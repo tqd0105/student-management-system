@@ -1,0 +1,79 @@
+const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const { PrismaClient } = require('@prisma/client');
+
+// Load environment variables
+dotenv.config();
+
+// Initialize Express app
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Initialize Prisma client
+const prisma = new PrismaClient();
+
+// Middleware
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// Health check endpoint
+app.get('/health', (req: any, res: any) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Student Management System API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// API routes
+app.get('/api/auth', (req: any, res: any) => {
+  res.json({ message: 'Auth routes - Coming soon' });
+});
+
+app.get('/api/users', (req: any, res: any) => {
+  res.json({ message: 'User routes - Coming soon' });
+});
+
+app.get('/api/classes', (req: any, res: any) => {
+  res.json({ message: 'Class routes - Coming soon' });
+});
+
+app.get('/api/attendance', (req: any, res: any) => {
+  res.json({ message: 'Attendance routes - Coming soon' });
+});
+
+app.get('/api/mail', (req: any, res: any) => {
+  res.json({ message: 'Mail routes - Coming soon' });
+});
+
+// 404 handler
+app.use('*', (req: any, res: any) => {
+  res.status(404).json({ 
+    error: 'Route not found',
+    path: req.originalUrl 
+  });
+});
+
+// Error handler
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error(err.stack);
+  res.status(500).json({ 
+    error: 'Something went wrong!',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+  });
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('Shutting down gracefully...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/health`);
+});
