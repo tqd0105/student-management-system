@@ -1,0 +1,181 @@
+// Prisma Schema for Student Management System - DTECH TEAM
+// Database: PostgreSQL
+// ORM: Prisma Client v6.12.0
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - Người dùng trong hệ thống
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  password          String   // Hashed password với bcrypt
+  name              String
+  role              Role     @default(STUDENT)
+  isEmailVerified   Boolean  @default(false)
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  emailTokens       EmailVerificationToken[]
+  passwordResets    PasswordResetToken[]
+  teacherClasses    Class[] @relation("TeacherClasses")
+  studentClasses    ClassEnrollment[]
+  attendanceRecords AttendanceRecord[]
+
+  @@map("users")
+}
+
+// Enum cho vai trò người dùng
+enum Role {
+  ADMIN     // Quản trị viên - full access
+  TEACHER   // Giáo viên - quản lý lớp và điểm danh
+  STUDENT   // Sinh viên - chỉ điểm danh
+}
+
+// Email verification token model
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [email], references: [email], onDelete: Cascade)
+
+  @@map("email_verification_tokens")
+}
+
+// Password reset token model  
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user      User     @relation(fields: [email], references: [email], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+// Class model - Lớp học
+model Class {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  
+  // Teacher assignment
+  teacherId   String
+  teacher     User     @relation("TeacherClasses", fields: [teacherId], references: [id])
+  
+  // QR Settings
+  qrExpiryMinutes Int    @default(5) // QR code hết hạn sau 5 phút
+  locationLat     Float? // Vĩ độ của lớp học
+  locationLng     Float? // Kinh độ của lớp học
+  radiusMeters    Int    @default(100) // Bán kính cho phép điểm danh (meters)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  enrollments ClassEnrollment[]
+  sessions    AttendanceSession[]
+
+  @@map("classes")
+}
+
+// Class enrollment - Đăng ký lớp học
+model ClassEnrollment {
+  id        String   @id @default(cuid())
+  
+  // Relations
+  classId   String
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  enrolledAt DateTime @default(now())
+
+  @@unique([classId, studentId]) // Một sinh viên chỉ đăng ký một lần vào một lớp
+  @@map("class_enrollments")
+}
+
+// Attendance session - Buổi học/điểm danh
+model AttendanceSession {
+  id              String   @id @default(cuid())
+  
+  // Class relation
+  classId         String
+  class           Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  
+  // Session details
+  title           String   // Tên buổi học: "Buổi 1: Giới thiệu", "Buổi 2: Grammar"
+  date            DateTime @default(now())
+  
+  // QR Code info
+  qrCode          String?  @unique // QR code content
+  qrExpiresAt     DateTime? // Thời gian hết hạn QR
+  
+  // Status
+  isActive        Boolean  @default(false) // Có đang cho phép điểm danh không
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  attendanceRecords AttendanceRecord[]
+
+  @@map("attendance_sessions")
+}
+
+// Attendance record - Bản ghi điểm danh
+model AttendanceRecord {
+  id          String   @id @default(cuid())
+  
+  // Relations
+  sessionId   String
+  session     AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  studentId   String
+  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  // Attendance details
+  status      AttendanceStatus @default(ABSENT)
+  checkinTime DateTime?        // Thời gian điểm danh
+  
+  // Device & Location tracking
+  deviceId    String?          // ID thiết bị điểm danh
+  ipAddress   String?          // IP address
+  userAgent   String?          // Browser/app info
+  locationLat Float?           // Vĩ độ điểm danh
+  locationLng Float?           // Kinh độ điểm danh
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([sessionId, studentId]) // Một sinh viên chỉ điểm danh một lần mỗi buổi
+  @@map("attendance_records")
+}
+
+// Enum cho trạng thái điểm danh
+enum AttendanceStatus {
+  PRESENT   // Có mặt
+  LATE      // Đi muộn  
+  ABSENT    // Vắng mặt
+}

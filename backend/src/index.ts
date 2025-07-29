@@ -1,11 +1,18 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const dotenv = require('dotenv');
-const { PrismaClient } = require('@prisma/client');
+/**
+ * Main Server Entry Point (TypeScript)
+ * Student Management System - DTECH TEAM
+ * Khởi tạo Express server với đầy đủ middleware và routes
+ */
 
-// Load environment variables
-dotenv.config();
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { PrismaClient } from '@prisma/client';
+
+// Import routes
+import authRoutes from './routes/auth';
 
 // Initialize Express app
 const app = express();
@@ -14,96 +21,83 @@ const PORT = process.env.PORT || 3001;
 // Initialize Prisma client
 const prisma = new PrismaClient();
 
-// Security Middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"]
-    }
-  }
-}));
+// Security Middleware - bảo mật headers
+app.use(helmet());
 
-// CORS Configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+// CORS Configuration - cho phép frontend kết nối
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+
+// Rate limiting - chống spam requests
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 phút
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // tối đa 100 requests
+  message: {
+    error: 'Too many requests from this IP, please try again later.'
+  }
+});
+app.use(limiter);
 
 // Body parsing middleware
-app.use(express.json({ 
-  limit: '10mb',
-  verify: (req: any, res: any, buf: Buffer) => {
-    try {
-      JSON.parse(buf.toString());
-    } catch (e) {
-      res.status(400).json({ error: 'Invalid JSON' });
-      return;
-    }
-  }
-}));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: process.env.MAX_FILE_SIZE || '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: process.env.MAX_FILE_SIZE || '5mb' }));
 
 // Health check endpoint
-app.get('/health', (req: any, res: any) => {
-  res.json({ 
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
     status: 'OK', 
     message: 'Student Management System API is running',
+    team: 'DTECH TEAM',
     timestamp: new Date().toISOString()
   });
 });
 
-// API routes
-app.get('/api/auth', (req: any, res: any) => {
-  res.json({ message: 'Auth routes - Coming soon' });
-});
-
-app.get('/api/users', (req: any, res: any) => {
-  res.json({ message: 'User routes - Coming soon' });
-});
-
-app.get('/api/classes', (req: any, res: any) => {
-  res.json({ message: 'Class routes - Coming soon' });
-});
-
-app.get('/api/attendance', (req: any, res: any) => {
-  res.json({ message: 'Attendance routes - Coming soon' });
-});
-
-app.get('/api/mail', (req: any, res: any) => {
-  res.json({ message: 'Mail routes - Coming soon' });
-});
+// API Routes
+app.use('/api/auth', authRoutes);
 
 // 404 handler
-app.use('*', (req: any, res: any) => {
+app.use('*', (req, res) => {
   res.status(404).json({ 
     error: 'Route not found',
-    path: req.originalUrl 
+    message: 'The requested endpoint does not exist'
   });
 });
 
-// Error handler
-app.use((err: any, req: any, res: any, next: any) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    error: 'Something went wrong!',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+// Global error handler
+app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Server Error:', error);
+  
+  const statusCode = error.statusCode || 500;
+  const message = process.env.NODE_ENV === 'production' 
+    ? 'Internal server error' 
+    : error.message;
+
+  res.status(statusCode).json({
+    error: message,
+    ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
   });
 });
 
-// Graceful shutdown
+// Graceful shutdown - tắt server an toàn
 process.on('SIGINT', async () => {
-  console.log('Shutting down gracefully...');
+  console.log('🛑 Shutting down gracefully...');
   await prisma.$disconnect();
   process.exit(0);
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log(`
+🚀 Student Management System API
+📌 Server running on port ${PORT}
+🌐 Environment: ${process.env.NODE_ENV || 'development'}
+👥 Developed by: DTECH TEAM
+� Health check: http://localhost:${PORT}/health
+  `);
 });
+
+export default app;

@@ -1,8 +1,9 @@
 export interface UserPayload {
-  id: string;
+  userId: string; // Thay đổi từ 'id' thành 'userId' để phù hợp với auth controller
   email: string;
   role: 'ADMIN' | 'TEACHER' | 'STUDENT';
   name: string;
+  isEmailVerified?: boolean; // Thêm field để kiểm tra email đã verify
 }
 
 export interface AuthResponse {
