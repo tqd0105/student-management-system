@@ -13,6 +13,8 @@ import { PrismaClient } from '@prisma/client';
 
 // Import routes
 import authRoutes from './routes/auth';
+import userRoutes from './routes/user';
+import classRoutes from './routes/class';
 
 // Initialize Express app
 const app = express();
@@ -58,6 +60,8 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/classes', classRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
