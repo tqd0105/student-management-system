@@ -7,11 +7,10 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
-const { hashPassword, comparePassword, generateToken, validatePassword, generateEmailToken } = require('../utils/auth');
-const { EmailService } = require('../services/email');
+import { AuthUtils } from '../utils/auth';
+import emailServiceInstance from '../utils/emailService';
 
 const prisma = new PrismaClient();
-const emailService = new EmailService();
 
 class AuthController {
   /**
@@ -32,7 +31,7 @@ class AuthController {
       const { email, password, name, role } = req.body;
 
       // Validate password strength
-      const passwordValidation = validatePassword(password);
+      const passwordValidation = AuthUtils.validatePassword(password);
       if (!passwordValidation.isValid) {
         return res.status(400).json({
           success: false,
@@ -54,10 +53,10 @@ class AuthController {
       }
 
       // Hash password
-      const hashedPassword = await hashPassword(password);
+      const hashedPassword = await AuthUtils.hashPassword(password);
 
       // Generate email verification token
-      const emailToken = generateEmailToken();
+      const emailToken = AuthUtils.generateEmailToken();
 
       // Tạo user mới
       const user = await prisma.user.create({
@@ -65,26 +64,27 @@ class AuthController {
           email,
           password: hashedPassword,
           name,
-          role: role === 'ADMIN' ? 'ADMIN' : role === 'TEACHER' ? 'TEACHER' : 'STUDENT'
-          // Loại bỏ isEmailVerified vì field không tồn tại trong DB hiện tại
+          role: role === 'ADMIN' ? 'ADMIN' : role === 'TEACHER' ? 'TEACHER' : 'STUDENT',
+          isVerified: false // Cần email verification
         }
       });
 
       // Tạo email verification token
-      // TODO: Sẽ implement lại sau khi fix schema
-      // await prisma.emailVerificationToken.create({
-      //   data: {
-      //     email: user.email,
-      //     token: emailToken,
-      //     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
-      //   }
-      // });
+      await prisma.emailVerificationToken.create({
+        data: {
+          email: user.email,
+          token: emailToken,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+          user: {
+            connect: { email: user.email }
+          }
+        }
+      });
 
       // Gửi email xác thực
-      // TODO: Enable sau khi fix email verification
-      // await emailService.sendEmailVerification(user.email, emailToken);
+      await emailServiceInstance.sendEmailVerification(user.email, emailToken);
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'User registered successfully. Please check your email to verify your account.',
         data: {
@@ -92,15 +92,16 @@ class AuthController {
             id: user.id,
             email: user.email,
             name: user.name,
-            role: user.role
-            // Tạm thời bỏ isEmailVerified
+            role: user.role,
+            isVerified: user.isVerified
+            // Sử dụng isVerified field
           }
         }
       });
 
     } catch (error) {
       console.error('Register error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error'
       });
@@ -137,7 +138,7 @@ class AuthController {
       }
 
       // Kiểm tra password
-      const isPasswordValid = await comparePassword(password, user.password);
+      const isPasswordValid = await AuthUtils.comparePassword(password, user.password);
       if (!isPasswordValid) {
         return res.status(401).json({
           success: false,
@@ -145,24 +146,25 @@ class AuthController {
         });
       }
 
-      // Kiểm tra email đã được xác thực chưa (tạm thời skip vì schema chưa có field này)
-      // if (!user.isEmailVerified) {
-      //   return res.status(403).json({
-      //     success: false,
-      //     message: 'Please verify your email before logging in'
-      //   });
-      // }
+      // Kiểm tra email đã được xác thực chưa
+      if (!user.isVerified) {
+        return res.status(403).json({
+          success: false,
+          message: 'Please verify your email before logging in'
+        });
+      }
 
       // Tạo JWT token
-      const token = generateToken({
+      const token = AuthUtils.generateToken({
         userId: user.id,
         email: user.email,
         role: user.role,
-        name: user.name
-        // Tạm thời bỏ isEmailVerified
+        name: user.name,
+        isVerified: user.isVerified
+        // Sử dụng isVerified field
       });
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Login successful',
         data: {
@@ -171,15 +173,16 @@ class AuthController {
             id: user.id,
             email: user.email,
             name: user.name,
-            role: user.role
-            // Tạm thời bỏ isEmailVerified
+            role: user.role,
+            isVerified: user.isVerified
+            // Sử dụng isVerified field
           }
         }
       });
 
     } catch (error) {
       console.error('Login error:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: 'Internal server error'
       });
@@ -192,12 +195,24 @@ class AuthController {
   static async verifyEmail(req: Request, res: Response) {
     try {
       const { token } = req.params;
+      
+      console.log('🔍 DEBUG - Verification request:');
+      console.log('   Token received:', token);
+      console.log('   Token type:', typeof token);
+      console.log('   Token length:', token.length);
 
       // Tìm token trong database
       const verificationToken = await prisma.emailVerificationToken.findUnique({
         where: { token },
         include: { user: true }
       });
+      
+      console.log('   Database result:', verificationToken ? 'FOUND' : 'NOT FOUND');
+      if (verificationToken) {
+        console.log('   DB token:', verificationToken.token);
+        console.log('   DB token type:', typeof verificationToken.token);
+        console.log('   Tokens match:', verificationToken.token === token);
+      }
 
       if (!verificationToken) {
         return res.status(400).json({
@@ -225,14 +240,143 @@ class AuthController {
         where: { token }
       });
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Email verified successfully. You can now log in.'
       });
 
     } catch (error) {
       console.error('Email verification error:', error);
-      res.status(500).json({
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
+
+  /**
+   * Kiểm tra token xác thực có hợp lệ không (cho frontend)
+   */
+  static async checkVerificationToken(req: Request, res: Response) {
+    try {
+      const { token } = req.params;
+
+      // Tìm token trong database
+      const verificationToken = await prisma.emailVerificationToken.findUnique({
+        where: { token },
+        include: { user: true }
+      });
+
+      if (!verificationToken) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid verification token',
+          data: { isValid: false }
+        });
+      }
+
+      // Kiểm tra token đã hết hạn chưa
+      if (verificationToken.expiresAt < new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Verification token has expired',
+          data: { isValid: false, expired: true }
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Token is valid',
+        data: { 
+          isValid: true,
+          email: verificationToken.email,
+          expiresAt: verificationToken.expiresAt
+        }
+      });
+
+    } catch (error) {
+      console.error('Check verification token error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
+
+  /**
+   * Xác thực email bằng mã verification code
+   */
+  static async verifyEmailCode(req: Request, res: Response) {
+    try {
+      // Kiểm tra validation errors từ middleware
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array()
+        });
+      }
+
+      const { email, verificationCode } = req.body;
+
+      console.log('🔍 DEBUG - Email verification by code:');
+      console.log('   Email:', email);
+      console.log('   Code:', verificationCode);
+
+      // Tìm token trong database bằng verification code
+      const verificationToken = await prisma.emailVerificationToken.findFirst({
+        where: { 
+          email,
+          token: verificationCode 
+        },
+        include: { user: true }
+      });
+
+      if (!verificationToken) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid verification code or email'
+        });
+      }
+
+      // Kiểm tra token đã hết hạn chưa
+      if (verificationToken.expiresAt < new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Verification code has expired'
+        });
+      }
+
+      // Kiểm tra user đã được verify chưa
+      if (verificationToken.user.isVerified) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is already verified'
+        });
+      }
+
+      // Update user email verified status
+      await prisma.user.update({
+        where: { email },
+        data: { isVerified: true }
+      });
+
+      // Xóa verification token đã sử dụng
+      await prisma.emailVerificationToken.delete({
+        where: { token: verificationCode }
+      });
+
+      console.log('✅ Email verified successfully for:', email);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Email verified successfully. You can now log in.'
+      });
+
+    } catch (error) {
+      console.error('Email verification by code error:', error);
+      return res.status(500).json({
         success: false,
         message: 'Internal server error'
       });
@@ -273,7 +417,7 @@ class AuthController {
         });
       }
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Profile retrieved successfully',
         data: { user }
@@ -281,7 +425,79 @@ class AuthController {
 
     } catch (error) {
       console.error('Get profile error:', error);
-      res.status(500).json({
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
+
+  /**
+   * Gửi lại email verification
+   */
+  static async resendVerification(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is required'
+        });
+      }
+
+      // Tìm user theo email
+      const user = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      if (user.isVerified) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email already verified'
+        });
+      }
+
+      // Xóa token cũ nếu có
+      await prisma.emailVerificationToken.deleteMany({
+        where: { email }
+      });
+
+      // Tạo token mới
+      const emailToken = AuthUtils.generateEmailToken();
+      
+      // Lưu token mới
+      await prisma.emailVerificationToken.create({
+        data: {
+          email: user.email,
+          token: emailToken,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+          user: {
+            connect: { email: user.email }
+          }
+        }
+      });
+
+      // Gửi email
+      await emailServiceInstance.sendEmailVerification(user.email, emailToken);
+
+      console.log(`🔗 Email verification token for ${email}: ${emailToken}`);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Verification email sent successfully'
+      });
+
+    } catch (error) {
+      console.error('Resend verification error:', error);
+      return res.status(500).json({
         success: false,
         message: 'Internal server error'
       });
@@ -293,12 +509,11 @@ class AuthController {
    */
   static async logout(req: Request, res: Response) {
     // Với JWT stateless, logout chỉ cần frontend xóa token
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'Logged out successfully'
     });
   }
 }
 
-// Export cho CommonJS
-module.exports = { AuthController };
+export { AuthController };
