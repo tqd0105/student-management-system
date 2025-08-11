@@ -59,6 +59,13 @@ router.put('/:id', requireAuth(), updateUserValidation, UserController.updateUse
 router.put('/:id/password', requireAuth(), changePasswordValidation, UserController.changePassword);
 
 /**
+ * @route   DELETE /api/users/delete-account
+ * @desc    Xóa tài khoản của chính user đang đăng nhập
+ * @access  Authenticated user
+ */
+router.delete('/delete-account', requireAuth(), UserController.deleteAccount);
+
+/**
  * @route   DELETE /api/users/:id
  * @desc    Xóa user
  * @access  Admin only

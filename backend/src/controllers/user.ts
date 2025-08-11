@@ -45,7 +45,7 @@ class UserController {
             createdAt: true,
             updatedAt: true
           },
-          skip,
+          skip, 
           take: parseInt(limit),
           orderBy: { createdAt: 'desc' }
         }),
@@ -149,12 +149,12 @@ class UserController {
 
       // Tạo user mới
       const user = await prisma.user.create({
-        data: {
-          email,
-          password: hashedPassword,
-          name,
-          role: role || 'STUDENT'
-        },
+          data: {
+            email,
+            password: hashedPassword,
+            name,
+            role: role || 'STUDENT'
+          },
         select: {
           id: true,
           email: true,
@@ -226,7 +226,7 @@ class UserController {
       const updatedUser = await prisma.user.update({
         where: { id },
         data: {
-          ...(email && { email }),
+          ...(email && { email }), /* object spread */
           ...(name && { name }),
           ...(role && { role })
         },
@@ -398,7 +398,120 @@ class UserController {
       });
     }
   }
+
+  /**
+   * Xóa tài khoản của chính user đang đăng nhập
+   */
+  static async deleteAccount(req, res) {
+    try {
+      const userId = req.user.userId; /* có thể được lấy trong token jwt*/
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
+
+      // Get user info first
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, name: true, role: true }
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      // Begin transaction to delete all related data
+      await prisma.$transaction(async (tx) => {
+        // Delete email verification tokens
+        await tx.emailVerificationToken.deleteMany({
+          where: { email: user.email }
+        });
+
+        // If user is a teacher, delete related data
+        if (user.role === 'TEACHER') {
+          // Get teacher's classes first
+          const teacherClasses = await tx.class.findMany({
+            where: { teacherId: userId },
+            select: { id: true }
+          });
+
+          if (teacherClasses.length > 0) {
+            const classIds = teacherClasses.map((c: any) => c.id);
+
+            // Get all attendance sessions for these classes
+            const sessions = await tx.attendanceSession.findMany({
+              where: { classId: { in: classIds } },
+              select: { id: true }
+            });
+
+            const sessionIds = sessions.map((s: any) => s.id);
+
+            // Delete attendance records first (if any sessions exist)
+            if (sessionIds.length > 0) {
+              await tx.attendanceLog.deleteMany({
+                where: { sessionId: { in: sessionIds } }
+              });
+            }
+
+            // Delete attendance sessions
+            await tx.attendanceSession.deleteMany({
+              where: { classId: { in: classIds } }
+            });
+
+            // Delete class enrollments  
+            await tx.classEnrollment.deleteMany({
+              where: { classId: { in: classIds } }
+            });
+
+            // Finally delete classes
+            await tx.class.deleteMany({
+              where: { teacherId: userId }
+            });
+          }
+        }
+
+        // If user is a student, delete related data
+        if (user.role === 'STUDENT') {
+          // Delete attendance records
+          await tx.attendanceLog.deleteMany({
+            where: { studentId: userId }
+          });
+
+          // Delete class enrollments
+          await tx.classEnrollment.deleteMany({
+            where: { studentId: userId }
+          });
+        }
+
+        // Finally delete the user
+        await tx.user.delete({
+          where: { id: userId }
+        });
+      });
+
+      console.log(`✅ Account deleted successfully for user: ${user.email} (${user.role})`);
+
+      res.status(200).json({
+        success: true,
+        message: 'Account deleted successfully'
+      });
+
+    } catch (error) {
+      console.error('Delete account error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
 }
 
-// Export cho CommonJS
+// Export cho CommonJS và ES6
 module.exports = { UserController };
+export { UserController };
