@@ -234,34 +234,60 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 ">
+    <div className=" bg-gray-50 ">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b ">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" >
+      <header className="bg-white shadow-sm border-b rounded-lg shadow-xl" style={{backgroundImage: 'linear-gradient(-20deg, rgb(223, 239, 255) 0%, rgb(255, 249, 235) 100%, rgb(252, 236, 236) 100%)'}}>
+        <div className="max-w-7xl  mx-auto px-4 sm:px-6 lg:px-8" >
               <h1 className="text-2xl font-bold text-gray-900 text-center pt-3">👨‍🎓STUDENT DASHBOARD</h1>
 
           <div className="flex justify-between items-center py-4">
             
             <div>
-              <p className="text-blue-600 font-bold">WELCOME BACK </p>
-              <p className="text-gray-600">{user?.name || user?.email || 'Student'}</p>
-              <p className="text-gray-600">{user?.email || 'Chưa xác thực email'}</p>
+              <p className="text-green-600 font-bold text-md md:text-xl flex items-center gap-2">WELCOME BACK!!! 
+                <div className="flex items-center justify-center space-x-1">
+                  <img
+                    src="/icons/teacher.png"
+                    alt="Teacher"
+                    width={20}
+                    height={20}
+                    className="opacity-80"
+                  />
+                  <span className="text-md md:text-lg text-red-600 uppercase">
+                    Student
+                  </span>
+                </div>
+              </p>
+              <p className="text-black  flex items-center gap-2 my-1"> 
+                <div className='flex items-center gap-1  text-gray-600'>
+                  <img src="icons/name.png" width="25" height="25" alt="" />
+                  <span>Your name: </span>
+                </div>
+                <p className='font-bold'>
+                {user?.name || user?.email || 'Student'}</p>
+                </p>
+              <p className="text-black flex items-center gap-2"> 
+                 <div className='flex items-center gap-1  text-gray-600'>
+                  <img src="icons/email.png" width="25" height="25" alt="" />
+                  <span>Your email: </span>
+                </div>
+                <p className='font-bold'>
+                {user?.email || 'Chưa xác thực email'}</p></p>
             </div>
             <div className="flex flex-col justify-center items-center gap-2">
               <button
                 onClick={() => setIsHistoryOpen(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+                className="bg-blue-600 text-white p-3 md:px-4 md:py-2 rounded-full shadow-md hover:bg-blue-700 flex items-center space-x-0 md:space-x-2 cursor-pointer"
               >
-                <History className="w-4 h-4" />
-                <span>History</span>
+                <History className="w-4 h-4 " />
+                <span className='hidden md:block'>History</span>
               </button>
               <button
                 onClick={handleDeleteAccount}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center space-x-2 block md:hidden"
+                className="bg-red-600 text-white p-3 md:px-4 md:py-2 rounded-full hover:bg-red-700 flex items-center space-x-0 md:space-x-2 block md:hidden"
                 title="Delete Account"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Delete</span>
+                <span className='hidden md:block'>Delete</span>
               </button>
             </div>
           </div>
@@ -269,13 +295,14 @@ export default function StudentDashboard() {
       </header>
 
       {/* Quick Actions */}
-        <div className="bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-200 p-6 rounded-lg shadow-lg mb-4 mt-8">
+        <div className=" border-2 p-6 rounded-lg shadow-2xl mb-4 mt-8"
+        style={{backgroundImage: 'linear-gradient(to top, rgb(255, 255, 255) 0%, rgb(237, 237, 237) 100%)'}}>
           <div className="text-center">
             <h3 className="text-xl font-bold mb-2 text-blue-700">🎯 Quick Check-in</h3>
             <p className="text-gray-600 mb-4">Scan the QR code displayed by your teacher to mark attendance</p>
             <button
               onClick={() => setIsQRScannerOpen(true)}
-              className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 flex items-center space-x-2 mx-auto font-medium text-lg"
+              className="bg-green-600 text-white px-8 py-3 rounded-full shadow-md hover:bg-green-700 flex items-center space-x-2 mx-auto font-medium text-lg cursor-pointer"
             >
               <Camera className="w-6 h-6" />
               <span>Open QR Scanner</span>
@@ -299,7 +326,7 @@ export default function StudentDashboard() {
       {/* Stats */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-8">
-          <div className="bg-white p-4 rounded-lg shadow col-span-2 md:col-span-1">
+          <div className="bg-white p-4 rounded-lg shadow-lg col-span-2 md:col-span-2 lg:col-span-1" >
             <div className="flex items-center">
               <BookOpen className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
               <div className="ml-3">
@@ -308,7 +335,7 @@ export default function StudentDashboard() {
               </div>
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow col-span-2 md:col-span-1">
+          <div className="bg-white p-4 rounded-lg shadow-lg col-span-2 md:col-span-1 ">
             <div className="flex items-center">
               <Calendar className="w-6 h-6 md:w-8 md:h-8 text-green-600" />
               <div className="ml-3">
@@ -317,7 +344,7 @@ export default function StudentDashboard() {
               </div>
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="bg-white p-4 rounded-lg shadow-lg col-span-2 md:col-span-1 ">
             <div className="flex items-center">
               <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-purple-600" />
               <div className="ml-3">
@@ -326,7 +353,7 @@ export default function StudentDashboard() {
               </div>
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="bg-white p-4 rounded-lg shadow-lg col-span-1 md:col-span-2 lg:col-span-1">
             <div className="flex items-center">
               <QrCode className="w-6 h-6 md:w-8 md:h-8 text-orange-600" />
               <div className="ml-3">
@@ -335,7 +362,7 @@ export default function StudentDashboard() {
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg shadow border border-green-200">
+          <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg shadow-lg border border-green-200">
             <div className="flex items-center">
               <UserCheck className="w-6 h-6 md:w-8 md:h-8 text-green-600" />
               <div className="ml-3">
@@ -344,7 +371,7 @@ export default function StudentDashboard() {
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-4 rounded-lg shadow border border-yellow-200">
+          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-4 rounded-lg shadow-lg border border-yellow-200">
             <div className="flex items-center">
               <Clock className="w-6 h-6 md:w-8 md:h-8 text-yellow-600" />
               <div className="ml-3">
@@ -353,7 +380,7 @@ export default function StudentDashboard() {
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-lg shadow border border-red-200">
+          <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-lg shadow-lg border border-red-200">
             <div className="flex items-center">
               <UserX className="w-6 h-6 md:w-8 md:h-8 text-red-600" />
               <div className="ml-3">
@@ -430,7 +457,7 @@ export default function StudentDashboard() {
 
       {/* Attendance History Modal */}
       {isHistoryOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-gray-900/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[85vh] overflow-y-auto mx-4">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900">📋 Attendance History</h3>
