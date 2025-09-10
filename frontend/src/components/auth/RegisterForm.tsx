@@ -10,6 +10,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import ApiService from "@/services/ApiService";
 import { Input } from "../ui/input";
+import { Eye, EyeOff } from "lucide-react";
 
 interface RegisterFormProps {
   onSwitchToLogin?: () => void;
@@ -26,9 +27,11 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [step, setStep] = useState<"register" | "verify">("register");
+  const [step, setStep] = useState<"personal" | "security" | "verify">("personal");
   const [verificationCode, setVerificationCode] = useState("");
-  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
+  const [currentFormStep, setCurrentFormStep] = useState(1);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Password validation functions
   const validatePassword = (password: string) => {
@@ -49,44 +52,61 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
-      return;
-    }
-
-    if (!isPasswordValid(formData.password)) {
-      setError("Password does not meet the requirements below");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await ApiService.register({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-      });
-
-      if (response.success) {
-        setSuccess(
-          "Please check your email for verification code."
-        );
-        setStep("verify");
+    
+    if (step === "personal") {
+      // Validate personal info and move to security step
+      if (!formData.name || !formData.email) {
+        setError("Please fill in all required fields");
+        return;
       }
-    } catch (err: unknown) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Registration failed. Please try again.";
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
+      setError("");
+      setStep("security");
+      setCurrentFormStep(2);
+      return;
+    }
+
+    if (step === "security") {
+      // Validate passwords and submit registration
+      setLoading(true);
+      setError("");
+
+      // Validation
+      if (formData.password !== formData.confirmPassword) {
+        setError("Passwords do not match");
+        setLoading(false);
+        return;
+      }
+
+      if (!isPasswordValid(formData.password)) {
+        setError("Password does not meet the requirements below");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await ApiService.register({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+        });
+
+        if (response.success) {
+          setSuccess(
+            "Please check your email for verification code."
+          );
+          setStep("verify");
+          setCurrentFormStep(3);
+        }
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Registration failed. Please try again.";
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -96,15 +116,27 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     setError("");
 
     try {
-      // In real implementation, you would call email verification API
-      // For demo, we'll simulate verification
-      if (verificationCode === "123456") {
+      // Real API call for email verification
+      const response = await fetch("http://192.168.88.175:3001/api/auth/verify-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          verificationCode: verificationCode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
         setSuccess("Email verified successfully! You can now login.");
         setTimeout(() => {
           onSwitchToLogin?.();
         }, 2000);
       } else {
-        setError("Invalid verification code. Please try again.");
+        setError(data.message || "Invalid verification code. Please try again.");
       }
     } catch (err: unknown) {
       const errorMessage =
@@ -130,7 +162,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     setSuccess("");
     
     try {
-      const response = await fetch("http://192.168.1.4:3001/api/auth/resend-verification", {
+      const response = await fetch("http://192.168.88.175:3001/api/auth/resend-verification", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -225,7 +257,30 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
 
         {/* Verification Form */}
         <form onSubmit={handleVerification} className="space-y-6">
-          
+          <div>
+            <label htmlFor="verificationCode" className="block text-sm font-bold text-gray-900 mb-2">
+              Verification Code
+            </label>
+            <Input
+              id="verificationCode"
+              type="text"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+              placeholder="Enter 6-digit code"
+              className="w-full px-4 py-3 text-center text-2xl tracking-wider border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              maxLength={6}
+              required
+            />
+          </div>
+
+          <Button
+            type="submit"
+            disabled={loading || verificationCode.length !== 6}
+            className="w-full rounded-full shadow-xl text-white font-bold py-3 cursor-pointer"
+            style={{backgroundImage: "linear-gradient(to right, #4f46e5 0%, #7c3aed 50%, #db2777 100%)"}}
+          >
+            {loading ? "Verifying..." : "Verify Email"}
+          </Button>
 
           <div className="text-center">
             <button
@@ -241,8 +296,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
           <div className="text-center">
             <button
               type="button"
-              onClick={() => setStep("register")}
-              className="text-sm text-gray-600 hover:text-gray-500"
+              onClick={() => setStep("personal")}
+              className="text-sm text-gray-600 hover:text-gray-500 cursor-pointer"
             >
               ← Back to registration
             </button>
@@ -255,30 +310,68 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   }
 
   return (
-    <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+    <div className=" py-8 md:py-10 lg:py-6 px-4 md:px-10 lg:px-12 shadow-2xl sm:rounded-lg sm:px-10 max-w-md md:max-w-4xl lg:max-w-md xl:max-w-xl mx-4 rounded-xl" style={{backgroundImage: "linear-gradient(to top, rgb(255, 229, 251) 0%, rgb(255, 255, 255) 99%)"}}>
       {/* Header */}
-      <div className="text-center mb-6">
-        <div className="mx-auto h-12 w-12 rounded-full flex items-center justify-center">
-          <svg
-            width="800px"
-            height="800px"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M20 18L17 18M17 18L14 18M17 18V15M17 18V21M11 21H4C4 17.134 7.13401 14 11 14C11.695 14 12.3663 14.1013 13 14.2899M15 7C15 9.20914 13.2091 11 11 11C8.79086 11 7 9.20914 7 7C7 4.79086 8.79086 3 11 3C13.2091 3 15 4.79086 15 7Z"
-              stroke="#000000"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </div>
-        <h2 className=" text-2xl font-bold text-gray-900">Create Account</h2>
-        <p className="mt-2 text-sm text-gray-600">
+      <div className="text-center mb-6 md:mb-8 lg:mb-8">
+        <h2 className="text-2xl md:text-3xl lg:text-3xl xl:text-2xl font-extrabold text-gray-900 uppercase">Create Account</h2>
+        <p className="mt-2 text-sm md:text-lg lg:text-base xl:text-sm text-gray-600">
           Join Student Management System
         </p>
+      </div>
+
+      {/* Step Progress Indicator */}
+      <div className="mb-8 md:mb-8 lg:mb-8">
+        <div className="flex items-center justify-center">
+          <div className="flex items-center space-x-1 sm:space-x-2">
+            {/* Step 1 */}
+            <div className="flex items-center">
+              <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${
+                currentFormStep >= 1 ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
+                1
+              </div>
+              <span className={`ml-1 sm:ml-2 text-xs sm:text-sm md:text-md lg:text-sm font-bold ${
+                currentFormStep >= 1 ? 'text-green-600' : 'text-gray-500'
+              }`}>
+                Personal
+              </span>
+            </div>
+            
+            {/* Divider */}
+            <div className={`w-6 sm:w-12 md:w-6 lg:w-12 h-1 ${currentFormStep >= 2 ? 'bg-green-600' : 'bg-gray-200'}`}></div>
+            
+            {/* Step 2 */}
+            <div className="flex items-center">
+              <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${
+                currentFormStep >= 2 ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
+                2
+              </div>
+              <span className={`ml-1 sm:ml-2 text-xs sm:text-sm md:text-md lg:text-sm font-bold ${
+                currentFormStep >= 2 ? 'text-green-600' : 'text-gray-500'
+              }`}>
+                Security
+              </span>
+            </div>
+            
+            {/* Divider */}
+            <div className={`w-6 sm:w-12 md:w-6 lg:w-12 h-1 ${currentFormStep >= 3 ? 'bg-green-600' : 'bg-gray-200'}`}></div>
+            
+            {/* Step 3 */}
+            <div className="flex items-center">
+              <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${
+                currentFormStep >= 3 ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
+                3
+              </div>
+              <span className={`ml-1 sm:ml-2 text-xs sm:text-sm md:text-md lg:text-sm font-bold ${
+                currentFormStep >= 3 ? 'text-green-600' : 'text-gray-500'
+              }`}>
+                Verify
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Messages */}
@@ -321,266 +414,221 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
       )}
 
       {/* Registration Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Full Name */}
-        <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Full Name
-          </label>
-          <Input
-            id="name"
-            name="name"
-            type="text"
-            required
-            className="w-full px-3 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter your full name"
-            value={formData.name}
-            onChange={handleChange}
-          />
-        </div>
-
-        {/* Email */}
-        <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Email Address
-          </label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            required
-            className="w-full px-3 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter your email"
-            value={formData.email}
-            onChange={handleChange}
-          />
-        </div>
-
-        {/* Role Selection - Chỉ Student có thể tự đăng ký */}
-        <div>
-          <label
-            htmlFor="role"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Account Type
-          </label>
-          <div className="w-full px-3 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900">
-            <div className="flex items-center">
-              <svg
-                className="h-5 w-5 text-blue-600 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 14l9-5-9-5-9 5 9 5z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"
-                />
-              </svg>
-              <span className="font-medium">Student Account</span>
+      <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6 lg:space-y-5">
+        
+        {/* Step 1: Personal Information */}
+        {step === "personal" && (
+          <div className="space-y-4 md:space-y-6 lg:space-y-4">
+            
+            {/* Full Name */}
+            <div>
+              <label htmlFor="name" className="block text-sm md:text-md lg:text-base xl:text-sm font-bold text-black mb-1 md:mb-3 lg:mb-2 xl:mb-1">
+                Full Name
+              </label>
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                required
+                className="w-full px-3 md:px-4 lg:px-3 py-3 md:py-3 lg:py-3 h-10 md:h-12 lg:h-12 xl:h-10 border border-gray-700 rounded-lg placeholder-gray-500 text-gray-900 text-sm md:text-lg lg:text-base xl:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your full name"
+                value={formData.name}
+                onChange={handleChange}
+              />
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Teachers must be registered by system administrators for security
-            </p>
-          </div>
-          <input type="hidden" name="role" value="STUDENT" />
-        </div>
 
-        {/* Password */}
-        <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Password
-          </label>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            required
-            className="w-full px-3 py-3 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter your password"
-            value={formData.password}
-            onChange={handleChange}
-            onFocus={() => setShowPasswordRequirements(true)}
-          />
-          
-          {/* Password Requirements */}
-          {(showPasswordRequirements || formData.password.length > 0) && (
-            <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
-              <p className="text-sm font-medium text-gray-700 mb-2">Password must contain:</p>
-              <div className="space-y-1">
-                {Object.entries({
-                  length: "At least 8 characters",
-                  uppercase: "One uppercase letter (A-Z)",
-                  lowercase: "One lowercase letter (a-z)", 
-                  number: "One number (0-9)",
-                  special: "One special character (!@#$%^&*)"
-                }).map(([key, description]) => {
-                  const isValid = validatePassword(formData.password)[key as keyof ReturnType<typeof validatePassword>];
-                  return (
-                    <div key={key} className="flex items-center text-sm">
-                      <div className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center ${isValid ? 'bg-green-500' : 'bg-gray-300'}`}>
-                        {isValid ? (
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        ) : (
-                          <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                        )}
-                      </div>
-                      <span className={isValid ? 'text-green-700' : 'text-gray-600'}>{description}</span>
-                    </div>
-                  );
-                })}
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-sm md:text-md lg:text-base xl:text-sm font-bold text-black mb-1 md:mb-3 lg:mb-2 xl:mb-1">
+                Email Address
+              </label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="w-full px-3 md:px-4 lg:px-3 py-3 md:py-3 lg:py-3 h-10 md:h-12 lg:h-12 xl:h-10 border border-gray-700 rounded-lg placeholder-gray-500 text-gray-900 text-sm md:text-lg lg:text-base xl:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* Role Selection */}
+            <div>
+              
+              <div className="w-full px-3 md:px-4 lg:px-3 py-3 md:py-4 lg:py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-900">
+                <div className="flex items-center">
+                  <svg className="h-4 w-4 md:h-6 md:w-6 lg:h-5 lg:w-5 text-blue-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                  </svg>
+                  <span className="font-medium text-sm md:text-lg lg:text-base xl:text-sm">Student Account</span>
+                </div>
+                <p className="text-xs md:text-sm lg:text-xs text-gray-500 mt-1">
+                  Teachers must be registered by system administrators for security
+                </p>
               </div>
-              {formData.password.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-gray-200">
-                  <div className="flex items-center">
-                    <div className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center ${isPasswordValid(formData.password) ? 'bg-green-500' : 'bg-red-500'}`}>
-                      {isPasswordValid(formData.password) ? (
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      ) : (
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-                    <span className={`text-sm font-medium ${isPasswordValid(formData.password) ? 'text-green-700' : 'text-red-700'}`}>
-                      {isPasswordValid(formData.password) ? 'Password is strong!' : 'Password is weak'}
-                    </span>
-                  </div>
-                </div>
-              )}
+              <input type="hidden" name="role" value="STUDENT" />
             </div>
-          )}
-        </div>
 
-        {/* Confirm Password */}
-        <div>
-          <label
-            htmlFor="confirmPassword"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Confirm Password
-          </label>
-          <Input
-            id="confirmPassword"
-            name="confirmPassword"
-            type="password"
-            required
-            className={`w-full px-3 py-3 border rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 ${
-              formData.confirmPassword && formData.password !== formData.confirmPassword
-                ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                : formData.confirmPassword && formData.password === formData.confirmPassword
-                ? 'border-green-300 focus:ring-green-500 focus:border-green-500'
-                : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-            }`}
-            placeholder="Confirm your password"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-          />
-          
-          {/* Password Match Indicator */}
-          {formData.confirmPassword && (
-            <div className="mt-1 flex items-center">
-              {formData.password === formData.confirmPassword ? (
-                <div className="flex items-center text-green-600">
-                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-sm">Passwords match</span>
-                </div>
-              ) : (
-                <div className="flex items-center text-red-600">
-                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-sm">Passwords do not match</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Submit Button */}
-        <Button 
-          type="submit" 
-          disabled={loading || !isPasswordValid(formData.password) || formData.password !== formData.confirmPassword} 
-          className="w-full" 
-          size="lg"
-        >
-          {loading ? "Creating Account..." : "Create Account"}
-        </Button>
-
-        {/* Form validation info */}
-        {(!isPasswordValid(formData.password) || formData.password !== formData.confirmPassword) && formData.password && formData.confirmPassword && (
-          <div className="text-center">
-            <p className="text-sm text-gray-500">
-              Please ensure your password meets all requirements and both passwords match
-            </p>
+            {/* Next Button */}
+            <Button 
+              type="submit" 
+              className="w-full text-white font-extrabold shadow-xl py-2 rounded-full md:py-4 lg:py-3 xl:py-2 px-4 md:px-8 lg:px-6 xl:px-4 text-sm md:text-lg lg:text-base xl:text-sm cursor-pointer" 
+              size="lg"
+              style={{backgroundImage: "linear-gradient(to right, #4f46e5 0%, #7c3aed 50%, #db2777 100%)"}}
+            >
+              Set Password  →
+            </Button>
           </div>
         )}
 
-        {/* Switch to Login */}
-        <div className="text-center space-y-2">
-          <span className="text-sm text-gray-600">
-            Already have an account?{" "}
-            <button
-              type="button"
-              onClick={onSwitchToLogin}
-              className="font-medium text-blue-600 hover:text-blue-500"
-            >
-              Sign in here
-            </button>
-          </span>
-        </div>
+        {/* Step 2: Security */}
+        {step === "security" && (
+          <div className="space-y-4 md:space-y-6 lg:space-y-4">
 
-        {/* Teacher Registration Notice */}
-        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <div className="flex">
-            <svg
-              className="h-5 w-5 text-amber-400 mt-0.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div className="ml-3">
-              <h4 className="text-sm font-medium text-amber-800">
-                For Teachers
-              </h4>
-              <p className="text-sm text-amber-700 mt-1">
-                Teacher accounts must be created by system administrators.
-                Please contact your institution&apos;s IT department for access.
-              </p>
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="block text-sm md:text-lg lg:text-base xl:text-sm font-bold text-black mb-1 md:mb-3 lg:mb-2 xl:mb-1">
+                Password
+              </label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  className="w-full px-3 md:px-4 lg:px-3 py-3 md:py-3 lg:py-3 h-10 md:h-12 lg:h-12 xl:h-10 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 text-sm md:text-lg lg:text-base xl:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 md:pr-4 lg:pr-3"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 md:w-7 md:h-7 lg:w-6 lg:h-6 xl:w-5 xl:h-5 text-gray-400" />
+                  ) : (
+                    <Eye className="h-5 w-5 md:w-7 md:h-7 lg:w-6 lg:h-6 xl:w-5 xl:h-5 text-gray-400" />
+                  )}
+                </button>
+              </div>
+              
+              {/* Password Requirements - Simplified */}
+              {formData.password.length > 0 && (
+                <div className={`mt-2 p-2 rounded-lg border ${isPasswordValid(formData.password) ? 'bg-green-200 border-green-200' : 'bg-red-200 border-red-200 border-3'}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center text-xs">
+                      {Object.entries({
+                        length: formData.password.length >= 8,
+                        uppercase: /[A-Z]/.test(formData.password),
+                        lowercase: /[a-z]/.test(formData.password),
+                        number: /\d/.test(formData.password),
+                        special: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password),
+                      }).map(([key, isValid]) => (
+                        <div key={key} className={`w-2 h-2 rounded-full mr-1 ${isValid ? 'bg-green-500' : 'bg-red-600'}`}></div>
+                      ))}
+                    </div>
+                    <span className={`text-xs font-bold ${isPasswordValid(formData.password) ? 'text-green-600' : 'text-red-600'}`}>
+                      {isPasswordValid(formData.password) ? '✓ Strong' : '✗ Weak'}
+                    </span>
+                  </div>
+                  {!isPasswordValid(formData.password) && (
+                    <p className="text-xs text-gray-500 mt-1 font-medium">
+                      8+ chars • uppercase • lowercase • number • special char
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm md:text-lg lg:text-base xl:text-sm font-bold text-black mb-1 md:mb-3 lg:mb-2 xl:mb-1">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  className={`w-full px-3 md:px-4 lg:px-3 py-3 md:py-4 lg:py-3 pr-10 md:pr-12 lg:pr-10 h-10 md:h-12 lg:h-12 xl:h-10 border rounded-lg placeholder-gray-500 text-gray-900 text-sm md:text-lg lg:text-base xl:text-sm focus:outline-none focus:ring-2 ${
+                    formData.confirmPassword && formData.password !== formData.confirmPassword
+                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                      : formData.confirmPassword && formData.password === formData.confirmPassword
+                      ? 'border-green-300 focus:ring-green-500 focus:border-green-500'
+                      : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  }`}
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 md:pr-4 lg:pr-3"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-5 w-5 md:w-7 md:h-7 lg:w-6 lg:h-6 xl:w-5 xl:h-5 text-gray-400" />
+                  ) : (
+                    <Eye className="h-5 w-5 md:w-7 md:h-7 lg:w-6 lg:h-6 xl:w-5 xl:h-5 text-gray-400" />
+                  )}
+                </button>
+              </div>
+              
+              {/* Password Match Indicator - Simplified */}
+              {formData.confirmPassword && (
+                <div className="mt-1 text-xs">
+                  {formData.password === formData.confirmPassword ? (
+                    <span className="text-green-600">✓ Passwords match</span>
+                  ) : (
+                    <span className="text-red-600">✗ Passwords don&apos;t match</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-3">
+              <Button 
+                type="button"
+                onClick={() => {setStep("personal"); setCurrentFormStep(1);}}
+                variant="outline"
+                className="flex-1 shadow rounded-full py-2 md:py-3 lg:py-2 px-4 md:px-6 lg:px-4 text-sm md:text-lg lg:text-base xl:text-sm cursor-pointer"
+              >
+                ← Back
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={loading || !isPasswordValid(formData.password) || formData.password !== formData.confirmPassword} 
+                className="flex-1 text-white font-bold shadow-lg rounded-full py-2 md:py-3 lg:py-2 px-4 md:px-6 lg:px-4 text-sm md:text-lg lg:text-base xl:text-sm cursor-pointer" 
+                size="lg"
+                style={{backgroundImage: "linear-gradient(to right, #eea2a2 0%, #bbc1bf 19%, #57c6e1 42%, #b49fda 79%, #7ac5d8 100%)"}}
+              >
+                {loading ? "Creating..." : "Create Account"}
+              </Button>
             </div>
           </div>
-        </div>
+        )}
       </form>
+
+      {/* Switch to Login - Always show */}
+      <div className="mt-6 md:mt-6 lg:mt-2 text-center">
+        <span className="text-sm md:text-md lg:text-base xl:text-sm text-gray-600">
+          Already have an account?{" "}
+          <button
+            type="button"
+            onClick={onSwitchToLogin}
+            className="font-bold text-blue-600 hover:text-blue-500 cursor-pointer"
+          >
+            Sign in here
+          </button>
+        </span>
+      </div>
     </div>
   );
 };
