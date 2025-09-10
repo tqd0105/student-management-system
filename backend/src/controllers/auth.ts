@@ -194,7 +194,7 @@ class AuthController {
    */
   static async verifyEmail(req: Request, res: Response) {
     try {
-      const { token } = req.params;
+      const { token } = req.params; // Lấy token từ URL
       
       console.log('🔍 DEBUG - Verification request:');
       console.log('   Token received:', token);

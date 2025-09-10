@@ -180,13 +180,11 @@ class ClassController {
 
       const { 
         name, 
-        description, 
-        teacherId,
-        qrExpiryMinutes = 5,
-        locationLat,
-        locationLng,
-        radiusMeters = 100
+        description
       } = req.body;
+
+      // Lấy teacherId từ authenticated user
+      const teacherId = req.user.userId;
 
       // Kiểm tra teacher tồn tại và có role TEACHER
       const teacher = await prisma.user.findFirst({
@@ -208,11 +206,7 @@ class ClassController {
         data: {
           name,
           description,
-          teacherId,
-          qrExpiryMinutes: parseInt(qrExpiryMinutes),
-          locationLat: locationLat ? parseFloat(locationLat) : null,
-          locationLng: locationLng ? parseFloat(locationLng) : null,
-          radiusMeters: parseInt(radiusMeters)
+          teacherId
         },
         include: {
           teacher: {
@@ -419,9 +413,9 @@ class ClassController {
       // Kiểm tra student đã enroll chưa
       const existingEnrollment = await prisma.classEnrollment.findUnique({
         where: {
-          classId_studentId: {
-            classId,
-            studentId
+          studentId_classId: {
+            studentId,
+            classId
           }
         }
       });
@@ -481,9 +475,9 @@ class ClassController {
       // Kiểm tra enrollment tồn tại
       const enrollment = await prisma.classEnrollment.findUnique({
         where: {
-          classId_studentId: {
-            classId,
-            studentId
+          studentId_classId: {
+            studentId,
+            classId
           }
         }
       });
@@ -498,9 +492,9 @@ class ClassController {
       // Xóa enrollment
       await prisma.classEnrollment.delete({
         where: {
-          classId_studentId: {
-            classId,
-            studentId
+          studentId_classId: {
+            studentId,
+            classId
           }
         }
       });

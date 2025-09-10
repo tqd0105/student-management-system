@@ -35,8 +35,21 @@ export const loginValidation = [
 export const verifyEmailValidation = [
   param('token')
     .isString()
-    .isLength({ min: 32, max: 64 })
+    .isLength({ min: 6, max: 64 })
     .withMessage('Invalid verification token format')
+];
+
+export const verifyEmailCodeValidation = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email address'),
+  
+  body('verificationCode')
+    .isString()
+    .isLength({ min: 6, max: 6 })
+    .matches(/^\d{6}$/)
+    .withMessage('Verification code must be exactly 6 digits')
 ];
 
 // User management validations
@@ -102,11 +115,6 @@ export const createClassValidation = [
     .trim()
     .isLength({ max: 500 })
     .withMessage('Description must not exceed 500 characters'),
-  
-  body('teacherId')
-    .isString()
-    .notEmpty()
-    .withMessage('Teacher ID is required'),
   
   body('qrExpiryMinutes')
     .optional()
@@ -181,6 +189,107 @@ export const enrollmentValidation = [
     .withMessage('Student ID is required')
 ];
 
+// ==================== ATTENDANCE VALIDATIONS ====================
+
+/**
+ * Validation cho tạo attendance session
+ */
+export const createSessionValidation = [
+  body('classId')
+    .isString()
+    .withMessage('Class ID is required')
+    .notEmpty()
+    .withMessage('Class ID cannot be empty'),
+    
+  body('startTime')
+    .isISO8601()
+    .withMessage('Start time must be a valid date')
+    .custom((value) => {
+      const startTime = new Date(value);
+      const now = new Date();
+      if (startTime < now) {
+        throw new Error('Start time cannot be in the past');
+      }
+      return true;
+    }),
+    
+  body('endTime')
+    .isISO8601()
+    .withMessage('End time must be a valid date')
+    .custom((value, { req }) => {
+      const startTime = new Date(req.body.startTime);
+      const endTime = new Date(value);
+      if (endTime <= startTime) {
+        throw new Error('End time must be after start time');
+      }
+      return true;
+    }),
+    
+  body('locationLat')
+    .optional()
+    .isFloat({ min: -90, max: 90 })
+    .withMessage('Latitude must be between -90 and 90'),
+    
+  body('locationLng')
+    .optional()
+    .isFloat({ min: -180, max: 180 })
+    .withMessage('Longitude must be between -180 and 180'),
+    
+  body('radiusMeters')
+    .optional()
+    .isInt({ min: 1, max: 10000 })
+    .withMessage('Radius must be between 1 and 10000 meters')
+];
+
+/**
+ * Validation cho student check-in
+ */
+export const checkInValidation = [
+  body('qrCode')
+    .isString()
+    .withMessage('QR code is required')
+    .isLength({ min: 10 })
+    .withMessage('Invalid QR code format'),
+    
+  body('deviceId')
+    .isString()
+    .withMessage('Device ID is required')
+    .notEmpty()
+    .withMessage('Device ID cannot be empty'),
+    
+  body('latitude')
+    .optional()
+    .isFloat({ min: -90, max: 90 })
+    .withMessage('Latitude must be between -90 and 90'),
+    
+  body('longitude')
+    .optional()
+    .isFloat({ min: -180, max: 180 })
+    .withMessage('Longitude must be between -180 and 180')
+];
+
+/**
+ * Validation cho session ID parameter
+ */
+export const sessionIdValidation = [
+  param('sessionId')
+    .isString()
+    .withMessage('Session ID must be a string')
+    .notEmpty()
+    .withMessage('Session ID is required')
+];
+
+/**
+ * Validation cho QR code parameter
+ */
+export const qrCodeValidation = [
+  param('qrCode')
+    .isString()
+    .withMessage('QR code must be a string')
+    .isLength({ min: 10 })
+    .withMessage('Invalid QR code format')
+];
+
 // Export for CommonJS compatibility
 module.exports = {
   registerValidation,
@@ -191,5 +300,9 @@ module.exports = {
   changePasswordValidation,
   createClassValidation,
   updateClassValidation,
-  enrollmentValidation
+  enrollmentValidation,
+  createSessionValidation,
+  checkInValidation,
+  sessionIdValidation,
+  qrCodeValidation
 };

@@ -4,7 +4,7 @@
  * Centralized API communication với backend
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.1.4:3001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.88.175:3001';
 
 class ApiService {
   private static getHeaders(includeAuth: boolean = true): HeadersInit {

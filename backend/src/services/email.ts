@@ -193,6 +193,6 @@ export class EmailService {
   }
 }
 
-// Export singleton
+// Export singleton 
 export const emailService = new EmailService();
 module.exports = { EmailService, emailService };

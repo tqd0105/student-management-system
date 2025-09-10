@@ -15,10 +15,22 @@ import { PrismaClient } from '@prisma/client';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/user';
 import classRoutes from './routes/class';
+import attendanceRoutes from './routes/attendance';
+import adminRoutes from './routes/admin';
+import teacherRoutes from './routes/teacher';
+import studentRoutes from './routes/student';
+
+// Import controllers
+import { HealthController } from './controllers/health';
+
+// Import middleware
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { generalLimiter, authLimiter } from './middleware/rateLimiter';
 
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Initialize Prisma client
 const prisma = new PrismaClient();
@@ -28,9 +40,17 @@ app.use(helmet());
 
 // CORS Configuration - cho phép frontend kết nối
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    'http://localhost:3000',
+    'http://192.168.88.175:3000',
+    'http://0.0.0.0:3000',
+    'http://192.168.1.4:3000',
+    process.env.FRONTEND_URL || ''
+  ].filter(url => url !== ''),
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 app.use(cors(corsOptions));
 
@@ -45,23 +65,21 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Body parsing middleware
-app.use(express.json({ limit: process.env.MAX_FILE_SIZE || '5mb' }));
-app.use(express.urlencoded({ extended: true, limit: process.env.MAX_FILE_SIZE || '5mb' }));
+  app.use(express.json({ limit: process.env.MAX_FILE_SIZE || '5mb' }));
+  app.use(express.urlencoded({ extended: true, limit: process.env.MAX_FILE_SIZE || '5mb' }));
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    message: 'Student Management System API is running',
-    team: 'DTECH TEAM',
-    timestamp: new Date().toISOString()
-  });
-});
+// Health check endpoints
+app.get('/health', HealthController.healthCheck);
+app.get('/health/quick', HealthController.quickStatus);
 
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/classes', classRoutes);
+app.use('/api/attendance', attendanceRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/teacher', teacherRoutes);
+app.use('/api/student', studentRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -94,13 +112,14 @@ process.on('SIGINT', async () => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`
 🚀 Student Management System API
 📌 Server running on port ${PORT}
 🌐 Environment: ${process.env.NODE_ENV || 'development'}
 👥 Developed by: DTECH TEAM
-� Health check: http://localhost:${PORT}/health
+📱 Local: http://localhost:${PORT}/health
+📱 Network: http://192.168.88.175:${PORT}/health
   `);
 });
 

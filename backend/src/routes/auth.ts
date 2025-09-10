@@ -4,7 +4,8 @@ import { requireAuth } from '../middleware/auth';
 import { 
   registerValidation, 
   loginValidation, 
-  verifyEmailValidation 
+  verifyEmailValidation,
+  verifyEmailCodeValidation
 } from '../middleware/validation';
 
 // Router instance cho authentication endpoints
@@ -26,10 +27,31 @@ router.post('/login', loginValidation, AuthController.login);
 
 /**
  * @route   GET /api/auth/verify-email/:token
- * @desc    Verify email address
+ * @desc    Verify email address (legacy - auto verify)
  * @access  Public
  */
 router.get('/verify-email/:token', verifyEmailValidation, AuthController.verifyEmail);
+
+/**
+ * @route   POST /api/auth/verify-code
+ * @desc    Verify email with verification code
+ * @access  Public
+ */
+router.post('/verify-code', AuthController.verifyEmailCode);
+
+/**
+ * @route   GET /api/auth/check-token/:token
+ * @desc    Check if verification token is valid (for frontend)
+ * @access  Public
+ */
+router.get('/check-token/:token', AuthController.checkVerificationToken);
+
+/**
+ * @route   POST /api/auth/resend-verification
+ * @desc    Resend email verification
+ * @access  Public
+ */
+router.post('/resend-verification', AuthController.resendVerification);
 
 /**
  * @route   GET /api/auth/profile

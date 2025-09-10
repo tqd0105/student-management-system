@@ -44,10 +44,12 @@ export class AuthUtils {
   }
 
   /**
-   * Generate secure random token for email verification /?token=abc123
+   * Generate 6-digit verification code for email verification
    */
   static generateEmailToken(): string {
-    return crypto.randomBytes(32).toString('hex'); /* Tạo chuỗi ngẫu nhiên 32 bytes và chuyển sang hex */
+    // Tạo mã 6 số ngẫu nhiên từ 100000 đến 999999
+    const code = Math.floor(100000 + Math.random() * 900000);
+    return code.toString();
   }
 
   /**

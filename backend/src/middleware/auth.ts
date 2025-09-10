@@ -69,6 +69,10 @@ export const requireAdmin = requireAuth(['ADMIN']);
 export const requireTeacher = requireAuth(['ADMIN', 'TEACHER']);
 export const requireStudent = requireAuth(['ADMIN', 'TEACHER', 'STUDENT']);
 
+// Aliases for backward compatibility
+export const authMiddleware = requireAuth([]);
+export const adminMiddleware = requireAuth(['ADMIN']);
+
 // Export for CommonJS compatibility
 module.exports = { 
   extractTokenFromHeader,
@@ -76,5 +80,7 @@ module.exports = {
   requireAuth,
   requireAdmin, 
   requireTeacher,
-  requireStudent
+  requireStudent,
+  authMiddleware,
+  adminMiddleware
 };

@@ -3,7 +3,7 @@ export interface UserPayload {
   email: string;
   role: 'ADMIN' | 'TEACHER' | 'STUDENT';
   name: string;
-  isEmailVerified?: boolean; // Thêm field để kiểm tra email đã verify
+  isVerified?: boolean; // Thêm field để kiểm tra email đã verify
 }
 
 export interface AuthResponse {
