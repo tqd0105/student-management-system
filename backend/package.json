@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "npm install && tsc -p tsconfig.build.json",
-    "start": "npx prisma generate && node dist/index.js",
+    "start": "npx prisma generate && node ./dist/index.js",
+    "start:debug": "pwd && ls -la && ls -la dist/ 2>/dev/null || echo 'No dist directory' && npm start",
     "postinstall": "npx prisma generate",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
