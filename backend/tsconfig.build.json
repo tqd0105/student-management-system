@@ -5,6 +5,16 @@
     "noImplicitAny": false,
     "noImplicitReturns": false,
     "skipLibCheck": true,
-    "noEmitOnError": false
-  }
+    "noEmitOnError": false,
+    "lib": ["ES2020", "DOM"],
+    "types": ["node"],
+    "moduleResolution": "node"
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "scripts",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
 }
