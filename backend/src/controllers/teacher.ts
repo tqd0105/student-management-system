@@ -179,8 +179,39 @@ export const deleteClass = async (req: AuthenticatedRequest, res: Response): Pro
       return res.status(404).json({ success: false, message: 'Class not found or access denied' });
     }
 
-    await prisma.class.delete({
-      where: { id: classId }
+    // Xóa cascade các records liên quan trước khi xóa class
+    await prisma.$transaction(async (tx) => {
+      // Lấy tất cả attendance sessions của class này
+      const sessions = await tx.attendanceSession.findMany({
+        where: { classId: classId },
+        select: { id: true }
+      });
+
+      // Xóa attendance logs của các sessions này
+      if (sessions.length > 0) {
+        await tx.attendanceLog.deleteMany({
+          where: {
+            sessionId: {
+              in: sessions.map(s => s.id)
+            }
+          }
+        });
+      }
+
+      // Xóa attendance sessions
+      await tx.attendanceSession.deleteMany({
+        where: { classId: classId }
+      });
+
+      // Xóa class enrollments
+      await tx.classEnrollment.deleteMany({
+        where: { classId: classId }
+      });
+
+      // Cuối cùng xóa class
+      await tx.class.delete({
+        where: { id: classId }
+      });
     });
 
     return res.json({

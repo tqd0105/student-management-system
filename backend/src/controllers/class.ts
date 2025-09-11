@@ -4,9 +4,10 @@
  * Quản lý lớp học, enrollment, và class schedules
  */
 
-const { Request, Response } = require('express');
-const { validationResult } = require('express-validator');
-const { PrismaClient } = require('@prisma/client');
+import { Request, Response } from 'express';
+import { validationResult } from 'express-validator';
+import { PrismaClient } from '@prisma/client';
+import { WhereCondition } from '../types';
 
 const prisma = new PrismaClient();
 
@@ -14,22 +15,24 @@ class ClassController {
   /**
    * Lấy danh sách tất cả lớp học
    */
-  static async getAllClasses(req, res) {
+  static async getAllClasses(req: Request, res: Response) {
     try {
       const { page = 1, limit = 10, teacherId, search } = req.query;
-      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const pageNum = parseInt(page as string);
+      const limitNum = parseInt(limit as string);
+      const skip = (pageNum - 1) * limitNum;
 
       // Build where condition
-      const whereCondition = {};
+      const whereCondition: WhereCondition = {};
       
       if (teacherId) {
-        whereCondition.teacherId = teacherId;
+        whereCondition.teacherId = teacherId as string;
       }
 
       if (search) {
         whereCondition.OR = [
-          { name: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } }
+          { name: { contains: search as string, mode: 'insensitive' } },
+          { description: { contains: search as string, mode: 'insensitive' } }
         ];
       }
 
@@ -55,19 +58,19 @@ class ClassController {
                 }
               }
             },
-            sessions: {
-              select: {
-                id: true,
-                title: true,
-                date: true,
-                isActive: true
-              },
-              orderBy: { date: 'desc' },
-              take: 5 // Chỉ lấy 5 sessions gần nhất
-            }
+            // sessions: {
+            //   select: {
+            //     id: true,
+            //     title: true,
+            //     date: true,
+            //     isActive: true
+            //   },
+            //   orderBy: { date: 'desc' },
+            //   take: 5 // Chỉ lấy 5 sessions gần nhất
+            // }
           },
           skip,
-          take: parseInt(limit),
+          take: limitNum,
           orderBy: { createdAt: 'desc' }
         }),
         prisma.class.count({ where: whereCondition })
@@ -79,10 +82,10 @@ class ClassController {
         data: {
           classes,
           pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
+            page: pageNum,
+            limit: limitNum,
             total,
-            totalPages: Math.ceil(total / parseInt(limit))
+            totalPages: Math.ceil(total / limitNum)
           }
         }
       });
@@ -123,22 +126,22 @@ class ClassController {
                 }
               }
             }
-          },
-          sessions: {
-            include: {
-              attendanceRecords: {
-                include: {
-                  student: {
-                    select: {
-                      id: true,
-                      name: true
-                    }
-                  }
-                }
-              }
-            },
-            orderBy: { date: 'desc' }
           }
+          // sessions: {
+          //   include: {
+          //     attendanceRecords: {
+          //       include: {
+          //         student: {
+          //           select: {
+          //             id: true,
+          //             name: true
+          //           }
+          //         }
+          //       }
+          //     }
+          //   },
+          //   orderBy: { date: 'desc' }
+          // }
         }
       });
 
@@ -337,8 +340,8 @@ class ClassController {
       const existingClass = await prisma.class.findUnique({
         where: { id },
         include: {
-          enrollments: true,
-          sessions: true
+          enrollments: true
+          // sessions: true
         }
       });
 
@@ -349,11 +352,11 @@ class ClassController {
         });
       }
 
-      // Kiểm tra có student enrollment hoặc sessions không
-      if (existingClass.enrollments.length > 0 || existingClass.sessions.length > 0) {
+      // Kiểm tra có student enrollment không
+      if (existingClass.enrollments.length > 0) {
         return res.status(400).json({
           success: false,
-          message: 'Cannot delete class with existing enrollments or sessions'
+          message: 'Cannot delete class with existing enrollments'
         });
       }
 
@@ -514,5 +517,5 @@ class ClassController {
   }
 }
 
-// Export cho CommonJS
+export { ClassController };
 module.exports = { ClassController };

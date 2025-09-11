@@ -4,10 +4,11 @@
  * Quản lý CRUD users, roles, và profiles
  */
 
-const { Request, Response } = require('express');
-const { validationResult } = require('express-validator');
-const { PrismaClient } = require('@prisma/client');
-const { hashPassword, comparePassword } = require('../utils/auth');
+import { Request, Response } from 'express';
+import { validationResult } from 'express-validator';
+import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
+import { WhereCondition } from '../types';
 
 const prisma = new PrismaClient();
 
@@ -15,28 +16,30 @@ class UserController {
   /**
    * Lấy danh sách tất cả users (Admin only)
    */
-  static async getAllUsers(req, res) {
+  static async getAllUsers(req: Request, res: Response) {
     try {
       const { page = 1, limit = 10, role, search } = req.query;
-      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const pageNum = parseInt(page as string);
+      const limitNum = parseInt(limit as string);
+      const skip = (pageNum - 1) * limitNum;
 
       // Build where condition
-      const whereCondition = {};
+      const whereCondition: WhereCondition = {};
       
-      if (role && ['ADMIN', 'TEACHER', 'STUDENT'].includes(role)) {
-        whereCondition.role = role;
+      if (role && ['ADMIN', 'TEACHER', 'STUDENT'].includes(role as string)) {
+        whereCondition.role = role as string;
       }
 
       if (search) {
         whereCondition.OR = [
-          { name: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } }
+          { name: { contains: search as string, mode: 'insensitive' } },
+          { email: { contains: search as string, mode: 'insensitive' } }
         ];
       }
 
       const [users, total] = await Promise.all([
         prisma.user.findMany({
-          where: whereCondition,
+          where: whereCondition as any,
           select: {
             id: true,
             email: true,
@@ -46,10 +49,10 @@ class UserController {
             updatedAt: true
           },
           skip, 
-          take: parseInt(limit),
+          take: limitNum,
           orderBy: { createdAt: 'desc' }
         }),
-        prisma.user.count({ where: whereCondition })
+        prisma.user.count({ where: whereCondition as any })
       ]);
 
       res.status(200).json({
@@ -58,10 +61,10 @@ class UserController {
         data: {
           users,
           pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
+            page: pageNum,
+            limit: limitNum,
             total,
-            totalPages: Math.ceil(total / parseInt(limit))
+            totalPages: Math.ceil(total / limitNum)
           }
         }
       });
@@ -145,7 +148,7 @@ class UserController {
       }
 
       // Hash password
-      const hashedPassword = await hashPassword(password);
+      const hashedPassword = await bcrypt.hash(password, 12);
 
       // Tạo user mới
       const user = await prisma.user.create({
@@ -288,7 +291,7 @@ class UserController {
       }
 
       // Verify current password
-      const isCurrentPasswordValid = await comparePassword(currentPassword, user.password);
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
       if (!isCurrentPasswordValid) {
         return res.status(401).json({
           success: false,
@@ -297,7 +300,7 @@ class UserController {
       }
 
       // Hash new password
-      const hashedNewPassword = await hashPassword(newPassword);
+      const hashedNewPassword = await bcrypt.hash(newPassword, 12);
 
       // Update password
       await prisma.user.update({
@@ -512,6 +515,4 @@ class UserController {
   }
 }
 
-// Export cho CommonJS và ES6
-module.exports = { UserController };
 export { UserController };
