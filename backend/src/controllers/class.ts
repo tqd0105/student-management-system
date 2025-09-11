@@ -518,4 +518,3 @@ class ClassController {
 }
 
 export { ClassController };
-module.exports = { ClassController };

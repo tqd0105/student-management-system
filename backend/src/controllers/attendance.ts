@@ -584,6 +584,3 @@ class AttendanceController {
 }
 
 export { AttendanceController };
-
-// Export cho CommonJS
-module.exports = { AttendanceController };

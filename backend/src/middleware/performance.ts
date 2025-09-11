@@ -37,5 +37,5 @@ class PerformanceMonitor {
   }
 }
 
-module.exports = { PerformanceMonitor };
+export { PerformanceMonitor };
 export default PerformanceMonitor;
