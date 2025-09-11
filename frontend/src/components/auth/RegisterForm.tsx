@@ -189,7 +189,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
 
   if (step === "verify") {
     return (
-      <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <div className="bg-white py-8 px-4 shadow rounded-lg sm:px-10 mx-4 sm:mx-0">
         {/* Header */}
         <div className="text-center mb-6">
           <div className="mx-auto h-12 w-12 bg-green-500 rounded-full flex items-center justify-center">
