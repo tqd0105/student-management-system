@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "npm ci && tsc -p tsconfig.build.json",
+    "build": "tsc",
     "start": "npx prisma generate && node dist/index.js",
     "postinstall": "npx prisma generate",
     "db:generate": "prisma generate",
