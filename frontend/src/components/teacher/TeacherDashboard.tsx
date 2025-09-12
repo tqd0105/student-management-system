@@ -109,9 +109,9 @@ export default function TeacherDashboard() {
         if (session.isActive && session.qrExpiresAt) {
           const expiresAt = new Date(session.qrExpiresAt);
           if (now > expiresAt) {
-            console.log(
-              `⏰ Session ${session.id} QR has expired, auto-stopping...`
-            );
+            // console.log(
+            //   `⏰ Session ${session.id} QR has expired, auto-stopping...`
+            // );
             try {
               const token = localStorage.getItem("token");
               await fetch(
@@ -149,7 +149,7 @@ export default function TeacherDashboard() {
       qrDataCache.forEach((qrData, sessionId) => {
         const expiresAt = new Date(qrData.expiresAt);
         if (now > expiresAt) {
-          console.log(`⏰ Removing expired QR from cache: ${sessionId}`);
+          // console.log(`⏰ Removing expired QR from cache: ${sessionId}`);
           setQrDataCache((prev) => {
             const newCache = new Map(prev);
             newCache.delete(sessionId);
@@ -239,7 +239,7 @@ export default function TeacherDashboard() {
 
         // Cập nhật cache với active QR sessions
         setQrDataCache(activeQRSessions);
-        console.log(`🔄 Restored ${activeQRSessions.size} active QR sessions from server`);
+        // console.log(`🔄 Restored ${activeQRSessions.size} active QR sessions from server`);
       }
     } catch (error) {
       console.error("Error fetching active QR sessions:", error);
@@ -286,7 +286,7 @@ export default function TeacherDashboard() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Sessions fetched:", data);
+        // console.log("Sessions fetched:", data);
         setSessions(data.data || []);
       } else {
         const errorData = await response.json();
@@ -393,22 +393,22 @@ export default function TeacherDashboard() {
   const createSession = async () => {
     if (!selectedClass) return;
 
-    console.log("Creating session for class:", selectedClass);
-    console.log("Session title:", newSessionTitle);
+    // console.log("Creating session for class:", selectedClass);
+    // console.log("Session title:", newSessionTitle);
 
     try {
       const token = localStorage.getItem("token");
-      console.log("Using token:", token ? "Token exists" : "No token");
+      // console.log("Using token:", token ? "Token exists" : "No token");
 
       const url = `${API_BASE_URL}/api/teacher/classes/${selectedClass.id}/sessions`;
-      console.log("POST URL:", url);
+      // console.log("POST URL:", url);
 
       const body = {
         title:
           newSessionTitle ||
           `Bài học ${new Date().toLocaleDateString("vi-VN")}`,
       };
-      console.log("Request body:", body);
+      // console.log("Request body:", body);
 
       const response = await fetch(url, {
         method: "POST",
@@ -419,12 +419,12 @@ export default function TeacherDashboard() {
         body: JSON.stringify(body),
       });
 
-      console.log("Response status:", response.status);
-      console.log("Response headers:", response.headers);
+      // console.log("Response status:", response.status);
+      // console.log("Response headers:", response.headers);
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Session created successfully:", data);
+        // console.log("Session created successfully:", data);
         fetchClassSessions(selectedClass.id);
         setIsCreateSessionModalOpen(false);
         setNewSessionTitle("");
@@ -444,7 +444,7 @@ export default function TeacherDashboard() {
 
   const generateQR = async (sessionId: string) => {
     try {
-      console.log("🔄 Generating QR for session:", sessionId);
+      // console.log("🔄 Generating QR for session:", sessionId);
       const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_BASE_URL}/api/teacher/sessions/${sessionId}/qr`,
@@ -457,20 +457,20 @@ export default function TeacherDashboard() {
         }
       );
 
-      console.log("🔄 QR Response status:", response.status);
+      // console.log("🔄 QR Response status:", response.status);
 
       if (response.ok) {
         const data = await response.json();
-        console.log("✅ QR Data received:", data);
-        console.log("🔍 QR Image URL:", data.data?.qrImageUrl);
+        // console.log("✅ QR Data received:", data);
+        // console.log("🔍 QR Image URL:", data.data?.qrImageUrl);
 
         // Save QR data to cache
         setQrDataCache((prev) => {
           const newCache = new Map(prev);
-          console.log("💾 Saving QR to cache with sessionId:", sessionId);
-          console.log("💾 QR data being saved:", data.data);
+          // console.log("💾 Saving QR to cache with sessionId:", sessionId);
+          // console.log("💾 QR data being saved:", data.data);
           newCache.set(sessionId, data.data);
-          console.log("💾 Cache after save:", newCache);
+          // console.log("💾 Cache after save:", newCache);
           return newCache;
         });
 
@@ -494,11 +494,11 @@ export default function TeacherDashboard() {
 
     try {
       const token = localStorage.getItem("token");
-      console.log("🛑 Stopping session:", sessionId);
-      console.log(
-        "🔗 API URL:",
-        `${API_BASE_URL}/api/teacher/sessions/${sessionId}/end`
-      );
+      // console.log("🛑 Stopping session:", sessionId);
+      // console.log(
+      //   "🔗 API URL:",
+      //   `${API_BASE_URL}/api/teacher/sessions/${sessionId}/end`
+      // );
 
       const response = await fetch(
         `${API_BASE_URL}/api/teacher/sessions/${sessionId}/end`,
@@ -511,16 +511,16 @@ export default function TeacherDashboard() {
         }
       );
 
-      console.log("📡 Response status:", response.status);
-      console.log("📡 Response ok:", response.ok);
+      // console.log("📡 Response status:", response.status);
+      // console.log("📡 Response ok:", response.ok);
 
       if (response.ok) {
         // Remove from cache immediately when session ends
         setQrDataCache((prev) => {
           const newCache = new Map(prev);
           newCache.delete(sessionId);
-          console.log("🗑️ Removed QR from cache for session:", sessionId);
-          console.log("📦 Cache after removal:", newCache);
+          // console.log("🗑️ Removed QR from cache for session:", sessionId);
+          // console.log("📦 Cache after removal:", newCache);
           return newCache;
         });
 
@@ -529,10 +529,10 @@ export default function TeacherDashboard() {
 
         // Only refresh sessions if we're in a session modal
         if (selectedClass?.id) {
-          console.log("🔄 Refreshing sessions for class:", selectedClass.id);
+          // console.log("🔄 Refreshing sessions for class:", selectedClass.id);
           fetchClassSessions(selectedClass.id);
         } else {
-          console.log("ℹ️ No selected class, skipping session refresh");
+          // console.log("ℹ️ No selected class, skipping session refresh");
         }
 
         alert("✅ QR code stopped successfully!");
@@ -563,11 +563,11 @@ export default function TeacherDashboard() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("✅ Resume response:", data);
+        // console.log("✅ Resume response:", data);
 
         // Backend resumeSession returns updatedSession with qrCode (base64) and qrExpiresAt
         if (data.data && data.data.qrCode) {
-          console.log("💾 Saving resumed QR data to cache");
+          // console.log("💾 Saving resumed QR data to cache");
 
           // Find session info for complete QRData
           const sessionInfo = sessions.find((s: Session) => s.id === sessionId);
@@ -590,7 +590,7 @@ export default function TeacherDashboard() {
             return newCache;
           });
         } else {
-          console.log("⚠️ No QR data in resume response");
+          // console.log("⚠️ No QR data in resume response");
         }
 
         fetchClassSessions(selectedClass?.id || ""); // Refresh sessions
@@ -798,8 +798,8 @@ export default function TeacherDashboard() {
         startTime: editSessionDate,
       };
 
-      console.log("🔄 Updating session:", editingSession.id);
-      console.log("📤 Payload:", payload);
+      // console.log("🔄 Updating session:", editingSession.id);
+      // console.log("📤 Payload:", payload);
 
       const response = await fetch(
         `${API_BASE_URL}/api/teacher/sessions/${editingSession.id}`,
@@ -813,11 +813,11 @@ export default function TeacherDashboard() {
         }
       );
 
-      console.log("📥 Response status:", response.status);
+      // console.log("📥 Response status:", response.status);
 
       if (response.ok) {
         const data = await response.json();
-        console.log("✅ Success:", data);
+        // console.log("✅ Success:", data);
         setIsEditSessionModalOpen(false);
         setEditingSession(null);
         setEditSessionTitle("");
@@ -1758,8 +1758,8 @@ export default function TeacherDashboard() {
             <div className="flex space-x-3">
               <button
                 onClick={() => {
-                  console.log("🔙 Closing QR modal, keeping cache intact");
-                  console.log("🔍 Current cache before close:", qrDataCache);
+                  // console.log("🔙 Closing QR modal, keeping cache intact");
+                  // console.log("🔍 Current cache before close:", qrDataCache);
                   setShowQRModal(false);
                 }}
                 className="flex-1 bg-gray-500 text-white p-2 rounded-full shadow-2xl hover:bg-gray-600 cursor-pointer"

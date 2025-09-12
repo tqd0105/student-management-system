@@ -51,39 +51,39 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
     const file = event.target.files?.[0];
     if (!file) return;
 
-    console.log('📁 File selected:', {
-      name: file.name,
-      size: file.size,
-      type: file.type
-    });
+    // console.log('📁 File selected:', {
+    //   name: file.name,
+    //   size: file.size,
+    //   type: file.type
+    // });
 
     setLoading(true);
     setError(null);
 
     try {
-      console.log('� Starting QR processing...');
+      // console.log('🔥 Starting QR processing...');
       const qrData = await processImageFile(file);
       
       if (qrData) {
-        console.log('✅ QR Code detected successfully:', qrData);
-        console.log('🔍 QR Data type:', typeof qrData);
-        console.log('📏 QR Data length:', qrData.length);
-        console.log('🧪 QR Data preview:', qrData.substring(0, 100) + (qrData.length > 100 ? '...' : ''));
+        // console.log('✅ QR Code detected successfully:', qrData);
+        // console.log('🔍 QR Data type:', typeof qrData);
+        // console.log('📏 QR Data length:', qrData.length);
+        // console.log('🧪 QR Data preview:', qrData.substring(0, 100) + (qrData.length > 100 ? '...' : ''));
         
         // Try to parse and validate QR data format
         try {
           const parsedQR = JSON.parse(qrData);
-          console.log('✅ Parsed QR object:', parsedQR);
-          console.log('🔑 QR Keys:', Object.keys(parsedQR));
-          console.log('📋 QR Values:', {
-            sessionId: parsedQR.sessionId,
-            qrCode: parsedQR.qrCode,
-            classId: parsedQR.classId,
-            timestamp: parsedQR.timestamp
-          });
+          // console.log('✅ Parsed QR object:', parsedQR);
+          // console.log('🔑 QR Keys:', Object.keys(parsedQR));
+          // console.log('📋 QR Values:', {
+          //   sessionId: parsedQR.sessionId,
+          //   qrCode: parsedQR.qrCode,
+          //   classId: parsedQR.classId,
+          //   timestamp: parsedQR.timestamp
+          // });
         } catch (parseError) {
-          console.error('❌ QR Data is not valid JSON:', parseError);
-          console.log('📄 Raw QR Data:', qrData);
+          // console.error('❌ QR Data is not valid JSON:', parseError);
+          // console.log('📄 Raw QR Data:', qrData);
         }
         
         setSuccess('✅ QR code đã được quét thành công!');
@@ -96,11 +96,11 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
           onClose();
         }, 1000);
       } else {
-        console.warn('❌ No QR code found in image');
+        // console.warn('❌ No QR code found in image');
         setError('QR code not found in image. Make sure QR code is clear and complete, shoot at appropriate distance and ensure adequate lighting!');
       }
     } catch (fileError) {
-      console.error('❌ File processing error:', fileError);
+      // console.error('❌ File processing error:', fileError);
       setError('❌ Lỗi xử lý file hình ảnh: ' + (fileError instanceof Error ? fileError.message : 'Unknown error'));
     } finally {
       setLoading(false);
@@ -113,18 +113,18 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
 
   const processImageFile = (file: File): Promise<string | null> => {
     return new Promise((resolve, reject) => {
-      console.log('📄 Reading file...');
-      console.log('📱 File details:', {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        lastModified: new Date(file.lastModified).toISOString()
-      });
+      // console.log('📄 Reading file...');
+      // console.log('📱 File details:', {
+      //   name: file.name,
+      //   size: file.size,
+      //   type: file.type,
+      //   lastModified: new Date(file.lastModified).toISOString()
+      // });
       
       const reader = new FileReader();
       
       reader.onerror = () => {
-        console.error('❌ FileReader error');
+        // console.error('❌ FileReader error');
         reject(new Error('Failed to read file')); 
       };
       
@@ -136,22 +136,22 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
             return;
           }
 
-          console.log('🖼️ Creating image...');
+          // console.log('🖼️ Creating image...');
           const img = new Image();
           
           img.onerror = () => {
-            console.error('❌ Image load error');
+            // console.error('❌ Image load error');
             reject(new Error('Failed to load image'));
           };
           
           img.onload = () => {
             try {
-              console.log('🎨 Original image:', {
-                width: img.width,
-                height: img.height,
-                naturalWidth: img.naturalWidth,
-                naturalHeight: img.naturalHeight
-              });
+              // console.log('🎨 Original image:', {
+              //   width: img.width,
+              //   height: img.height,
+              //   naturalWidth: img.naturalWidth,
+              //   naturalHeight: img.naturalHeight
+              // });
 
               const canvas = document.createElement('canvas');
               const ctx = canvas.getContext('2d');
@@ -171,11 +171,11 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
                 const scale = Math.min(maxSize / canvasWidth, maxSize / canvasHeight);
                 canvasWidth = Math.floor(canvasWidth * scale);
                 canvasHeight = Math.floor(canvasHeight * scale);
-                console.log('📏 Scaling image:', { 
-                  original: { width: img.width, height: img.height },
-                  scaled: { width: canvasWidth, height: canvasHeight },
-                  scale 
-                });
+                // console.log('📏 Scaling image:', { 
+                //   original: { width: img.width, height: img.height },
+                //   scaled: { width: canvasWidth, height: canvasHeight },
+                //   scale 
+                // });
               }
 
               // Set canvas size
@@ -188,16 +188,16 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
               
               // Draw image to canvas with scaling
               ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
-              console.log('🎨 Image drawn to canvas:', { width: canvasWidth, height: canvasHeight });
+              // console.log('🎨 Image drawn to canvas:', { width: canvasWidth, height: canvasHeight });
 
               // Get image data
               const imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
-              console.log('📊 Image data extracted:', {
-                width: imageData.width,
-                height: imageData.height,
-                dataLength: imageData.data.length,
-                bytesPerPixel: imageData.data.length / (imageData.width * imageData.height)
-              });
+              // console.log('📊 Image data extracted:', {
+              //   width: imageData.width,
+              //   height: imageData.height,
+              //   dataLength: imageData.data.length,
+              //   bytesPerPixel: imageData.data.length / (imageData.width * imageData.height)
+              // });
 
               // Try multiple QR detection methods with different approaches
               const attempts: Array<{ 
@@ -212,24 +212,24 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
 
               // Try detection on original size first
               for (let i = 0; i < attempts.length; i++) {
-                console.log(`🔍 QR detection attempt ${i + 1}: ${attempts[i].description}`);
+                // console.log(`🔍 QR detection attempt ${i + 1}: ${attempts[i].description}`);
                 
                 try {
                   const qrCode = jsQR(imageData.data, imageData.width, imageData.height, attempts[i]);
                   
                   if (qrCode && qrCode.data) {
-                    console.log('✅ QR Code found on attempt', i + 1, ':', qrCode.data);
+                    // console.log('✅ QR Code found on attempt', i + 1, ':', qrCode.data);
                     resolve(qrCode.data);
                     return;
                   }
                 } catch (qrError) {
-                  console.warn(`⚠️ QR detection attempt ${i + 1} failed:`, qrError);
+                  // console.warn(`⚠️ QR detection attempt ${i + 1} failed:`, qrError);
                 }
               }
 
               // If not found, try with different canvas sizes for mobile images
               if (img.width !== canvasWidth || img.height !== canvasHeight) {
-                console.log('🔄 Trying with different scales...');
+                // console.log('🔄 Trying with different scales...');
                 
                 const scales = [0.8, 1.2, 0.6, 1.5];
                 for (const scale of scales) {
@@ -240,7 +240,7 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
                     continue; // Skip invalid sizes
                   }
                   
-                  console.log(`🔍 Trying scale ${scale}:`, { width: newWidth, height: newHeight });
+                  // console.log(`🔍 Trying scale ${scale}:`, { width: newWidth, height: newHeight });
                   
                   canvas.width = newWidth;
                   canvas.height = newHeight;
@@ -255,7 +255,7 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
                       const qrCode = jsQR(scaledImageData.data, scaledImageData.width, scaledImageData.height, attempts[j]);
                       
                       if (qrCode && qrCode.data) {
-                        console.log(`✅ QR Code found with scale ${scale}, attempt ${j + 1}:`, qrCode.data);
+                        // console.log(`✅ QR Code found with scale ${scale}, attempt ${j + 1}:`, qrCode.data);
                         resolve(qrCode.data);
                         return;
                       }
@@ -267,7 +267,7 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
               }
 
               // If still not found, try enhancing contrast
-              console.log('🔄 Trying contrast enhancement...');
+              // console.log('🔄 Trying contrast enhancement...');
               try {
                 // Reset to original scaled size
                 canvas.width = canvasWidth;
@@ -297,31 +297,31 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
                     const qrCode = jsQR(finalImageData.data, finalImageData.width, finalImageData.height, attempts[k]);
                     
                     if (qrCode && qrCode.data) {
-                      console.log(`✅ QR Code found with contrast enhancement, attempt ${k + 1}:`, qrCode.data);
+                      // console.log(`✅ QR Code found with contrast enhancement, attempt ${k + 1}:`, qrCode.data);
                       resolve(qrCode.data);
                       return;
                     }
                   } catch (qrError) {
-                    console.warn(`⚠️ Enhanced detection attempt ${k + 1} failed:`, qrError);
+                    // console.warn(`⚠️ Enhanced detection attempt ${k + 1} failed:`, qrError);
                   }
                 }
               } catch (enhanceError) {
-                console.warn('⚠️ Contrast enhancement failed:', enhanceError);
+                // console.warn('⚠️ Contrast enhancement failed:', enhanceError);
               }
 
               // If no QR code found with any method
-              console.warn('❌ No QR code detected with any method');
-              console.log('🔍 Final image analysis:', {
-                finalWidth: canvasWidth,
-                finalHeight: canvasHeight,
-                attemptsTotal: attempts.length,
-                scalesAttempted: 4,
-                contrastEnhanced: true
-              });
+              // console.warn('❌ No QR code detected with any method');
+              // console.log('🔍 Final image analysis:', {
+              //   finalWidth: canvasWidth,
+              //   finalHeight: canvasHeight,
+              //   attemptsTotal: attempts.length,
+              //   scalesAttempted: 4,
+              //   contrastEnhanced: true
+              // });
               resolve(null);
               
             } catch (canvasError) {
-              console.error('❌ Canvas processing error:', canvasError);
+              // console.error('❌ Canvas processing error:', canvasError);
               reject(canvasError);
             }
           };
@@ -329,7 +329,7 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
           img.src = result as string;
           
         } catch (imgError) {
-          console.error('❌ Image processing error:', imgError);
+          // console.error('❌ Image processing error:', imgError);
           reject(imgError);
         }
       };

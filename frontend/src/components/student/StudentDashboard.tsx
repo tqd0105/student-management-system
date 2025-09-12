@@ -87,7 +87,7 @@ export default function StudentDashboard() {
         }));
       }
     } catch (error) {
-      console.error('Error fetching classes:', error);
+      // console.error('Error fetching classes:', error);
     } finally {
       setLoading(false);
     }
@@ -121,41 +121,41 @@ export default function StudentDashboard() {
         }));
       }
     } catch (error) {
-      console.error('Error fetching student stats:', error);
+      // console.error('Error fetching student stats:', error);
     }
   };
 
   const handleQRScan = async (qrCode: string) => {
-    console.log('🔥 QR Scan started!');
-    console.log('📊 QR Code received:', qrCode);
-    console.log('🔍 QR Code type:', typeof qrCode);
-    console.log('📏 QR Code length:', qrCode.length);
-    console.log('🧪 QR Code preview:', qrCode.substring(0, 100) + (qrCode.length > 100 ? '...' : ''));
+    // console.log('🔥 QR Scan started!');
+    // console.log('📊 QR Code received:', qrCode);
+    // console.log('🔍 QR Code type:', typeof qrCode);
+    // console.log('📏 QR Code length:', qrCode.length);
+    // console.log('🧪 QR Code preview:', qrCode.substring(0, 100) + (qrCode.length > 100 ? '...' : ''));
     
     // Validate QR format before sending
     try {
       const parsedQR = JSON.parse(qrCode);
-      console.log('✅ QR validation successful:', parsedQR);
-      console.log('🔑 Required fields check:', {
-        hasSessionId: !!parsedQR.sessionId,
-        hasQrCode: !!parsedQR.qrCode,
-        hasClassId: !!parsedQR.classId,
-        hasTimestamp: !!parsedQR.timestamp
-      });
+      // console.log('✅ QR validation successful:', parsedQR);
+      // console.log('🔑 Required fields check:', {
+      //   hasSessionId: !!parsedQR.sessionId,
+      //   hasQrCode: !!parsedQR.qrCode,
+      //   hasClassId: !!parsedQR.classId,
+      //   hasTimestamp: !!parsedQR.timestamp
+      // });
     } catch (validateError) {
-      console.error('❌ QR validation failed:', validateError);
+      // console.error('❌ QR validation failed:', validateError);
       setScanResult('❌ Invalid QR code format');
       setIsQRScannerOpen(false);
       return;
     }
     
     try {
-      console.log('🌐 Sending API request...');
+      // console.log('🌐 Sending API request...');
       const response = await ApiService.scanQRAndCheckIn(qrCode);
-      console.log('✅ Response data:', response);
+      // console.log('✅ Response data:', response);
 
       if (response.success) {
-        console.log('✅ Scan successful!');
+        // console.log('✅ Scan successful!');
         setScanResult(`✅ ${response.message || 'Check-in successful! You have been marked as present.'}`);
         setIsQRScannerOpen(false);
         
@@ -165,12 +165,12 @@ export default function StudentDashboard() {
         // Auto-hide success message after 5 seconds
         setTimeout(() => setScanResult(''), 5000);
       } else {
-        console.log('❌ Scan failed:', response.message);
+        // console.log('❌ Scan failed:', response.message);
         setScanResult(`❌ Error: ${response.message || 'Check-in failed'}`);
         setIsQRScannerOpen(false);
       }
     } catch (error) {
-      console.error('❌ QR Scan error:', error);
+      // console.error('❌ QR Scan error:', error);
       
       // More detailed error message
       let errorMessage = '❌ Network error. Please try again.';
@@ -218,7 +218,7 @@ export default function StudentDashboard() {
         alert(`❌ Failed to delete account: ${data.message}`);
       }
     } catch (error) {
-      console.error('Delete account error:', error);
+      // console.error('Delete account error:', error);
       alert('❌ An error occurred while deleting your account. Please try again.');
     }
   };
