@@ -9,6 +9,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import ApiService from "@/services/ApiService";
+import { API_BASE_URL } from "@/config/api";
 import { Input } from "../ui/input";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -117,7 +118,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
 
     try {
       // Real API call for email verification
-      const response = await fetch("http://192.168.88.175:3001/api/auth/verify-code", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-code`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -162,7 +163,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     setSuccess("");
     
     try {
-      const response = await fetch("http://192.168.88.175:3001/api/auth/resend-verification", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/resend-verification`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -189,7 +190,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
 
   if (step === "verify") {
     return (
-      <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <div className="bg-white py-8 px-4 shadow rounded-lg sm:px-10 mx-4 sm:mx-0">
         {/* Header */}
         <div className="text-center mb-6">
           <div className="mx-auto h-12 w-12 bg-green-500 rounded-full flex items-center justify-center">

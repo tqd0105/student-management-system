@@ -94,13 +94,12 @@ export class AuthUtils {
   }
 }
 
-// Export for CommonJS compatibility
-module.exports = { 
-  AuthUtils,
-  generateToken: AuthUtils.generateToken,
-  verifyToken: AuthUtils.verifyToken,
-  hashPassword: AuthUtils.hashPassword,
-  comparePassword: AuthUtils.comparePassword,
-  generateEmailToken: AuthUtils.generateEmailToken,
-  validatePassword: AuthUtils.validatePassword
-};
+// ES module exports - individual functions
+export const {
+  generateToken,
+  verifyToken,
+  hashPassword,
+  comparePassword,
+  generateEmailToken,
+  validatePassword
+} = AuthUtils;

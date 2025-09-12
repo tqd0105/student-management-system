@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { API_BASE_URL } from "@/config/api";
 import {
   Plus,
   Users,
@@ -114,7 +115,7 @@ export default function TeacherDashboard() {
             try {
               const token = localStorage.getItem("token");
               await fetch(
-                `http://192.168.88.175:3001/api/teacher/sessions/${session.id}/end`,
+                `${API_BASE_URL}/api/teacher/sessions/${session.id}/end`,
                 {
                   method: "POST",
                   headers: {
@@ -167,7 +168,7 @@ export default function TeacherDashboard() {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        "http://192.168.88.175:3001/api/teacher/classes",
+        `${API_BASE_URL}/api/teacher/classes`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -184,7 +185,7 @@ export default function TeacherDashboard() {
         for (const cls of data.data) {
           // Fetch sessions cho mỗi class
           const sessionsResponse = await fetch(
-            `http://192.168.88.175:3001/api/teacher/classes/${cls.id}/sessions`,
+            `${API_BASE_URL}/api/teacher/classes/${cls.id}/sessions`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -249,7 +250,7 @@ export default function TeacherDashboard() {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        "http://192.168.88.175:3001/api/teacher/classes",
+        `${API_BASE_URL}/api/teacher/classes`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -274,7 +275,7 @@ export default function TeacherDashboard() {
       setSessionsLoading(true);
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://192.168.88.175:3001/api/teacher/classes/${classId}/sessions`,
+        `${API_BASE_URL}/api/teacher/classes/${classId}/sessions`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -308,7 +309,7 @@ export default function TeacherDashboard() {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        "http://192.168.88.175:3001/api/teacher/classes",
+        `${API_BASE_URL}/api/teacher/classes`,
         {
           method: "POST",
           headers: {
@@ -339,7 +340,7 @@ export default function TeacherDashboard() {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://192.168.88.175:3001/api/teacher/classes/${selectedClassForStudent.id}/students`,
+        `${API_BASE_URL}/api/teacher/classes/${selectedClassForStudent.id}/students`,
         {
           method: "POST",
           headers: {
@@ -372,7 +373,7 @@ export default function TeacherDashboard() {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://192.168.88.175:3001/api/teacher/classes/${classId}/students/${studentId}`,
+        `${API_BASE_URL}/api/teacher/classes/${classId}/students/${studentId}`,
         {
           method: "DELETE",
           headers: {
@@ -399,7 +400,7 @@ export default function TeacherDashboard() {
       const token = localStorage.getItem("token");
       console.log("Using token:", token ? "Token exists" : "No token");
 
-      const url = `http://192.168.88.175:3001/api/teacher/classes/${selectedClass.id}/sessions`;
+      const url = `${API_BASE_URL}/api/teacher/classes/${selectedClass.id}/sessions`;
       console.log("POST URL:", url);
 
       const body = {
@@ -446,7 +447,7 @@ export default function TeacherDashboard() {
       console.log("🔄 Generating QR for session:", sessionId);
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://192.168.88.175:3001/api/teacher/sessions/${sessionId}/qr`,
+        `${API_BASE_URL}/api/teacher/sessions/${sessionId}/qr`,
         {
           method: "POST",
           headers: {
@@ -496,11 +497,11 @@ export default function TeacherDashboard() {
       console.log("🛑 Stopping session:", sessionId);
       console.log(
         "🔗 API URL:",
-        `http://192.168.88.175:3001/api/teacher/sessions/${sessionId}/end`
+        `${API_BASE_URL}/api/teacher/sessions/${sessionId}/end`
       );
 
       const response = await fetch(
-        `http://192.168.88.175:3001/api/teacher/sessions/${sessionId}/end`,
+        `${API_BASE_URL}/api/teacher/sessions/${sessionId}/end`,
         {
           method: "POST",
           headers: {
@@ -550,7 +551,7 @@ export default function TeacherDashboard() {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://192.168.88.175:3001/api/teacher/sessions/${sessionId}/resume`,
+        `${API_BASE_URL}/api/teacher/sessions/${sessionId}/resume`,
         {
           method: "POST",
           headers: {
@@ -615,7 +616,7 @@ export default function TeacherDashboard() {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://192.168.88.175:3001/api/teacher/sessions/${sessionId}`,
+        `${API_BASE_URL}/api/teacher/sessions/${sessionId}`,
         {
           method: "DELETE",
           headers: {
@@ -654,7 +655,7 @@ export default function TeacherDashboard() {
       setSessionStatsLoading(prev => new Set([...prev, sessionId]));
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://192.168.88.175:3001/api/teacher/sessions/${sessionId}/stats`,
+        `${API_BASE_URL}/api/teacher/sessions/${sessionId}/stats`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -691,7 +692,7 @@ export default function TeacherDashboard() {
       setClassStatsLoading(true);
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://192.168.88.175:3001/api/teacher/classes/${classId}/stats`,
+        `${API_BASE_URL}/api/teacher/classes/${classId}/stats`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -743,7 +744,7 @@ export default function TeacherDashboard() {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://192.168.88.175:3001/api/teacher/sessions/${sessionId}/qr`,
+        `${API_BASE_URL}/api/teacher/sessions/${sessionId}/qr`,
         {
           method: "DELETE",
           headers: {
@@ -801,7 +802,7 @@ export default function TeacherDashboard() {
       console.log("📤 Payload:", payload);
 
       const response = await fetch(
-        `http://192.168.88.175:3001/api/teacher/sessions/${editingSession.id}`,
+        `${API_BASE_URL}/api/teacher/sessions/${editingSession.id}`,
         {
           method: "PUT",
           headers: {
@@ -842,7 +843,7 @@ export default function TeacherDashboard() {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://192.168.88.175:3001/api/teacher/classes/${classId}`,
+        `${API_BASE_URL}/api/teacher/classes/${classId}`,
         {
           method: "DELETE",
           headers: {
@@ -871,7 +872,7 @@ export default function TeacherDashboard() {
     try {
       const response = await fetch(
         `${
-          process.env.NEXT_PUBLIC_API_URL || "http://192.168.88.175:3001"
+          process.env.NEXT_PUBLIC_API_URL || "${API_BASE_URL}"
         }/api/users/delete-account`,
         {
           method: "DELETE",

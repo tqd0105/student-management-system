@@ -3,7 +3,7 @@
  * Student Management System - DTECH TEAM
  */
 
-const { Request, Response, NextFunction } = require('express');
+import { Request, Response, NextFunction } from 'express';
 
 class PerformanceMonitor {
   static responseTime() {
@@ -37,5 +37,5 @@ class PerformanceMonitor {
   }
 }
 
-module.exports = { PerformanceMonitor };
+export { PerformanceMonitor };
 export default PerformanceMonitor;

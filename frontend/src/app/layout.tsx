@@ -48,7 +48,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <head>
-        <link rel="icon" href="/images/logo.png?v=1" sizes="any" />
+        <link rel="icon" href="/images/logo.png" sizes="any" />
         {/* <link rel="icon" href="/images/logo.png?v=2" type="image/png" sizes="32x32" />
         <link rel="icon" href="/images/logo.png?v=3" type="image/png" sizes="16x16" />
         <link rel="apple-touch-icon" href="/images/logo.png" /> */}

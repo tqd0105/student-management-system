@@ -4,8 +4,8 @@
  * Generate và validate QR codes cho attendance system
  */
 
-const crypto = require('crypto'); /* Tạo mã hoá, token, hash (qr có thời hạn, mã hoá mk, verifyToken để xác thực mail) */
-const QRCode = require('qrcode'); /* Tạo mã qr từ chuỗi, url, anydata */
+import * as crypto from 'crypto'; /* Tạo mã hoá, token, hash (qr có thời hạn, mã hoá mk, verifyToken để xác thực mail) */
+import * as QRCode from 'qrcode'; /* Tạo mã qr từ chuỗi, url, anydata */
 
 class QRService {
   /**
@@ -32,7 +32,7 @@ class QRService {
           dark: '#000000',
           light: '#FFFFFF'
         },
-        errorCorrectionLevel: 'M'
+        errorCorrectionLevel: 'M' as const
       };
 
       const qrOptions = { ...defaultOptions, ...options };
@@ -247,5 +247,4 @@ class QRService {
   }
 }
 
-// Export cho CommonJS
-module.exports = { QRService };
+export { QRService };

@@ -38,6 +38,20 @@ export interface CheckInRequest {
   longitude?: number;
 }
 
+export interface AuthenticatedRequest extends Request {
+  user: UserPayload;
+}
+
+export interface WhereCondition {
+  teacherId?: string;
+  role?: string;
+  OR?: Array<{
+    name?: { contains: string; mode: 'insensitive' };
+    email?: { contains: string; mode: 'insensitive' };
+    description?: { contains: string; mode: 'insensitive' };
+  }>;
+}
+
 declare global {
   namespace Express {
     interface Request {

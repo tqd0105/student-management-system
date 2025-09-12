@@ -195,4 +195,3 @@ export class EmailService {
 
 // Export singleton 
 export const emailService = new EmailService();
-module.exports = { EmailService, emailService };

@@ -4,10 +4,10 @@
  * Quản lý QR attendance sessions và attendance records
  */
 
-const { Request, Response } = require('express');
-const { validationResult } = require('express-validator');
-const { PrismaClient } = require('@prisma/client');
-const crypto = require('crypto');
+import { Request, Response } from 'express';
+import { validationResult } from 'express-validator';
+import { PrismaClient } from '@prisma/client';
+import * as crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -112,7 +112,7 @@ class AttendanceController {
       const skip = (parseInt(page) - 1) * parseInt(limit);
 
       // Kiểm tra user có quyền xem class này không
-      let whereCondition = { classId };
+      let whereCondition: any = { classId };
       
       if (req.user.role === 'TEACHER') {
         whereCondition.teacherId = req.user.userId;
@@ -301,7 +301,7 @@ class AttendanceController {
           studentId,
           sessionId: session.id,
           deviceId,
-          status,
+          status: status as any,
           latitude: latitude ? parseFloat(latitude) : null,
           longitude: longitude ? parseFloat(longitude) : null,
           checkedAt: now
@@ -583,5 +583,4 @@ class AttendanceController {
   }
 }
 
-// Export cho CommonJS
-module.exports = { AttendanceController };
+export { AttendanceController };

@@ -73,14 +73,4 @@ export const requireStudent = requireAuth(['ADMIN', 'TEACHER', 'STUDENT']);
 export const authMiddleware = requireAuth([]);
 export const adminMiddleware = requireAuth(['ADMIN']);
 
-// Export for CommonJS compatibility
-module.exports = { 
-  extractTokenFromHeader,
-  verifyToken,
-  requireAuth,
-  requireAdmin, 
-  requireTeacher,
-  requireStudent,
-  authMiddleware,
-  adminMiddleware
-};
+// All exports are already declared above with 'export const'

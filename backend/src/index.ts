@@ -45,6 +45,7 @@ const corsOptions = {
     'http://192.168.88.175:3000',
     'http://0.0.0.0:3000',
     'http://192.168.1.4:3000',
+    'https://sms-fe-lovat.vercel.app',
     process.env.FRONTEND_URL || ''
   ].filter(url => url !== ''),
   credentials: true,

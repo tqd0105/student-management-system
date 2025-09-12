@@ -290,19 +290,4 @@ export const qrCodeValidation = [
     .withMessage('Invalid QR code format')
 ];
 
-// Export for CommonJS compatibility
-module.exports = {
-  registerValidation,
-  loginValidation,
-  verifyEmailValidation,
-  createUserValidation,
-  updateUserValidation,
-  changePasswordValidation,
-  createClassValidation,
-  updateClassValidation,
-  enrollmentValidation,
-  createSessionValidation,
-  checkInValidation,
-  sessionIdValidation,
-  qrCodeValidation
-};
+// All exports are already declared above with 'export const'

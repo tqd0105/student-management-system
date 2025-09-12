@@ -86,7 +86,7 @@ export default function HomePage() {
 
         <div className="w-full max-w-xs sm:max-w-sm lg:max-w-lg  lg:block hidden">
           <img
-            src="/images/banner-lightbrave.png"
+            src="/images/Banner-lightbrave.png"
             alt="Banner"
             className="w-full h-auto mx-auto mt-2 sm:mt-4 rounded-2xl shadow-2xl  "
           />

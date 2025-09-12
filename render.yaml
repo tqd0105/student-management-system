@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: student-management-backend
+    env: node
+    region: singapore
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        value: postgresql://postgres.lovyisummpalskgsqdqm:171512@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres
+      - key: JWT_SECRET
+        value: super-secret-jwt-key-production-2024
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      - key: GMAIL_USER
+        value: dtech.webdevteam@gmail.com
+      - key: GMAIL_APP_PASSWORD
+        value: rtimzqahfthmoclo
+      - key: EMAIL_FROM
+        value: "Student Management System | LightBrave Team <dtech.webdevteam@gmail.com>"
+      - key: FRONTEND_URL
+        value: https://sms-fe-lovat.vercel.app
+      - key: APP_2FA_NAME
+        value: "Student Management System"

@@ -6,6 +6,7 @@ import { BookOpen, Calendar, CheckCircle, QrCode, Camera, History, UserCheck, Us
 import QRScanner from '@/components/student/QRScanner';
 import AttendanceHistory from '@/components/student/AttendanceHistory';
 import ApiService from '@/services/ApiService';
+import { API_BASE_URL } from '@/config/api';
 
 interface Class {
   id: string;
@@ -67,7 +68,7 @@ export default function StudentDashboard() {
   const fetchClasses = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://192.168.1.4:3001/api/student/classes', {
+      const response = await fetch(`${API_BASE_URL}/api/student/classes`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -199,7 +200,7 @@ export default function StudentDashboard() {
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://192.168.1.4:3001'}/api/users/delete-account`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/delete-account`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,

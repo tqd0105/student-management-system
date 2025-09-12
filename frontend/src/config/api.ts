@@ -5,14 +5,14 @@ const getApiBaseUrl = () => {
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return 'http://localhost:3001';
     } else {
-      return 'http://192.168.88.175:3001';
+      return 'https://student-management-system-udhy.onrender.com';
     }
   }
-  return 'http://192.168.88.175:3001';
+  return 'https://student-management-system-udhy.onrender.com';
 };
 
 export const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-production-api.com'
+  ? process.env.NEXT_PUBLIC_API_URL || 'https://student-management-system-udhy.onrender.com'
   : getApiBaseUrl();
 
 export const API_ENDPOINTS = {

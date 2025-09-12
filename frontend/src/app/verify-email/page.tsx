@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Mail, ArrowLeft, Shield, CheckCircle, AlertCircle, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
+import { API_BASE_URL } from '@/config/api';
 
-const VerifyEmailPage: React.FC = () => {
+const VerifyEmailContent: React.FC = () => {
   const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,7 +30,7 @@ const VerifyEmailPage: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch('http://192.168.88.175:3001/api/auth/verify-code', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,7 +68,7 @@ const VerifyEmailPage: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch('http://192.168.88.175:3001/api/auth/resend-verification', {
+      const response = await fetch(`${API_BASE_URL}/api/auth/resend-verification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -301,6 +302,21 @@ const VerifyEmailPage: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const VerifyEmailPage: React.FC = () => {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
   );
 };
 

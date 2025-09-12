@@ -141,11 +141,11 @@ router.get('/students', authMiddleware, adminMiddleware, async (req: any, res: a
         isVerified: true,
         createdAt: true,
         updatedAt: true,
-        attendanceRecords: {
+        attendanceLogs: {
           select: {
             id: true,
             status: true,
-            createdAt: true
+            checkedAt: true
           }
         }
       },
@@ -179,13 +179,13 @@ router.get('/stats', authMiddleware, adminMiddleware, async (req: any, res: any)
       totalTeachers,
       totalStudents,
       totalClasses,
-      totalAttendanceRecords,
+      totalAttendanceLogs,
       recentRegistrations
     ] = await Promise.all([
       prisma.user.count({ where: { role: 'TEACHER' } }),
       prisma.user.count({ where: { role: 'STUDENT' } }),
       prisma.class.count(),
-      prisma.attendanceRecord.count(),
+      prisma.attendanceLog.count(),
       prisma.user.count({
         where: {
           createdAt: {
@@ -201,7 +201,7 @@ router.get('/stats', authMiddleware, adminMiddleware, async (req: any, res: any)
         totalTeachers,
         totalStudents,
         totalClasses,
-        totalAttendances: totalAttendanceRecords,
+        totalAttendances: totalAttendanceLogs,
         recentRegistrations
       }
     });

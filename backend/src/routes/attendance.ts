@@ -4,15 +4,15 @@
  * API endpoints cho QR attendance system
  */
 
-const express = require('express');
-const { AttendanceController } = require('../controllers/attendance');
-const { requireAuth, requireAdmin, requireTeacher } = require('../middleware/auth');
-const { 
+import express from 'express';
+import { AttendanceController } from '../controllers/attendance.js';
+import { requireAuth, requireAdmin, requireTeacher } from '../middleware/auth.js';
+import { 
   createSessionValidation,
   checkInValidation,
   sessionIdValidation,
   qrCodeValidation
-} = require('../middleware/validation');
+} from '../middleware/validation.js';
 
 const router = express.Router();
 
@@ -84,5 +84,4 @@ router.get('/sessions/:sessionId/report',
   AttendanceController.getSessionReport
 );
 
-module.exports = router;
 export default router;
