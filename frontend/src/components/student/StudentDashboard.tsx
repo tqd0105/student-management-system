@@ -239,7 +239,7 @@ export default function StudentDashboard() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b rounded-lg shadow-xl" style={{backgroundImage: 'linear-gradient(-20deg, rgb(223, 239, 255) 0%, rgb(255, 249, 235) 100%, rgb(252, 236, 236) 100%)'}}>
         <div className="max-w-7xl  mx-auto px-4 sm:px-6 lg:px-8" >
-              <h1 className="text-2xl font-bold text-gray-900 text-center pt-3">👨‍🎓STUDENT DASHBOARD</h1>
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900 text-center pt-3">👨‍🎓STUDENT DASHBOARD</h1>
 
           <div className="flex justify-between items-center py-4">
             
@@ -261,18 +261,19 @@ export default function StudentDashboard() {
               <p className="text-black  flex items-center gap-2 my-1"> 
                 <div className='flex items-center gap-1  text-gray-600'>
                   <img src="icons/name.png" width="25" height="25" alt="" />
-                  <span>Your name: </span>
+                  <span className='hidden md:block'>Your name: </span>
                 </div>
-                <p className='font-bold'>
+                <p className='font-bold truncate'>
                 {user?.name || user?.email || 'Student'}</p>
                 </p>
               <p className="text-black flex items-center gap-2"> 
                  <div className='flex items-center gap-1  text-gray-600'>
                   <img src="icons/email.png" width="25" height="25" alt="" />
-                  <span>Your email: </span>
+                  <span className='hidden md:block'>Your email: </span>
                 </div>
-                <p className='font-bold'>
-                {user?.email || 'Chưa xác thực email'}</p></p>
+                <p className='font-bold truncate'>
+                {user?.email || 'Chưa xác thực email'}</p>
+                </p>
             </div>
             <div className="flex flex-col justify-center items-center gap-2">
               <button

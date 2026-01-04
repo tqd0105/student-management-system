@@ -131,7 +131,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                   <img src="./images/logo.png" alt="Logo" />
                 </div>
                 <div className="ml-3">
-                  <h1 className="text-lg font-semibold text-gray-900">Student Management System</h1>
+                  <h1 className="text-md md:text-lg font-extrabold text-gray-900">Student Management System</h1>
                   <p className="text-xs text-gray-500">LIGHTBRAVE.EDU</p>
                 </div>
               </div>

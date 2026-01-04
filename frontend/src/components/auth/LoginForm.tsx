@@ -221,13 +221,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
                     className={`w-full p-4 rounded-xl cursor-pointer ${account.color} ${account.hoverColor} text-white shadow-lg transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className=" bg-white/30 rounded-full">
+                      <div className=" bg-white/30 rounded-full w-12 h-12 ">
                         <img src={account.icon} width={24} height={24} alt={account.role} className="w-12 h-12" />
                       </div>
                       <div className="flex-1 text-left">
                         <div className="font-bold text-sm">{account.role}</div>
                         <div className="text-white/90 text-xs">{account.name}</div>
-                        <div className="text-white/70 text-xs truncate">{account.email}</div>
+                        <div className="text-white/70 text-xs w-40 truncate">{account.email}</div>
                       </div>
                       <div className="text-gray-100 text-sm font-semibold flex flex-col items-center gap-1">
                         Login <img src="./icons/next.png" width={35} alt="" />
