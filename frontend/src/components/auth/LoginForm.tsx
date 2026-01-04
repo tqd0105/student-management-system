@@ -10,11 +10,43 @@ import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, X, Crown, GraduationCap, BookOpen, Code } from "lucide-react";
 
 interface LoginFormProps {
   onSwitchToRegister?: () => void;
 }
+
+// Demo accounts for testing
+const DEMO_ACCOUNTS = [
+  
+  {
+    role: "Teacher",
+    name: "TRAN QUANG DUNG",
+    email: "tqd0105@gmail.com",
+    password: "Dungabc123@",
+    icon: "/icons/teacher.png",
+    color: "bg-gradient-to-r from-amber-500 to-orange-500",
+    hoverColor: "hover:from-amber-600 hover:to-orange-600",
+  },
+  {
+    role: "Student",
+    name: "DUNG TRAN QUANG",
+    email: "dtq287@gmail.com",
+    password: "Dungabc123@",
+    icon: "/icons/student.png",
+    color: "bg-gradient-to-r from-blue-500 to-cyan-500",
+    hoverColor: "hover:from-blue-600 hover:to-cyan-600",
+  },
+  {
+    role: "Student",
+    name: "DTECH",
+    email: "tranquangdung.tech@gmail.com",
+    password: "Dungabc123@",
+    icon: "/icons/student.png",
+    color: "bg-gradient-to-r from-purple-500 to-indigo-500",
+    hoverColor: "hover:from-purple-600 hover:to-indigo-600",
+  },
+];
 
 const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
   const { login, loading, error } = useAuth();
@@ -24,6 +56,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showDemoModal, setShowDemoModal] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -41,6 +74,17 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
       await login(formData.email, formData.password);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Login failed";
+      setFormError(errorMessage);
+    }
+  };
+
+  const handleDemoLogin = async (email: string, password: string) => {
+    setShowDemoModal(false);
+    setFormData({ email, password });
+    try {
+      await login(email, password);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Demo login failed";
       setFormError(errorMessage);
     }
   };
@@ -125,6 +169,79 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
           Register
         </button>
       </div>
+
+      {/* Demo Accounts Button */}
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <button
+          type="button"
+          onClick={() => setShowDemoModal(true)}
+          className="flex items-center justify-center gap-2 cursor-pointer w-full py-2 px-4 rounded-full text-sm font-semibold text-white bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 shadow-lg transition-all duration-300 transform hover:scale-[1.02]"
+        >
+          <img src="/icons/boy.png" width={25} alt="" />
+           Use Demo Accounts 
+        </button>
+      </div>
+
+      {/* Demo Accounts Modal */}
+      {showDemoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowDemoModal(false)}
+          />
+          
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-violet-500 to-fuchsia-500">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2 ">
+                <img src="/icons/boy.png" width={40} alt="" />
+                 DEMO ACCOUNTS</h2>
+              <button
+                onClick={() => setShowDemoModal(false)}
+                className="p-1 rounded-full hover:bg-white/20 transition-colors cursor-pointer  "
+              >
+                <img src="/icons/close.png" width={30} alt="" />
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="p-4 space-y-3 overflow-y-auto max-h-[60vh]">
+              <p className="text-sm text-gray-600 text-center mb-4">
+                Select an account to login instantly
+              </p>
+              
+              {DEMO_ACCOUNTS.map((account, index) => {
+                return (
+                  <button
+                    key={index}
+                    onClick={() => handleDemoLogin(account.email, account.password)}
+                    disabled={loading}
+                    className={`w-full p-4 rounded-xl cursor-pointer ${account.color} ${account.hoverColor} text-white shadow-lg transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className=" bg-white/30 rounded-full">
+                        <img src={account.icon} width={24} height={24} alt={account.role} className="w-12 h-12" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="font-bold text-sm">{account.role}</div>
+                        <div className="text-white/90 text-xs">{account.name}</div>
+                        <div className="text-white/70 text-xs truncate">{account.email}</div>
+                      </div>
+                      <div className="text-gray-100 text-sm font-semibold flex flex-col items-center gap-1">
+                        Login <img src="./icons/next.png" width={35} alt="" />
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            
+            
+          </div>
+        </div>
+      )}
     </div>
   );
 };
