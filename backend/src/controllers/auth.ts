@@ -46,9 +46,55 @@ class AuthController {
       });
 
       if (existingUser) {
-        return res.status(409).json({
-          success: false,
-          message: 'User already exists with this email'
+        // Nếu user đã verified → không cho đăng ký lại
+        if (existingUser.isVerified) {
+          return res.status(409).json({
+            success: false,
+            message: 'Email này đã được đăng ký và xác thực. Vui lòng đăng nhập.'
+          });
+        }
+
+        // Nếu user chưa verified → xóa token cũ, tạo token mới, gửi lại email
+        await prisma.emailVerificationToken.deleteMany({ where: { email } });
+
+        const hashedPassword = await AuthUtils.hashPassword(password);
+        const emailToken = AuthUtils.generateEmailToken();
+
+        // Cập nhật lại thông tin user (password mới, name, role)
+        await prisma.user.update({
+          where: { email },
+          data: {
+            password: hashedPassword,
+            name,
+            role: role === 'ADMIN' ? 'ADMIN' : role === 'TEACHER' ? 'TEACHER' : 'STUDENT',
+          }
+        });
+
+        await prisma.emailVerificationToken.create({
+          data: {
+            email,
+            token: emailToken,
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            user: { connect: { email } }
+          }
+        });
+
+        await emailServiceInstance.sendEmailVerification(email, emailToken);
+
+        console.log(`🔗 Re-sent verification for unverified user ${email}: ${emailToken}`);
+
+        return res.status(201).json({
+          success: true,
+          message: 'Tài khoản chưa xác thực. Mã xác thực mới đã được gửi đến email của bạn.',
+          data: {
+            user: {
+              id: existingUser.id,
+              email: existingUser.email,
+              name,
+              role: existingUser.role,
+              isVerified: false
+            }
+          }
         });
       }
 
