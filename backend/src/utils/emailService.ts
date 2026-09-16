@@ -12,14 +12,20 @@ interface EmailOptions {
   html: string;
 }
 
-// Cấu hình transporter với Gmail
+// Cấu hình transporter với Gmail - dùng port 465 (SSL) thay vì 587 (STARTTLS)
+// Port 465 ít bị block bởi ISP hơn port 587
 const createTransporter = () => {
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // SSL
     auth: {
-      user: process.env.GMAIL_USER, // Email Gmail của bạn
-      pass: process.env.GMAIL_APP_PASSWORD // App Password từ Gmail
-    }
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD
+    },
+    connectionTimeout: 10000, // 10 giây
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
   });
 };
 
@@ -31,8 +37,9 @@ const createTransporter = () => {
  */
 export const sendEmail = async (to: string, subject: string, html: string): Promise<void> => {
   try {
-    // Development: Simulate email để dễ test (tránh timeout SMTP)
-    if (process.env.NODE_ENV === 'development') {
+    // Development: Simulate email (trừ khi SEND_REAL_EMAIL=true trong .env)
+    const shouldSimulate = process.env.NODE_ENV === 'development' && process.env.SEND_REAL_EMAIL !== 'true';
+    if (shouldSimulate) {
       console.log('\n📧 [DEV MODE] Email Service - Email được gửi (mô phỏng):');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('📬 Đến:', to);
@@ -41,8 +48,8 @@ export const sendEmail = async (to: string, subject: string, html: string): Prom
       console.log(html.substring(0, 500).replace(/<[^>]*>/g, '').trim() + '...');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('✅ [DEV MODE] Email đã được gửi thành công (mô phỏng)\n');
+      console.log('💡 Để gửi email thật trong dev, thêm SEND_REAL_EMAIL=true vào .env');
       
-      // Giả lập delay gửi email
       await new Promise(resolve => setTimeout(resolve, 300));
       return;
     }
