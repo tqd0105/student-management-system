@@ -31,24 +31,23 @@ const createTransporter = () => {
  */
 export const sendEmail = async (to: string, subject: string, html: string): Promise<void> => {
   try {
-    // ENABLE REAL EMAIL SENDING FOR TESTING
-    // Development: Simulate email để dễ test
-    // if (process.env.NODE_ENV === 'development') {
-    //   console.log('\n📧 [DEV MODE] Email Service - Email được gửi (mô phỏng):');
-    //   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    //   console.log('📬 Đến:', to);
-    //   console.log('📝 Tiêu đề:', subject);
-    //   console.log('📄 Nội dung preview:');
-    //   console.log(html.substring(0, 200).replace(/<[^>]*>/g, '') + '...');
-    //   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    //   console.log('✅ [DEV MODE] Email đã được gửi thành công (mô phỏng)\n');
-    //   
-    //   // Giả lập delay gửi email
-    //   await new Promise(resolve => setTimeout(resolve, 500));
-    //   return;
-    // }
+    // Development: Simulate email để dễ test (tránh timeout SMTP)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('\n📧 [DEV MODE] Email Service - Email được gửi (mô phỏng):');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📬 Đến:', to);
+      console.log('📝 Tiêu đề:', subject);
+      console.log('📄 Nội dung preview:');
+      console.log(html.substring(0, 500).replace(/<[^>]*>/g, '').trim() + '...');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('✅ [DEV MODE] Email đã được gửi thành công (mô phỏng)\n');
+      
+      // Giả lập delay gửi email
+      await new Promise(resolve => setTimeout(resolve, 300));
+      return;
+    }
 
-    // REAL EMAIL SENDING - Always enabled for testing
+    // PRODUCTION: REAL EMAIL SENDING via Gmail SMTP
     if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
       throw new Error('Gmail credentials not configured. Check GMAIL_USER and GMAIL_APP_PASSWORD in .env');
     }
@@ -72,7 +71,6 @@ export const sendEmail = async (to: string, subject: string, html: string): Prom
     
   } catch (error) {
     console.error('❌ Email service error:', error);
-    // In development, log error but don't crash
     if (process.env.NODE_ENV === 'development') {
       console.log('⚠️ [DEV MODE] Email failed, continuing...');
       console.error('Email error details:', error);
