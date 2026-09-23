@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth';
+import { GoogleAuthController } from '../controllers/googleAuth';
 import { requireAuth } from '../middleware/auth';
 import { 
   registerValidation, 
@@ -66,6 +67,20 @@ router.get('/profile', requireAuth(), AuthController.getProfile);
  * @access  Private
  */
 router.post('/logout', requireAuth(), AuthController.logout);
+
+/**
+ * @route   GET /api/auth/google
+ * @desc    Initiate Google OAuth login
+ * @access  Public
+ */
+router.get('/google', GoogleAuthController.initiateGoogleAuth);
+
+/**
+ * @route   GET /api/auth/google/callback
+ * @desc    Google OAuth callback - nhận code và tạo JWT
+ * @access  Public
+ */
+router.get('/google/callback', GoogleAuthController.googleCallback);
 
 // Export router để sử dụng trong main app
 export default router;

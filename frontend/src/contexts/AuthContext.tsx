@@ -14,6 +14,17 @@ interface User {
   email: string;
   name: string;
   role: 'ADMIN' | 'TEACHER' | 'STUDENT';
+  studentProfile?: {
+    studentCode: string;
+    phone?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    address?: string;
+    parentName?: string;
+    parentPhone?: string;
+    status?: string;
+    notes?: string;
+  };
 }
 
 interface AuthContextType {
@@ -55,6 +66,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const currentUser = ApiService.getCurrentUser();
     if (currentUser) {
       setUser(currentUser);
+      // Fetch latest profile from server to ensure studentProfile and studentCode are synced
+      ApiService.getProfile()
+        .then((res) => {
+          if (res?.success && res.data?.user) {
+            setUser(res.data.user);
+            localStorage.setItem('user', JSON.stringify(res.data.user));
+          }
+        })
+        .catch(() => {});
     }
     setLoading(false);
   }, []);

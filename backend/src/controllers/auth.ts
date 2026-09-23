@@ -9,6 +9,7 @@ import { validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import { AuthUtils } from '../utils/auth';
 import emailServiceInstance from '../utils/emailService';
+import { ensureStudentProfileAndCode } from '../utils/studentCode';
 
 const prisma = new PrismaClient();
 
@@ -210,6 +211,12 @@ class AuthController {
         // Sử dụng isVerified field
       });
 
+      // Tự động đảm bảo học sinh có MSSV theo quy luật khi đăng nhập
+      let studentProfile = null;
+      if (user.role === 'STUDENT') {
+        studentProfile = await ensureStudentProfileAndCode(user.id);
+      }
+
       return res.status(200).json({
         success: true,
         message: 'Login successful',
@@ -220,8 +227,8 @@ class AuthController {
             email: user.email,
             name: user.name,
             role: user.role,
-            isVerified: user.isVerified
-            // Sử dụng isVerified field
+            isVerified: user.isVerified,
+            studentProfile,
           }
         }
       });
@@ -452,7 +459,8 @@ class AuthController {
           role: true,
           isVerified: true,
           createdAt: true,
-          updatedAt: true
+          updatedAt: true,
+          studentProfile: true,
         }
       });
 
@@ -461,6 +469,12 @@ class AuthController {
           success: false,
           message: 'User not found'
         });
+      }
+
+      // Đảm bảo học sinh có MSSV nếu chưa có
+      if (user.role === 'STUDENT' && (!user.studentProfile || !user.studentProfile.studentCode)) {
+        const profile = await ensureStudentProfileAndCode(user.id);
+        (user as any).studentProfile = profile;
       }
 
       return res.status(200).json({
