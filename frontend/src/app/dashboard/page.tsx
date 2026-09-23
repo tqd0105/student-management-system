@@ -129,9 +129,7 @@ const DashboardPage: React.FC = () => {
                   <div className="flex-shrink-0">
                     <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
                       <span className="text-xl">
-                        {user?.role === 'TEACHER' && '👨‍🏫'}
-                        {user?.role === 'STUDENT' && '👨‍🎓'}
-                        {user?.role === 'ADMIN' && '👨‍💼'}
+                        {user?.role === 'ADMIN' ? '👨‍💼' : '👤'}
                       </span>
                     </div>
                   </div>

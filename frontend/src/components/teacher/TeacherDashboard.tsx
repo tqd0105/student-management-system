@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { API_BASE_URL } from "@/config/api";
+import StudentDirectory from "@/components/teacher/StudentDirectory";
 import {
   Plus,
   Users,
@@ -20,7 +21,30 @@ import {
   X,
   DeleteIcon,
   LogOut,
+  Award,
+  ClipboardList,
+  ChevronDown,
+  CreditCard,
+  SlidersHorizontal,
+  BookOpen,
+  BarChart3,
+  Sparkles,
+  RefreshCw,
+  Search,
+  CheckCircle2,
+  AlertCircle,
+  ExternalLink,
+  Eye,
+  TrendingUp,
+  Activity,
+  CalendarDays,
+  Check
 } from "lucide-react";
+import Gradebook from "./Gradebook";
+import ManualAttendance from "./ManualAttendance";
+import StudentManagementModal from "./StudentManagementModal";
+import TuitionManagementModal from "./TuitionManagementModal";
+import ClassMaterialsPanel from "./ClassMaterialsPanel";
 
 interface Class {
   id: string;
@@ -74,6 +98,9 @@ export default function TeacherDashboard() {
     useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [selectedClassForStudent, setSelectedClassForStudent] = useState<Class | null>(null);
+  const [selectedClassForGrades, setSelectedClassForGrades] = useState<Class | null>(null);
+  const [selectedClassForMaterials, setSelectedClassForMaterials] = useState<Class | null>(null);
+  const [selectedSessionForAttendance, setSelectedSessionForAttendance] = useState<Session | null>(null);
   const [newClassName, setNewClassName] = useState("");
   const [newClassDescription, setNewClassDescription] = useState("");
   const [newSessionTitle, setNewSessionTitle] = useState("");
@@ -83,6 +110,11 @@ export default function TeacherDashboard() {
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [editSessionTitle, setEditSessionTitle] = useState("");
   const [editSessionDate, setEditSessionDate] = useState("");
+
+  // Management dropdown & modals
+  const [isManagementMenuOpen, setIsManagementMenuOpen] = useState(false);
+  const [isStudentManagementOpen, setIsStudentManagementOpen] = useState(false);
+  const [isTuitionModalOpen, setIsTuitionModalOpen] = useState(false);
 
   // Statistics states
   const [showStatsModal, setShowStatsModal] = useState(false);
@@ -899,703 +931,884 @@ export default function TeacherDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-xs font-semibold text-slate-500">Đang tải dữ liệu giảng viên...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header
-        className="bg-white shadow-lg border-b rounded-lg"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgb(255, 249, 231) 0%, rgb(242, 247, 255) 100%)",
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-4 py-2 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold text-gray-900 text-center">
-            🎓TEACHER DASHBOARD
-          </h1>
-          <div className="flex justify-between items-center py-4">
-            <div>
-              <p className="text-green-600 font-bold text-xl flex items-center gap-2">
-                WELCOME BACK,
-                <div className="flex items-center justify-center space-x-1">
-                  <img
-                    src="/icons/teacher.png"
-                    alt="Teacher"
-                    width={20}
-                    height={20}
-                    className="opacity-80"
-                  />
-                  <span className="text-lg text-red-600 uppercase">
-                    Teacher
+    <div className="min-h-screen bg-slate-50/60 text-slate-800 font-sans">
+      {/* Header / Top Navigation */}
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 md:h-20">
+            {/* Left: Brand & Teacher Profile */}
+            <div className="flex items-center space-x-3 md:space-x-4">
+              <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center shadow-md shadow-indigo-200">
+                <GraduationCap className="w-5 h-5 md:w-6 md:h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base md:text-lg font-bold text-slate-900 tracking-tight">
+                    Cổng Giảng Viên
+                  </span>
+                  <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    Teacher Portal
                   </span>
                 </div>
-              </p>
-
-              <p className="flex items-center gap-2 my-1">
-                <div className="flex items-center gap-1  text-gray-600">
-                  <img src="icons/name.png" width="25" height="25" alt="" />
-                  <span>Your name: </span>
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <span className="font-medium text-slate-700">{user?.name || "Giảng viên"}</span>
+                  {user?.email && (
+                    <>
+                      <span className="text-slate-300">•</span>
+                      <span className="text-slate-500 truncate max-w-[180px] sm:max-w-none">{user?.email}</span>
+                    </>
+                  )}
                 </div>
-                <p className="font-bold">{user?.name || "Teacher"}</p>
-              </p>
-              <p className="flex items-center gap-2">
-                <div className="flex items-center gap-1  text-gray-600">
-                  <img src="icons/email.png" width="25" height="25" alt="" />
-                  <span>Your email: </span>
-                </div>
-                <p className="font-bold">{user?.email}</p>
-              </p>
+              </div>
             </div>
-            <div className="flex flex-col justify-center items-center gap-2">
+
+            {/* Right: Actions Toolbar */}
+            <div className="flex items-center gap-2 md:gap-3">
+              {/* Refresh live classes */}
+              <button
+                type="button"
+                onClick={fetchClasses}
+                className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-xl transition-all border border-slate-200/80 cursor-pointer"
+                title="Làm mới dữ liệu lớp học"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+
+              {/* Quản lý Dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsManagementMenuOpen(!isManagementMenuOpen)}
+                  className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-2 font-semibold text-xs md:text-sm cursor-pointer transition-all hover:border-slate-300"
+                >
+                  <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
+                  <span className="hidden sm:inline">Quản lý</span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isManagementMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isManagementMenuOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setIsManagementMenuOpen(false)} 
+                    />
+                    <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="px-4 py-2 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Trung tâm quản lý
+                      </div>
+                      
+                      {/* Item 1: Quản lý học sinh */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsManagementMenuOpen(false);
+                          setIsStudentManagementOpen(true);
+                        }}
+                        className="w-full px-4 py-3 text-left text-xs md:text-sm hover:bg-indigo-50/60 flex items-center gap-3 text-slate-700 transition-colors cursor-pointer group"
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                          <Users size={18} />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">Quản lý học sinh</p>
+                          <p className="text-[11px] text-slate-500">Hồ sơ, MSSV, thông tin liên hệ</p>
+                        </div>
+                      </button>
+
+                      {/* Item 2: Quản lý học phí */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsManagementMenuOpen(false);
+                          setIsTuitionModalOpen(true);
+                        }}
+                        className="w-full px-4 py-3 text-left text-xs md:text-sm hover:bg-amber-50/60 flex items-center gap-3 text-slate-700 transition-colors cursor-pointer group"
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                          <CreditCard size={18} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-slate-900 group-hover:text-amber-600 transition-colors">Quản lý học phí</p>
+                          <p className="text-[11px] text-slate-500">Biểu phí & trạng thái đóng</p>
+                        </div>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Create Class Button */}
               <button
                 onClick={() => setIsCreateClassModalOpen(true)}
-                className="bg-blue-600 text-white p-3 md:px-4 md:py-2 rounded-full shadow-lg hover:bg-blue-700 flex items-center space-x-0 md:space-x-2 cursor-pointer"
+                className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3.5 py-2 md:px-4 md:py-2.5 rounded-xl shadow-md shadow-indigo-200 flex items-center gap-1.5 cursor-pointer font-semibold text-xs md:text-sm transition-all hover:shadow-lg"
               >
                 <Plus className="w-4 h-4" />
-                <span className='hidden md:block'>New</span>
-              </button>
-              <button
-                onClick={handleDeleteAccount}
-                className="bg-red-600 text-white p-3 md:px-4 md:py-2 rounded-full hover:bg-red-700 flex items-center space-x-0 md:space-x-2 block md:hidden cursor-pointer"
-                title="Delete Account"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span className='hidden md:block'>Delete</span>
+                <span>Tạo Lớp Mới</span>
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Stats */}
-      <div className="max-w-7xl    py-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 ">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center">
-              <GraduationCap className="w-8 h-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">
-                  Total Classes
+      {/* Main Dashboard Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* KPI Metrics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* Total Classes */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs hover:shadow-md transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Tổng số Lớp học
                 </p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-3xl font-extrabold text-slate-900 mt-2">
                   {classes.length}
                 </p>
+                <p className="text-xs text-slate-500 mt-1 font-medium">
+                  Đang hoạt động trong kỳ
+                </p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <GraduationCap className="w-6 h-6" />
               </div>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center">
-              <Users className="w-8 h-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">
-                  Total Students
+
+          {/* Total Students */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs hover:shadow-md transition-all">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Tổng số Sinh viên
                 </p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {classes.reduce(
-                    (total, cls) => total + cls.enrollments.length,
-                    0
-                  )}
+                <p className="text-3xl font-extrabold text-slate-900 mt-2">
+                  {classes.reduce((total, cls) => total + cls.enrollments.length, 0)}
                 </p>
+                <p className="text-xs text-slate-500 mt-1 font-medium">
+                  Đã ghi danh vào các lớp
+                </p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Users className="w-6 h-6" />
               </div>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center">
-              <QrCode className="w-8 h-8 text-purple-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">
-                  Active QR Sessions
-                </p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {
-                    Array.from(qrDataCache.values()).filter(
-                      (qr) => new Date() <= new Date(qr.expiresAt)
-                    ).length
-                  }
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Active QR Sessions Display */}
-        {qrDataCache.size > 0 && (
-          <div className=" border-4 border-green-500 p-6 rounded-lg shadow-lg mb-8"
-          style={{backgroundImage: "linear-gradient(to top, rgb(186, 255, 184) 0%, rgb(255, 255, 255) 100%)"}}
-          >
-            <div className="text-center mb-4">
-              <h3 className="text-xl font-bold mb-2 text-green-700">
-                🔴 ACTIVE QR CODE SESSIONS
-              </h3>
-              <p className="text-gray-600">
-                 QR code{qrDataCache.size > 1 ? "s" : ""}{" "}
-                currently active: <span className="font-extrabold">{qrDataCache.size}</span> <span className="text-gray-400">- Click to view details</span>
-              </p>
-            </div>
+          {/* Active QR Sessions */}
+          {(() => {
+            const activeQRCount = Array.from(qrDataCache.values()).filter(
+              (qr) => new Date() <= new Date(qr.expiresAt)
+            ).length;
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from(qrDataCache.entries()).map(([sessionId, qrData]) => {
-                const isExpired = new Date() > new Date(qrData.expiresAt);
-                const isExpiringSoon =
-                  !isExpired &&
-                  new Date(qrData.expiresAt).getTime() - Date.now() < 60000;
-
-                return (
-                  <div
-                    key={sessionId}
-                    className={`bg-white rounded-lg p-4 border-3 hover:border-3 transform transition-transform duration-300 hover:scale-105 shadow-lg cursor-pointer hover:shadow-xl transition-all ${
-                      isExpired
-                        ? "border-red-300 bg-red-50"
-                        : isExpiringSoon
-                        ? "border-orange-400 border-2 bg-orange-100"
-                        : "border-blue-400 hover:border-blue-600 border-3"
-                    }`}
-                    onClick={() => {
-                      if (isExpired) {
-                        alert(
-                          "⏰ QR code has expired. Please create a new QR code."
-                        );
-                        return;
-                      }
-                      setCurrentQR(qrData);
-                      setShowQRModal(true);
-                    }}
-                  >
-                    <div className="text-center grid grid-cols-3">
-                      <div className="col-span-2 flex items-center justify-center w-full h-full mx-auto bg-gray-100 rounded border">
-                        <img
-                          src={qrData.qrImageUrl}
-                          alt="QR Preview"
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                      <div className="col-span-1 flex flex-col items-center justify-center">
-                      <h4
-                        className="font-extrabold text-sm text-gray-900 truncate"
-                        title={qrData.sessionInfo.title}
-                      >
-                        {qrData.sessionInfo.title}
-                      </h4>
-                      <p
-                        className="text-xs text-gray-500 truncate"
-                        title={qrData.sessionInfo.className}
-                      >
-                        {qrData.sessionInfo.className}
-                      </p>
-                      <p
-                        className={`text-xs font-bold mt-1 text-center ${
-                          isExpired
-                            ? "text-red-600"
-                            : isExpiringSoon
-                            ? "text-orange-600"
-                            : "text-green-600"
-                        }`}
-                      >
-                        {isExpired
-                          ? "❌ EXPIRED"
-                          : isExpiringSoon
-                          ? "⚠️ EXPIRING SOON"
-                          : "✅ ACTIVE"}
-                      </p>
-                      <p className="text-xs font-bold text-gray-500 mt-1">
-                        ⏰{new Date(qrData.expiresAt).toLocaleTimeString()}
-                      </p>
-                      <button
-                        onClick={() => endSession(sessionId)}
-                        className="mt-2 bg-red-500 text-white px-4 py-1 rounded text-xs hover:bg-red-600 transition-colors cursor-pointer"
-                      >
-                        Stop
-                      </button>
-                      </div>
+            return (
+              <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs hover:shadow-md transition-all">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Phiên QR Điểm danh
+                    </p>
+                    <p className="text-3xl font-extrabold text-slate-900 mt-2">
+                      {activeQRCount}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      {activeQRCount > 0 ? (
+                        <>
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                          </span>
+                          <span className="text-xs font-semibold text-emerald-600">Đang mở trực tiếp</span>
+                        </>
+                      ) : (
+                        <span className="text-xs text-slate-400 font-medium">Chưa có phiên QR nào mở</span>
+                      )}
                     </div>
                   </div>
-                );
-              })}
+                  <div className="w-12 h-12 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center">
+                    <QrCode className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Live Attendance Monitor (Active QR Sessions) */}
+        {qrDataCache.size > 0 && (
+          <div className="bg-white rounded-2xl border border-emerald-200/80 shadow-xs overflow-hidden">
+            <div className="bg-gradient-to-r from-emerald-50/80 via-teal-50/50 to-white px-6 py-4 border-b border-emerald-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                  <Activity className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    Giám Sát Điểm Danh Trực Tiếp (Live QR)
+                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                      {qrDataCache.size} phiên
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Mã QR đang phát trên màn hình lớp học. Bấm vào thẻ để phóng to hoặc kết thúc phiên.
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {qrDataCache.size > 3 && (
-              <div className="text-center mt-4">
-                <p className="text-sm text-gray-600">
-                  💡 Tip: You can manage individual sessions from the class
-                  sessions panel
-                </p>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {Array.from(qrDataCache.entries()).map(([sessionId, qrData]) => {
+                  const isExpired = new Date() > new Date(qrData.expiresAt);
+                  const isExpiringSoon =
+                    !isExpired &&
+                    new Date(qrData.expiresAt).getTime() - Date.now() < 60000;
+
+                  return (
+                    <div
+                      key={sessionId}
+                      className={`rounded-2xl p-4 border transition-all cursor-pointer flex flex-col justify-between ${
+                        isExpired
+                          ? "border-rose-200 bg-rose-50/30 hover:border-rose-300"
+                          : isExpiringSoon
+                          ? "border-amber-200 bg-amber-50/30 hover:border-amber-300 shadow-sm"
+                          : "border-slate-200 bg-white hover:border-indigo-300 hover:shadow-md"
+                      }`}
+                      onClick={() => {
+                        if (isExpired) {
+                          alert("Mã QR này đã hết hạn. Vui lòng tạo mã QR mới.");
+                          return;
+                        }
+                        setCurrentQR(qrData);
+                        setShowQRModal(true);
+                      }}
+                    >
+                      <div className="flex gap-4 items-center">
+                        <div className="w-20 h-20 bg-slate-50 rounded-xl border border-slate-200 p-1 shrink-0 flex items-center justify-center">
+                          <img
+                            src={qrData.qrImageUrl}
+                            alt="QR Preview"
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4
+                            className="font-bold text-sm text-slate-900 truncate"
+                            title={qrData.sessionInfo.title}
+                          >
+                            {qrData.sessionInfo.title}
+                          </h4>
+                          <p
+                            className="text-xs text-slate-500 truncate mt-0.5"
+                            title={qrData.sessionInfo.className}
+                          >
+                            {qrData.sessionInfo.className}
+                          </p>
+                          <div className="mt-2 flex items-center gap-1.5">
+                            {isExpired ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">
+                                Đã hết hạn
+                              </span>
+                            ) : isExpiringSoon ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 animate-pulse">
+                                Hết hạn trong &lt; 1p
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Đang phát mã
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(qrData.expiresAt).toLocaleTimeString("vi-VN")}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isExpired) {
+                              alert("Mã QR đã hết hạn.");
+                              return;
+                            }
+                            setCurrentQR(qrData);
+                            setShowQRModal(true);
+                          }}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Trình chiếu</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            endSession(sessionId);
+                          }}
+                          className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
+                        >
+                          <StopCircle className="w-3.5 h-3.5" />
+                          <span>Dừng</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            )}
+            </div>
+          </div>
+        )}
+
+        {/* Classes Section Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              Danh Sách Lớp Học
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                {classes.length} lớp
+              </span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Quản lý buổi học, điểm danh QR, bảng điểm và học sinh từng lớp
+            </p>
+          </div>
+          <button
+            onClick={() => setIsCreateClassModalOpen(true)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100/80 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Thêm lớp mới</span>
+          </button>
+        </div>
+
+        {/* Empty State */}
+        {classes.length === 0 && (
+          <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4">
+              <GraduationCap className="w-8 h-8" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900">Chưa có lớp học nào</h3>
+            <p className="text-sm text-slate-500 max-w-md mx-auto mt-1 mb-6">
+              Bạn chưa tạo lớp học nào trong hệ thống. Hãy tạo lớp học đầu tiên để bắt đầu quản lý sinh viên và điểm danh.
+            </p>
+            <button
+              onClick={() => setIsCreateClassModalOpen(true)}
+              className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tạo Lớp Học Đầu Tiên</span>
+            </button>
           </div>
         )}
 
         {/* Classes Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {classes.map((cls) => (
-            <div key={cls.id} className="bg-white rounded-lg shadow-lg border">
+            <div
+              key={cls.id}
+              className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group"
+            >
               <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900">
-                      {cls?.name || "Unnamed Class"}
-                    </h3>
-                    <p className="text-gray-500">
-                      {cls?.description || "No description"}
-                    </p>
+                {/* Class Card Header */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-500 to-indigo-700 text-white font-bold text-base flex items-center justify-center shadow-xs shrink-0">
+                      {cls.name ? cls.name.charAt(0).toUpperCase() : "C"}
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                        {cls?.name || "Lớp học chưa đặt tên"}
+                      </h3>
+                      <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
+                        {cls?.description || "Chưa có mô tả cho lớp học này"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex space-x-2">
+
+                  {/* Actions Toolbar */}
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => {
                         setSelectedClass(cls);
                         fetchClassSessions(cls.id);
                       }}
-                      className="bg-blue-100 text-blue-600 hover:bg-blue-200 p-2 rounded-lg cursor-pointer"
-                      title="Manage QR Sessions"
+                      className="p-2 rounded-xl text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors cursor-pointer"
+                      title="Quản lý buổi học & QR"
                     >
-                      <QrCode className="w-5 h-5" />
+                      <QrCode className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => {
                         setSelectedClassForStudent(cls);
                         setIsAddStudentModalOpen(true);
                       }}
-                      className="bg-green-100 text-green-600 hover:bg-green-200 p-2 rounded-lg cursor-pointer"
-                      title="Add Student"
+                      className="p-2 rounded-xl text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 transition-colors cursor-pointer"
+                      title="Thêm học sinh vào lớp"
                     >
-                      <UserPlus className="w-5 h-5" />
+                      <UserPlus className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setSelectedClassForGrades(cls)}
+                      className="p-2 rounded-xl text-purple-600 hover:bg-purple-50 hover:text-purple-700 transition-colors cursor-pointer"
+                      title="Quản lý bảng điểm"
+                    >
+                      <Award className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setSelectedClassForMaterials(cls)}
+                      className="p-2 rounded-xl text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer"
+                      title="Tài liệu học tập"
+                    >
+                      <BookOpen className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => deleteClass(cls.id)}
-                      className="bg-red-100 text-red-600 hover:bg-red-200 p-2 rounded-lg cursor-pointer"
-                      title="Delete Class"
+                      className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer"
+                      title="Xoá lớp học"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                <div className="border-t pt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-600">
-                      Students Enrolled
+                {/* Enrolled Students Roster */}
+                <div className="mt-5 pt-4 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Danh sách sinh viên
                     </span>
-                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                      {cls.enrollments.length} students
+                    <span className="bg-slate-100 text-slate-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+                      {cls.enrollments.length} sinh viên
                     </span>
                   </div>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
+
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                     {cls.enrollments.map((enrollment) => (
                       <div
                         key={enrollment.student.id}
-                        className="flex items-center justify-between bg-green-100 p-4 rounded-lg"
+                        className="flex items-center justify-between bg-slate-50/80 hover:bg-slate-100/80 px-3 py-2 rounded-xl transition-colors"
                       >
-                        <div>
-                          <p className="text-sm font-medium">
-                            {enrollment?.student?.name ||
-                              enrollment?.student?.email ||
-                              "Unknown Student"}
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            {enrollment?.student?.email || ""}
-                          </p>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
+                            {(enrollment?.student?.name || enrollment?.student?.email || "S")
+                              .charAt(0)
+                              .toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-800 truncate">
+                              {enrollment?.student?.name || enrollment?.student?.email || "Chưa có tên"}
+                            </p>
+                            <p className="text-[11px] text-slate-400 truncate">
+                              {enrollment?.student?.email || ""}
+                            </p>
+                          </div>
                         </div>
+
                         <button
-                          onClick={() =>
-                            removeStudent(cls.id, enrollment.student.id)
-                          }
-                          className="text-white hover:text-gray-200 px-4 py-2 bg-red-500 rounded-full shadow-lg flex items-center gap-2 cursor-pointer" 
+                          onClick={() => removeStudent(cls.id, enrollment.student.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer shrink-0"
+                          title="Xóa sinh viên khỏi lớp"
                         >
-                          <UserMinus className="w-5 h-5" /> Xoá
+                          <UserMinus className="w-4 h-4" />
                         </button>
                       </div>
                     ))}
+
                     {cls.enrollments.length === 0 && (
-                      <p className="text-gray-500 text-sm text-center py-2">
-                        No students enrolled yet
-                      </p>
+                      <div className="py-4 text-center">
+                        <p className="text-xs text-slate-400">Chưa có sinh viên nào trong lớp này</p>
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
+
+              {/* Class Card Footer */}
+              <div className="bg-slate-50/60 px-6 py-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span>Quản lý phiên & điểm danh</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedClass(cls);
+                    fetchClassSessions(cls.id);
+                  }}
+                  className="font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                >
+                  <span>Mở phiên QR</span>
+                  <span>→</span>
+                </button>
+              </div>
             </div>
           ))}
         </div>
+      </main>
 
-        {/* Sessions Modal */}
-        {selectedClass && (
-          <div className="fixed inset-0 bg-gray-900/30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-2xl border-3 border-black p-6 m-2 md:m-4 lg:m-0 w-full max-w-3xl max-h-[85vh] overflow-y-auto animate__animated animate__bounceIn">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-gray-900">
-                  🎯 QR Sessions - {selectedClass.name}
-                </h3>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => {
-                      setSelectedClass(null);
-                      setSessions([]);
-                      // Don't reset currentQR here - keep it so View QR works after reopening
-                    }}
-                    className="text-gray-500 hover:text-gray-700 text-3xl font-bold"
-                  >
-                    ×
-                  </button>
+      {/* ========================================================================= */}
+      {/* MODAL 1: SESSIONS MANAGEMENT MODAL (CRITICAL SPECIFICATION FOCUS)        */}
+      {/* ========================================================================= */}
+      {selectedClass && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[88vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                  <CalendarDays className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    Quản Lý Buổi Học & QR
+                    <span className="text-indigo-600 font-extrabold">{selectedClass.name}</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Tạo phiên điểm danh QR trực tiếp, điểm danh thủ công hoặc theo dõi báo cáo
+                  </p>
                 </div>
               </div>
 
-              <div className="flex justify-center md:justify-start items-center gap-4">
-                <button
-                  onClick={() => setIsCreateSessionModalOpen(true)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 mb-6 flex items-center space-x-2 cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="hidden md:block">Create New Session</span>
-                  <span className="block md:hidden">New Session</span>
-                </button>
+              <button
+                onClick={() => {
+                  setSelectedClass(null);
+                  setSessions([]);
+                }}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-full transition-colors cursor-pointer"
+                title="Đóng cửa sổ"
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-                <button
-                  onClick={() => openStatsModal("class")}
-                  disabled={classStatsLoading}
-                  className="bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700 mb-6 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {classStatsLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Loading...</span>
-                    </>
-                  ) : (
-                    <span>📊 Class Stats</span>
-                  )}
-                </button>
-              </div>
-              <div className="space-y-4">
-                {sessionsLoading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600 font-medium">Loading sessions...</p>
-                  </div>
-                ) : sessions.length === 0 ? (
-                  <div className="text-center py-8 font-bold text-gray-400">
-                    <Calendar className="w-16 h-16 mx-auto mb-3  text-gray-400" />
-                    <p>No sessions created yet. Create your first session!</p>
-                  </div>
+            {/* Action Bar inside Modal */}
+            <div className="px-6 py-3.5 bg-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <button
+                onClick={() => setIsCreateSessionModalOpen(true)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs md:text-sm font-semibold px-4 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tạo Buổi Học Mới</span>
+              </button>
+
+              <button
+                onClick={() => openStatsModal("class")}
+                disabled={classStatsLoading}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs md:text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {classStatsLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-slate-600"></div>
+                    <span>Đang tải thống kê...</span>
+                  </>
                 ) : (
-                  sessions.map((session) => {
-                    // Calculate QR expiration status
-                    const now = new Date();
-                    const qrData = qrDataCache.get(session.id);
-                    const hasQR = session.qrCode && session.qrExpiresAt;
-                    const isQRExpired = hasQR
-                      ? now > new Date(session.qrExpiresAt!)
+                  <>
+                    <BarChart3 className="w-4 h-4 text-indigo-600" />
+                    <span>Thống Kê Toàn Lớp</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Sessions List (Scrollable) */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-4 bg-slate-50/40">
+              {sessionsLoading ? (
+                <div className="text-center py-16">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto mb-3"></div>
+                  <p className="text-xs font-semibold text-slate-500">Đang tải danh sách buổi học...</p>
+                </div>
+              ) : sessions.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200 p-8">
+                  <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+                    <Calendar className="w-7 h-7" />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-800">Chưa có buổi học nào</h4>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto mb-4">
+                    Lớp học này chưa có buổi học nào được lên lịch. Hãy bấm &quot;Tạo Buổi Học Mới&quot; để bắt đầu điểm danh.
+                  </p>
+                  <button
+                    onClick={() => setIsCreateSessionModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-xs"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Tạo buổi học ngay</span>
+                  </button>
+                </div>
+              ) : (
+                sessions.map((session) => {
+                  const now = new Date();
+                  const qrData = qrDataCache.get(session.id);
+                  const hasQR = Boolean(session.qrCode && session.qrExpiresAt);
+                  const isQRExpired = hasQR
+                    ? now > new Date(session.qrExpiresAt!)
+                    : false;
+                  const isQRExpiringSoon =
+                    hasQR && !isQRExpired
+                      ? new Date(session.qrExpiresAt!).getTime() - now.getTime() < 60000
                       : false;
-                    const isQRExpiringSoon =
-                      hasQR && !isQRExpired
-                        ? new Date(session.qrExpiresAt!).getTime() -
-                            now.getTime() <
-                          60000
-                        : false;
+                  const effectiveIsActive = Boolean(session.isActive && hasQR && !isQRExpired);
 
-                    // Determine actual session status (accounting for QR expiration)
-                    const effectiveIsActive =
-                      session.isActive && hasQR && !isQRExpired;
+                  return (
+                    <div
+                      key={session.id}
+                      className={`bg-white rounded-2xl border p-5 transition-all shadow-xs hover:shadow-md ${
+                        effectiveIsActive
+                          ? "border-emerald-300 ring-1 ring-emerald-300/40 bg-emerald-50/20"
+                          : isQRExpired
+                          ? "border-slate-200"
+                          : "border-slate-200"
+                      }`}
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        {/* Session Left Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-bold text-base text-slate-900 truncate">
+                              {session.title || "Buổi học chưa đặt tên"}
+                            </h4>
 
-                    return (
-                      <div
-                        key={session.id}
-                        className={`border-2 rounded-lg shadow-xl p-4 ${
-                          effectiveIsActive
-                            ? "border-green-600 border-3 bg-green-gradient"
-                            : isQRExpired
-                            ? "border-red-600 border-3 bg-red-gradient"
-                            : "border-gray-400"
-                        }`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3">
-                              <h4 className="font-semibold text-gray-900">
-                                <span className="font-medium text-gray-400 text-sm">Session: </span>
-                                {session.title || "Untitled Session"}
-                              </h4>
+                            {/* Quick Session Actions */}
+                            <div className="flex items-center gap-1 bg-slate-100/80 px-2 py-0.5 rounded-lg">
                               <button
                                 onClick={() => openEditSession(session)}
-                                className="text-blue-600 hover:text-blue-800 p-1 cursor-pointer"
-                                title="Edit session name and time"
+                                className="text-slate-500 hover:text-indigo-600 p-1 transition-colors cursor-pointer"
+                                title="Đổi tên & thời gian buổi học"
                               >
-                                <Edit3 className="w-4 h-4" />
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setSelectedSessionForAttendance(session)}
+                                className="text-slate-500 hover:text-emerald-600 p-1 transition-colors cursor-pointer"
+                                title="Điểm danh thủ công"
+                              >
+                                <ClipboardList className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => deleteSession(session.id)}
-                                className="text-red-600 hover:text-red-800 p-1 cursor-pointer"
-                                title="Delete session completely"
+                                className="text-slate-500 hover:text-rose-600 p-1 transition-colors cursor-pointer"
+                                title="Xoá buổi học"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
-                            <p
-                              className={`text-sm font-medium mt-1 ${
-                                effectiveIsActive
-                                  ? "text-green-600"
-                                  : isQRExpired
-                                  ? "text-red-600"
-                                  : "text-gray-500"
-                              }`}
-                            >
-                              {effectiveIsActive
-                                ? "🟢 ACTIVE - Students can scan QR"
-                                : isQRExpired
-                                ? "❌ QR EXPIRED - Student cannot scan QR"
-                                : session.isActive
-                                ? "⚫ Session Active (No QR)"
-                                : "⚫ Inactive"}
-                            </p>
-                            <p className="text-sm text-gray-600 mt-2">
-                              <span className="font-bold">
-                                Session created:
-                              </span>{" "}
-                              {new Date(session.startTime).toLocaleString(
-                                "en-US"
-                              )}
-                            </p>
-                            {session.qrExpiresAt && (
-                              <p
-                                className={`text-sm mt-1 font-medium ${
-                                  isQRExpired
-                                    ? "text-red-600"
-                                    : isQRExpiringSoon
-                                    ? "text-orange-600"
-                                    : "text-orange-600"
-                                }`}
-                              >
-                                <span className="font-bold">QR expires:</span>{" "}
-                                {new Date(session.qrExpiresAt).toLocaleString(
-                                  "en-US"
-                                )}
-                                {isQRExpired && " (EXPIRED)"}
-                                {isQRExpiringSoon && " (EXPIRING SOON)"}
-                              </p>
+                          </div>
+
+                          {/* Status Badge */}
+                          <div className="mt-2 flex items-center gap-2 flex-wrap">
+                            {effectiveIsActive ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Đang phát mã QR (Học sinh có thể quét)
+                              </span>
+                            ) : isQRExpired ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                <AlertCircle className="w-3.5 h-3.5" />
+                                Mã QR đã hết hạn
+                              </span>
+                            ) : session.isActive ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                                Buổi học đang diễn ra (Chưa tạo QR)
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                                Đã kết thúc
+                              </span>
                             )}
                           </div>
-                          <div className="flex space-x-2">
-                            {!hasQR || isQRExpired ? (
-                              <button className="bg-green-600 text-white px-4 py-2 rounded-full flex items-center space-x-1 cursor-pointer">
-                                <div>
-                                  {isQRExpired ? (
-                                    <button
-                                      onClick={() =>
-                                        openStatsModal("session", session.id)
-                                      }
-                                      disabled={sessionStatsLoading.has(session.id)}
-                                      className="bg-green-600 text-white  rounded-full w-full  flex justify-center items-center space-x-1 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                      title="View session attendance statistics"
-                                    >
-                                      {sessionStatsLoading.has(session.id) ? (
-                                        <>
-                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                          <span>Loading...</span>
-                                        </>
-                                      ) : (
-                                        <span>📊 Stats</span>
-                                      )}
-                                    </button>
-                                  ) : (
-                                    <div
-                                      className="flex justify-center items-center gap-2"
-                                      onClick={() => generateQR(session.id)}
-                                    >
-                                      <Play className="w-4 h-4" />{" "}
-                                      <span>Create QR</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </button>
-                            ) : effectiveIsActive ? (
-                              // QR exists and is active (not expired)
-                              <div className="flex flex-col justify-center items-center gap-4">
-                                <button
-                                  onClick={() => {
-                                    // Check if QR data exists in cache first
-                                    console.log(
-                                      "🔍 Checking cache for session:",
-                                      session.id
-                                    );
-                                    console.log(
-                                      "🔍 Cache contents:",
-                                      qrDataCache
-                                    );
-                                    console.log(
-                                      "🔍 Cache size:",
-                                      qrDataCache.size
-                                    );
 
-                                    const cachedQR = qrDataCache.get(
-                                      session.id
-                                    );
-                                    console.log(
-                                      "🔍 Cached QR for session:",
-                                      cachedQR
-                                    );
-
-                                    if (cachedQR) {
-                                      console.log(
-                                        "✅ Using cached QR data for session:",
-                                        session.id
-                                      );
-
-                                      // Check if QR is still valid
-                                      const now = new Date();
-                                      const expiresAt = new Date(
-                                        cachedQR.expiresAt
-                                      );
-                                      console.log("🔍 Current time:", now);
-                                      console.log(
-                                        "🔍 QR expires at:",
-                                        expiresAt
-                                      );
-                                      console.log(
-                                        "🔍 Is expired?",
-                                        now > expiresAt
-                                      );
-
-                                      if (now > expiresAt) {
-                                        alert(
-                                          "⏰ QR code has expired. Please create a new QR code."
-                                        );
-                                        return;
-                                      }
-
-                                      setCurrentQR(cachedQR);
-                                      setShowQRModal(true);
-                                    } else {
-                                      console.log(
-                                        "⚠️ No cached QR data found for session:",
-                                        session.id
-                                      );
-                                      console.log(
-                                        "⚠️ Available cache keys:",
-                                        Array.from(qrDataCache.keys())
-                                      );
-                                      alert(
-                                        "❌ QR code not found. Please generate a new QR code first."
-                                      );
-                                    }
-                                  }}
-                                  className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 flex items-center space-x-1 cursor-pointer"
-                                  title="View QR code for students to scan"
-                                >
-                                  <span>👁️ View QR</span>
-                                </button>
-                                <button
-                                  onClick={() => endSession(session.id)}
-                                  className="bg-red-600 text-white px-4 py-2 rounded-full hover:bg-red-700 flex items-center space-x-1 transition-colors cursor-pointer"
-                                  title="Stop QR code and end attendance session"
-                                >
-                                  <span>🛑 Stop QR</span>
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    openStatsModal("session", session.id)
-                                  }
-                                  disabled={sessionStatsLoading.has(session.id)}
-                                  className="bg-green-600 text-white px-4 py-2 rounded-full w-full hover:bg-green-700 flex justify-center items-center space-x-1 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                  title="View session attendance statistics"
-                                >
-                                  {sessionStatsLoading.has(session.id) ? (
-                                    <>
-                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                      <span>Loading...</span>
-                                    </>
-                                  ) : (
-                                    <span>📊 Stats</span>
-                                  )}
-                                </button>
-                              </div>
-                            ) : (
-                              // QR exists but session is inactive - only show stats
-                              <div className="flex justify-center items-center space-x-2">
-                                <button
-                                  onClick={() =>
-                                    openStatsModal("session", session.id)
-                                  }
-                                  disabled={sessionStatsLoading.has(session.id)}
-                                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-1 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                  title="View session attendance statistics"
-                                >
-                                  {sessionStatsLoading.has(session.id) ? (
-                                    <>
-                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                      <span>Loading...</span>
-                                    </>
-                                  ) : (
-                                    <span>📊 Stats</span>
-                                  )}
-                                </button>
-                              </div>
+                          {/* Timestamps */}
+                          <div className="mt-3 flex items-center gap-4 text-xs text-slate-500 flex-wrap">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                              <strong className="text-slate-700">Bắt đầu:</strong>{" "}
+                              {new Date(session.startTime).toLocaleString("vi-VN")}
+                            </span>
+                            {session.qrExpiresAt && (
+                              <span
+                                className={`flex items-center gap-1 ${
+                                  isQRExpired
+                                    ? "text-rose-600 font-semibold"
+                                    : isQRExpiringSoon
+                                    ? "text-amber-600 font-semibold animate-pulse"
+                                    : "text-slate-600"
+                                }`}
+                              >
+                                <Clock className="w-3.5 h-3.5" />
+                                <strong>Hạn quét QR:</strong>{" "}
+                                {new Date(session.qrExpiresAt).toLocaleTimeString("vi-VN")}
+                              </span>
                             )}
                           </div>
                         </div>
+
+                        {/* Session Right Actions Toolbar */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {!hasQR || isQRExpired ? (
+                            <div className="flex items-center gap-2">
+                              {isQRExpired && (
+                                <button
+                                  onClick={() => openStatsModal("session", session.id)}
+                                  disabled={sessionStatsLoading.has(session.id)}
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                                >
+                                  {sessionStatsLoading.has(session.id) ? (
+                                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
+                                  ) : (
+                                    <BarChart3 className="w-3.5 h-3.5" />
+                                  )}
+                                  <span>Thống kê</span>
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => generateQR(session.id)}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                              >
+                                <Play className="w-3.5 h-3.5" />
+                                <span>{isQRExpired ? "Tạo QR mới" : "Tạo Mã QR"}</span>
+                              </button>
+                            </div>
+                          ) : effectiveIsActive ? (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  const cachedQR = qrDataCache.get(session.id);
+                                  if (cachedQR) {
+                                    if (new Date() > new Date(cachedQR.expiresAt)) {
+                                      alert("Mã QR đã hết hạn. Vui lòng tạo mã mới.");
+                                      return;
+                                    }
+                                    setCurrentQR(cachedQR);
+                                    setShowQRModal(true);
+                                  } else {
+                                    alert("Không tìm thấy dữ liệu QR trong bộ nhớ. Vui lòng tạo mã QR mới.");
+                                  }
+                                }}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Trình chiếu QR</span>
+                              </button>
+
+                              <button
+                                onClick={() => endSession(session.id)}
+                                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                              >
+                                <StopCircle className="w-3.5 h-3.5" />
+                                <span>Dừng QR</span>
+                              </button>
+
+                              <button
+                                onClick={() => openStatsModal("session", session.id)}
+                                disabled={sessionStatsLoading.has(session.id)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                              >
+                                {sessionStatsLoading.has(session.id) ? (
+                                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
+                                ) : (
+                                  <BarChart3 className="w-3.5 h-3.5" />
+                                )}
+                                <span>Thống kê</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => openStatsModal("session", session.id)}
+                              disabled={sessionStatsLoading.has(session.id)}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              {sessionStatsLoading.has(session.id) ? (
+                                <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
+                              ) : (
+                                <BarChart3 className="w-3.5 h-3.5" />
+                              )}
+                              <span>Thống kê</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    );
-                  })
-                )}
-              </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Create Class Modal */}
+      {/* ========================================================================= */}
+      {/* MODAL 2: CREATE CLASS MODAL                                               */}
+      {/* ========================================================================= */}
       {isCreateClassModalOpen && (
-        <div className="fixed inset-0 bg-gray-900/30 flex items-center justify-center z-5">
-          <div className="bg-white shadow-2xl rounded-xl p-8 w-full max-w-md border-3 border-black animate__animated animate__bounceIn"
-          style={{backgroundImage: "linear-gradient(to top, rgb(255, 237, 254) 0%, rgb(240, 251, 255) 100%)"}}
-          >
-            <h3 className="text-2xl text-green-600 font-extrabold pb-3 mb-4 uppercase text-center border-b-2">Create New Class</h3>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 md:p-8 w-full max-w-md animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <GraduationCap className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Tạo Lớp Học Mới</h3>
+                <p className="text-xs text-slate-500">Nhập tên lớp và mô tả để khởi tạo lớp học</p>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1 ">
-                  Class Name
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Tên Lớp Học <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={newClassName}
                   onChange={(e) => setNewClassName(e.target.value)}
-                  className="w-full px-3 py-2 border-2 border-gray-600 rounded-lg shadow-xl focus:outline-none focus:ring-2 focus:ring-green-600"
-                  placeholder="Enter class name"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30 focus:border-indigo-600 focus:bg-white transition-all"
+                  placeholder="Ví dụ: CS101 - Lập trình Web"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">
-                  Description
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Mô tả Lớp Học
                 </label>
                 <textarea
                   value={newClassDescription}
                   onChange={(e) => setNewClassDescription(e.target.value)}
-                  className="w-full px-3 py-2 border-2 border-gray-600 rounded-lg shadow-xl focus:outline-none focus:ring-2 focus:ring-green-600"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30 focus:border-indigo-600 focus:bg-white transition-all"
                   rows={3}
-                  placeholder="Enter class description"
+                  placeholder="Ví dụ: Học kỳ 1, Thứ 2 và Thứ 5, Phòng A203"
                 />
               </div>
-              <div className="flex space-x-3">
+
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
                 <button
-                  onClick={createClass}
-                  className="flex-1 bg-blue-600 font-bold text-white py-2 px-4 rounded-md shadow-xl hover:bg-blue-700 cursor-pointer"
-                >
-                  + Create Class
-                </button>
-                <button
+                  type="button"
                   onClick={() => {
                     setIsCreateClassModalOpen(false);
                     setNewClassName("");
                     setNewClassDescription("");
                   }}
-                  className="flex-1 bg-gray-300 font-bold text-gray-700 py-2 px-4 rounded-md shadow-xl hover:bg-gray-400 cursor-pointer"
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs md:text-sm transition-colors cursor-pointer"
                 >
-                  Cancel
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  onClick={createClass}
+                  disabled={!newClassName.trim()}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-xs md:text-sm shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  Tạo Lớp
                 </button>
               </div>
             </div>
@@ -1603,92 +1816,60 @@ export default function TeacherDashboard() {
         </div>
       )}
 
-      {/* Create Session Modal */}
+      {/* ========================================================================= */}
+      {/* MODAL 3: CREATE SESSION MODAL                                             */}
+      {/* ========================================================================= */}
       {isCreateSessionModalOpen && (
-        <div className="fixed inset-0 bg-gray-900/30 flex items-center justify-center z-50">
-          <div className="bg-white shadow-2xl rounded-xl p-8 w-full max-w-md border-3 border-black animate__animated animate__bounceIn"
-          style={{backgroundImage: "linear-gradient(to top, rgb(255, 237, 254) 0%, rgb(240, 251, 255) 100%)"}}
-          >
-            <h3 className="text-2xl text-blue-600 font-extrabold pb-3 mb-4 uppercase text-center border-b-2">Create New Session</h3>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 md:p-8 w-full max-w-md animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <CalendarDays className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Tạo Buổi Học Mới</h3>
+                <p className="text-xs text-slate-500">Khởi tạo buổi học cho lớp {selectedClass?.name}</p>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">
-                  Session Name
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Tên Buổi Học <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={newSessionTitle}
                   onChange={(e) => setNewSessionTitle(e.target.value)}
-                  className="w-full px-3 py-2 border-2 border-gray-600 rounded-lg shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  placeholder="e.g. Lesson 1: Introduction to React"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/30 focus:border-indigo-600 focus:bg-white transition-all"
+                  placeholder="Ví dụ: Buổi 1: Giới thiệu khóa học & Thiết lập môi trường"
                 />
               </div>
-              <div className="bg-blue-50 p-3 rounded-lg border-2 border-blue-200">
-                <p className="text-sm text-blue-700 font-medium">
-                  💡 <strong>Tip:</strong> After creating the session, click
-                  &quot;Create QR&quot; to generate a QR code for student
-                  attendance.
+
+              <div className="bg-indigo-50/70 p-3.5 rounded-xl border border-indigo-100">
+                <p className="text-xs text-indigo-800 leading-relaxed font-medium">
+                  💡 Sau khi tạo buổi học, bạn có thể bấm <strong>&quot;Tạo Mã QR&quot;</strong> để hệ thống tạo mã quét điểm danh trực tiếp cho sinh viên.
                 </p>
               </div>
-              <div className="flex space-x-3">
+
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
                 <button
-                  onClick={createSession}
-                  className="flex-1 bg-blue-600 font-bold text-white p-2 rounded-full hover:bg-blue-700 cursor-pointer"
-                  disabled={!newSessionTitle.trim()}
-                >
-                  + Create Session
-                </button>
-                <button
+                  type="button"
                   onClick={() => {
                     setIsCreateSessionModalOpen(false);
                     setNewSessionTitle("");
                   }}
-                  className="flex-1 bg-gray-300 font-bold text-gray-700 p-2 rounded-full hover:bg-gray-400 cursor-pointer"
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs md:text-sm transition-colors cursor-pointer"
                 >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Student Modal */}
-      {isAddStudentModalOpen && (
-        <div className="fixed inset-0 bg-gray-900/30 flex items-center justify-center z-50">
-          <div className="bg-white shadow-2xl rounded-xl mx-2 md:mx-0 p-8 w-full max-w-md border-3 border-black animate__animated animate__bounceIn"
-          style={{backgroundImage: "linear-gradient(to top, rgb(255, 237, 254) 0%, rgb(240, 251, 255) 100%)"}}
-          >
-            <h3 className="text-2xl text-green-600 font-extrabold pb-3 mb-4 uppercase text-center border-b-2">Add Student to Class</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">
-                  Student Email
-                </label>
-                <input
-                  type="email"
-                  value={studentEmail}
-                  onChange={(e) => setStudentEmail(e.target.value)}
-                  className="w-full px-3 py-2 border-2 border-gray-600 rounded-lg shadow-xl focus:outline-none focus:ring-2 focus:ring-purple-600"
-                  placeholder="Enter student email"
-                />
-              </div>
-              <div className="flex space-x-3">
-                <button
-                  onClick={addStudent}
-                  className="flex-1 bg-green-600 font-bold text-white p-2 rounded-full hover:bg-green-700 cursor-pointer"
-                >
-                  + Add Student
+                  Hủy bỏ
                 </button>
                 <button
-                  onClick={() => {
-                    setIsAddStudentModalOpen(false);
-                    setStudentEmail("");
-                    setSelectedClassForStudent(null);
-                  }}
-                  className="flex-1 bg-gray-300 font-bold text-gray-700 p-2 rounded-full hover:bg-gray-400 cursor-pointer"
+                  type="button"
+                  onClick={createSession}
+                  disabled={!newSessionTitle.trim()}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-xl text-xs md:text-sm shadow-xs transition-all disabled:opacity-50 cursor-pointer"
                 >
-                  Cancel
+                  Tạo Buổi Học
                 </button>
               </div>
             </div>
@@ -1696,327 +1877,401 @@ export default function TeacherDashboard() {
         </div>
       )}
 
-      {/* QR Code Modal */}
-      {showQRModal && currentQR && (
-        <div className="fixed inset-0 bg-gray-900/70 flex items-center justify-center z-50 ">
-          <div className="bg-white rounded-lg p-8 w-full max-w-md text-center animate__animated animate__bounceIn">
-            <h3 className="text-xl font-bold mb-4 text-green-700">
-              🎯 ATTENDANCE QR CODE
-            </h3>
-
-            <div className="bg-gray-50 p-4 rounded-lg mb-4">
-              <div className="bg-white p-3 rounded border-2 border-green-400 inline-block">
-                {currentQR.qrImageUrl ? (
-                  <img
-                    src={currentQR.qrImageUrl}
-                    alt="QR Code"
-                    className="w-48 h-48"
-                    style={{ imageRendering: "pixelated" }}
-                    onError={(e) => {
-                      console.error("QR Image load error:", e);
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <div className="w-48 h-48 bg-gray-200 flex items-center justify-center text-gray-500">
-                    <div className="text-center">
-                      <div className="text-2xl mb-2">❌</div>
-                      <div className="text-sm">QR Code Expired</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="text-sm text-black font-bold mb-4">
-              <p>
-                <span className="text-gray-400 font-medium">Session:</span> {currentQR.sessionInfo.title}
-              </p>
-              <p>
-                <span className="text-gray-400 font-medium">Class:</span> {currentQR.sessionInfo.className}
-              </p>
-              <p
-                className={`font-bold ${
-                  new Date() > new Date(currentQR.expiresAt)
-                    ? "text-red-600"
-                    : new Date(currentQR.expiresAt).getTime() - Date.now() <
-                      60000
-                    ? "text-orange-600"
-                    : "text-red-600"
-                }`}
-              >
-                <span className="text-gray-400 font-medium">Expires:</span>{" "}
-                {new Date(currentQR.expiresAt).toLocaleString("en-US")}
-                {new Date() > new Date(currentQR.expiresAt) && " (EXPIRED)"}
-                {new Date() <= new Date(currentQR.expiresAt) &&
-                  new Date(currentQR.expiresAt).getTime() - Date.now() <
-                    60000 &&
-                  " (EXPIRING SOON)"}
-              </p>
-            </div>
-
-            <div className="flex space-x-3">
-              <button
-                onClick={() => {
-                  // console.log("🔙 Closing QR modal, keeping cache intact");
-                  // console.log("🔍 Current cache before close:", qrDataCache);
-                  setShowQRModal(false);
-                }}
-                className="flex-1 bg-gray-500 text-white p-2 rounded-full shadow-2xl hover:bg-gray-600 cursor-pointer"
-              >
-                ❌ Close
-              </button>
-              <button
-                onClick={() => {
-                  endSession(currentQR.sessionId);
-                  // endSession already has setShowQRModal(false) inside
-                }}
-                className="flex-1 bg-red-500 text-white p-2 rounded-full shadow-2xl hover:bg-red-700 cursor-pointer"
-              >
-                <span style={{boxShadow: "rgba(0, 0, 0, 0.25) 0px 14px 28px, rgba(0, 0, 0, 0.22) 0px 10px 10px", borderRadius:"50%"}}>🚫</span> Stop QR
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Session Modal */}
+      {/* ========================================================================= */}
+      {/* MODAL 4: EDIT SESSION MODAL                                               */}
+      {/* ========================================================================= */}
       {isEditSessionModalOpen && (
-        <div className="fixed inset-0 bg-gray-900/30 flex items-center justify-center z-50">
-          <div className="bg-white shadow-2xl rounded-xl p-8 w-full max-w-md border-3 border-black"
-          style={{backgroundImage: "linear-gradient(to top, rgb(222, 255, 221) 0%, rgb(255, 242, 242) 100%)"}}
-          >
-            <h3 className="text-2xl text-green-600 font-extrabold pb-3 mb-4 uppercase text-center border-b-2">✏️ Edit Session</h3>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 md:p-8 w-full max-w-md animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Edit3 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Chỉnh Sửa Buổi Học</h3>
+                <p className="text-xs text-slate-500">Cập nhật tiêu đề hoặc lịch diễn ra buổi học</p>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">
-                  Session Name
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Tên Buổi Học <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={editSessionTitle}
                   onChange={(e) => setEditSessionTitle(e.target.value)}
-                  className="w-full border-2 border-gray-600 rounded-lg shadow-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-600"
-                  placeholder="Enter session name..."
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 focus:bg-white transition-all"
+                  placeholder="Nhập tên buổi học..."
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">
-                  Date & Time
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Thời Gian Bắt Đầu
                 </label>
                 <input
                   type="datetime-local"
                   value={editSessionDate}
                   onChange={(e) => setEditSessionDate(e.target.value)}
                   min={new Date().toISOString().slice(0, 16)}
-                  className="w-full border-2 border-gray-600 rounded-lg shadow-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-600"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 focus:bg-white transition-all"
                 />
-                <p className="text-xs text-gray-600 mt-2 font-medium">
-                  ⚠️ Session time must be in the future
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Khuyến nghị chọn thời gian trong tương lai để buổi học diễn ra chuẩn xác.
                 </p>
               </div>
+
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditSessionModalOpen(false);
+                    setEditingSession(null);
+                    setEditSessionTitle("");
+                    setEditSessionDate("");
+                  }}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs md:text-sm transition-colors cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  onClick={updateSession}
+                  disabled={!editSessionTitle.trim()}
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 px-4 rounded-xl text-xs md:text-sm shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  Lưu Thay Đổi
+                </button>
+              </div>
             </div>
-            <div className="flex space-x-3 mt-6">
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 5: ADD STUDENT MODAL                                                */}
+      {/* ========================================================================= */}
+      {isAddStudentModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white shadow-2xl rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden border border-slate-200 flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-indigo-600 to-violet-600 text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                  <UserPlus className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold">Thêm Sinh Viên Vào Lớp</h3>
+                  {selectedClassForStudent && (
+                    <p className="text-indigo-100 text-xs mt-0.5">{selectedClassForStudent.name}</p>
+                  )}
+                </div>
+              </div>
               <button
                 onClick={() => {
-                  setIsEditSessionModalOpen(false);
-                  setEditingSession(null);
-                  setEditSessionTitle("");
-                  setEditSessionDate("");
+                  setIsAddStudentModalOpen(false);
+                  setStudentEmail("");
+                  setSelectedClassForStudent(null);
                 }}
-                className="flex-1 bg-gray-500 font-bold text-white py-2 px-4 rounded-md hover:bg-gray-600 cursor-pointer"
+                className="p-1.5 rounded-full hover:bg-white/20 transition-colors text-white cursor-pointer"
               >
-                Cancel
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Directory Content */}
+            <div className="p-5 overflow-y-auto max-h-[calc(90vh-80px)]">
+              <StudentDirectory
+                targetClassId={selectedClassForStudent?.id}
+                targetClassName={selectedClassForStudent?.name}
+                onStudentAdded={fetchClasses}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 6: QR CODE PRESENTATION MODAL (CLASSROOM SCREEN DISPLAY)           */}
+      {/* ========================================================================= */}
+      {showQRModal && currentQR && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl p-6 md:p-8 w-full max-w-lg text-center border border-slate-100 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
+            {/* Live Indicator Badge */}
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 mb-3">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
+              <span>ĐIỂM DANH TRỰC TIẾP QUA MÃ QR</span>
+            </div>
+
+            <h3 className="text-xl md:text-2xl font-black text-slate-900">
+              {currentQR.sessionInfo.title}
+            </h3>
+            <p className="text-sm font-medium text-slate-500 mt-1">
+              Lớp: <span className="text-indigo-600 font-bold">{currentQR.sessionInfo.className}</span>
+            </p>
+
+            {/* QR Canvas Container */}
+            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/80 my-5 shadow-inner">
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm inline-block">
+                {currentQR.qrImageUrl ? (
+                  <img
+                    src={currentQR.qrImageUrl}
+                    alt="QR Code"
+                    className="w-56 h-56 md:w-64 md:h-64 object-contain"
+                    style={{ imageRendering: "pixelated" }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="w-56 h-56 md:w-64 md:h-64 bg-slate-100 flex items-center justify-center text-slate-400">
+                    <div className="text-center">
+                      <AlertCircle className="w-10 h-10 mx-auto text-rose-500 mb-2" />
+                      <p className="text-xs font-semibold">Mã QR đã hết hạn</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Expiration Info */}
+            <div className="text-xs font-semibold text-slate-600 mb-6 space-y-1">
+              {(() => {
+                const now = new Date();
+                const expiresAt = new Date(currentQR.expiresAt);
+                const isExpired = now > expiresAt;
+                const isExpiringSoon = !isExpired && expiresAt.getTime() - now.getTime() < 60000;
+
+                return (
+                  <p
+                    className={`font-bold text-sm ${
+                      isExpired
+                        ? "text-rose-600"
+                        : isExpiringSoon
+                        ? "text-amber-600 animate-pulse"
+                        : "text-emerald-700"
+                    }`}
+                  >
+                    {isExpired
+                      ? "⚠️ Mã QR đã hết hạn quét"
+                      : isExpiringSoon
+                      ? "⏰ Sắp hết hạn trong chưa đầy 1 phút!"
+                      : `⏰ Thời hạn quét đến: ${expiresAt.toLocaleTimeString("vi-VN")}`}
+                  </p>
+                );
+              })()}
+              <p className="text-slate-400 font-normal text-[11px]">
+                Học sinh sử dụng ứng dụng di động hoặc camera để quét mã điểm danh
+              </p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex items-center gap-3 w-full">
+              <button
+                onClick={() => setShowQRModal(false)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs md:text-sm transition-colors cursor-pointer"
+              >
+                Đóng cửa sổ
               </button>
               <button
-                onClick={updateSession}
-                className="flex-1 bg-green-600 font-bold text-white py-2 px-4 rounded-md hover:bg-orange-700 cursor-pointer"
-                disabled={!editSessionTitle.trim()}
+                onClick={() => endSession(currentQR.sessionId)}
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 px-4 rounded-xl text-xs md:text-sm shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                💾 Save
+                <StopCircle className="w-4 h-4" />
+                <span>Dừng Điểm Danh</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      
-
-      {/* Statistics Modal */}
+      {/* ========================================================================= */}
+      {/* MODAL 7: STATISTICS ANALYTICS MODAL                                       */}
+      {/* ========================================================================= */}
       {showStatsModal && (
-        <div className="fixed inset-0 bg-gray-900/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-2xl p-6 m-2 md:m-4 lg:m-0 w-full max-w-6xl max-h-[85vh] md:max-h-[90vh] overflow-y-auto animate__animated animate__bounceIn" >
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">
-                {statsView === "session"
-                  ? "📊 Session Statistics"
-                  : "📈 Class Statistics"}
-              </h3>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 md:p-8 w-full max-w-6xl max-h-[88vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center pb-5 mb-6 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg md:text-xl font-bold text-slate-900">
+                    {statsView === "session"
+                      ? "Báo Cáo Điểm Danh Buổi Học"
+                      : "Thống Kê Điểm Danh Toàn Lớp"}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {statsView === "session"
+                      ? "Chi tiết thời gian quét mã và tỉ lệ có mặt của sinh viên trong buổi"
+                      : "Tổng quan tỉ lệ chuyên cần qua các buổi học"}
+                  </p>
+                </div>
+              </div>
+
               <button
                 onClick={() => {
                   setShowStatsModal(false);
                   setSessionStats(null);
                   setClassStats(null);
                 }}
-                className="text-gray-500 hover:text-gray-700 text-3xl font-bold"
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+                title="Đóng cửa sổ"
               >
-                ×
+                <X size={20} />
               </button>
             </div>
 
             {/* Session Statistics View */}
             {statsView === "session" && sessionStats && (
               <div className="space-y-6">
-                {/* Session Info */}
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="text-lg font-semibold text-blue-800 mb-2">
-                    📝 Session Information
-                  </h4>
+                {/* Session Info Banner */}
+                <div className="bg-indigo-50/70 border border-indigo-100 p-5 rounded-2xl">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <p className="text-sm text-gray-600">Session</p>
-                      <p className="font-medium">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Buổi học</p>
+                      <p className="font-bold text-sm text-slate-900 mt-1">
                         {sessionStats.sessionInfo.title}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Class</p>
-                      <p className="font-medium">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Lớp</p>
+                      <p className="font-bold text-sm text-slate-900 mt-1">
                         {sessionStats.sessionInfo.className}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Start Time</p>
-                      <p className="font-medium">
-                        {new Date(
-                          sessionStats.sessionInfo.startTime
-                        ).toLocaleString()}
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Thời gian bắt đầu</p>
+                      <p className="font-bold text-sm text-slate-900 mt-1">
+                        {new Date(sessionStats.sessionInfo.startTime).toLocaleString("vi-VN")}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Status</p>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Trạng thái</p>
                       <span
-                        className={`px-2 py-1 rounded text-sm ${
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold mt-1 ${
                           sessionStats.sessionInfo.isActive
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-slate-200 text-slate-700"
                         }`}
                       >
-                        {sessionStats.sessionInfo.isActive
-                          ? "Active"
-                          : "Inactive"}
+                        {sessionStats.sessionInfo.isActive ? "Đang diễn ra" : "Đã kết thúc"}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Summary Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                  <div className="bg-blue-100 p-4 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-blue-600">
+                {/* KPI Summary Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+                  <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl text-center">
+                    <p className="text-2xl font-black text-slate-900">
                       {sessionStats.totalStudents}
-                    </div>
-                    <div className="text-sm text-blue-800">Total Students</div>
+                    </p>
+                    <p className="text-xs font-semibold text-slate-500 mt-0.5">Tổng số sinh viên</p>
                   </div>
-                  <div className="bg-green-100 p-4 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-green-600">
+
+                  <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl text-center">
+                    <p className="text-2xl font-black text-emerald-600">
                       {sessionStats.presentStudents}
-                    </div>
-                    <div className="text-sm text-green-800">Present</div>
+                    </p>
+                    <p className="text-xs font-semibold text-emerald-800 mt-0.5">Có mặt đúng giờ</p>
                   </div>
-                  <div className="bg-yellow-100 p-4 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-yellow-600">
+
+                  <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl text-center">
+                    <p className="text-2xl font-black text-amber-600">
                       {sessionStats.lateStudents}
-                    </div>
-                    <div className="text-sm text-yellow-800">Late</div>
+                    </p>
+                    <p className="text-xs font-semibold text-amber-800 mt-0.5">Đi muộn</p>
                   </div>
-                  <div className="bg-red-100 p-4 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-red-600">
+
+                  <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl text-center">
+                    <p className="text-2xl font-black text-rose-600">
                       {sessionStats.absentStudents}
-                    </div>
-                    <div className="text-sm text-red-800">Absent</div>
+                    </p>
+                    <p className="text-xs font-semibold text-rose-800 mt-0.5">Vắng mặt</p>
                   </div>
-                  <div className="bg-purple-100 p-4 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-purple-600">
+
+                  <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl text-center">
+                    <p className="text-2xl font-black text-indigo-600">
                       {sessionStats.attendanceRate}%
-                    </div>
-                    <div className="text-sm text-purple-800">
-                      Attendance Rate
-                    </div>
+                    </p>
+                    <p className="text-xs font-semibold text-indigo-800 mt-0.5">Tỉ lệ tham gia</p>
                   </div>
                 </div>
 
                 {/* Student Details Table */}
-                <div className="bg-white border rounded-lg overflow-hidden">
-                  <div className="bg-gray-50 px-4 py-3 border-b">
-                    <h4 className="text-lg font-semibold text-gray-800">
-                      👥 Student Details
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+                  <div className="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-slate-800">
+                      Danh sách sinh viên điểm danh
                     </h4>
+                    <span className="text-xs text-slate-500">
+                      {sessionStats.attendanceDetails.length} sinh viên
+                    </span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-100">
+                      <thead className="bg-slate-100/75 text-slate-600 border-b border-slate-200">
                         <tr>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
-                            Student
+                          <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider">
+                            Sinh viên
                           </th>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                          <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider">
                             Email
                           </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                            Status
+                          <th className="px-5 py-3 text-center text-xs font-bold uppercase tracking-wider">
+                            Trạng thái
                           </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                            Check-in Time
+                          <th className="px-5 py-3 text-center text-xs font-bold uppercase tracking-wider">
+                            Thời gian điểm danh
                           </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                            Minutes from Start
+                          <th className="px-5 py-3 text-center text-xs font-bold uppercase tracking-wider">
+                            Độ trễ
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {sessionStats.attendanceDetails.map(
-                          (student: any, index: number) => (
-                            <tr
-                              key={student.studentId}
-                              className={
-                                index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                              }
-                            >
-                              <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                {student.studentName}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-600">
-                                {student.studentEmail}
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <span
-                                  className={`px-2 py-1 rounded text-xs font-medium ${
-                                    student.status === "PRESENT"
-                                      ? "bg-green-100 text-green-800"
-                                      : student.status === "LATE"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : "bg-red-100 text-red-800"
-                                  }`}
-                                >
-                                  {student.status}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-center text-sm text-gray-600">
-                                {student.checkinTime
-                                  ? new Date(
-                                      student.checkinTime
-                                    ).toLocaleTimeString()
-                                  : "-"}
-                              </td>
-                              <td className="px-4 py-3 text-center text-sm text-gray-600">
-                                {student.timeFromStart !== null
-                                  ? `${student.timeFromStart} min`
-                                  : "-"}
-                              </td>
-                            </tr>
-                          )
-                        )}
+                      <tbody className="divide-y divide-slate-100">
+                        {sessionStats.attendanceDetails.map((student: any) => (
+                          <tr key={student.studentId} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="px-5 py-3 text-xs font-bold text-slate-900 whitespace-nowrap">
+                              {student.studentName}
+                            </td>
+                            <td className="px-5 py-3 text-xs text-slate-500 whitespace-nowrap">
+                              {student.studentEmail}
+                            </td>
+                            <td className="px-5 py-3 text-center whitespace-nowrap">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                  student.status === "PRESENT"
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : student.status === "LATE"
+                                    ? "bg-amber-100 text-amber-800"
+                                    : "bg-rose-100 text-rose-800"
+                                }`}
+                              >
+                                {student.status === "PRESENT"
+                                  ? "Có mặt"
+                                  : student.status === "LATE"
+                                  ? "Đi muộn"
+                                  : "Vắng"}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-center text-xs text-slate-600 whitespace-nowrap">
+                              {student.checkinTime
+                                ? new Date(student.checkinTime).toLocaleTimeString("vi-VN")
+                                : "—"}
+                            </td>
+                            <td className="px-5 py-3 text-center text-xs text-slate-600 whitespace-nowrap">
+                              {student.timeFromStart !== null
+                                ? `+${student.timeFromStart} phút`
+                                : "—"}
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -2027,29 +2282,24 @@ export default function TeacherDashboard() {
             {/* Class Statistics View */}
             {statsView === "class" && classStats && (
               <div className="space-y-6">
-                {/* Class Info */}
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h4 className="text-lg font-semibold text-green-800 mb-2">
-                    🎓 Class Overview
-                  </h4>
+                {/* Class Info Banner */}
+                <div className="bg-emerald-50/60 border border-emerald-100 p-5 rounded-2xl">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <p className="text-sm text-gray-600">Class Name</p>
-                      <p className="font-medium">{classStats.classInfo.name}</p>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tên Lớp</p>
+                      <p className="font-bold text-sm text-slate-900 mt-1">{classStats.classInfo.name}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Total Students</p>
-                      <p className="font-medium">{classStats.totalStudents}</p>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tổng sinh viên</p>
+                      <p className="font-bold text-sm text-slate-900 mt-1">{classStats.totalStudents}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Total Sessions</p>
-                      <p className="font-medium">{classStats.totalSessions}</p>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tổng số buổi học</p>
+                      <p className="font-bold text-sm text-slate-900 mt-1">{classStats.totalSessions}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">
-                        Average Attendance
-                      </p>
-                      <p className="font-medium">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tỉ lệ tham gia TB</p>
+                      <p className="font-bold text-sm text-emerald-700 mt-1">
                         {classStats.averageAttendanceRate}%
                       </p>
                     </div>
@@ -2057,188 +2307,247 @@ export default function TeacherDashboard() {
                 </div>
 
                 {/* Student Performance Table */}
-                <div className="bg-white border rounded-lg overflow-hidden">
-                  <div className="bg-gray-50 px-4 py-3 border-b">
-                    <h4 className="text-lg font-semibold text-gray-800">
-                      📈 Student Performance
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+                  <div className="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-slate-800">
+                      Chuyên cần từng sinh viên
                     </h4>
+                    <span className="text-xs text-slate-500">
+                      {classStats.studentStats.length} sinh viên
+                    </span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-100">
+                      <thead className="bg-slate-100/75 text-slate-600 border-b border-slate-200">
                         <tr>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
-                            Student
+                          <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                            Sinh viên
                           </th>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                          <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider whitespace-nowrap">
                             Email
                           </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                            Present
+                          <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                            Có mặt
                           </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                            Late
+                          <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                            Đi muộn
                           </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                            Absent
+                          <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                            Vắng
                           </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                            Rate
+                          <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                            Tỉ lệ
                           </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                            Last Attendance
+                          <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                            Điểm danh gần nhất
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {classStats.studentStats.map(
-                          (student: any, index: number) => (
-                            <tr
-                              key={student.studentId}
-                              className={
-                                index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                              }
-                            >
-                              <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                {student.studentName}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-600">
-                                {student.studentEmail}
-                              </td>
-                              <td className="px-4 py-3 text-center text-sm text-green-600 font-medium">
-                                {student.presentSessions}
-                              </td>
-                              <td className="px-4 py-3 text-center text-sm text-yellow-600 font-medium">
-                                {student.lateSessions}
-                              </td>
-                              <td className="px-4 py-3 text-center text-sm text-red-600 font-medium">
-                                {student.absentSessions}
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <span
-                                  className={`px-2 py-1 rounded text-xs font-medium ${
-                                    parseFloat(student.attendanceRate) >= 80
-                                      ? "bg-green-100 text-green-800"
-                                      : parseFloat(student.attendanceRate) >= 60
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : "bg-red-100 text-red-800"
-                                  }`}
-                                >
-                                  {student.attendanceRate}%
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-center text-sm text-gray-600">
-                                {student.lastAttendance
-                                  ? new Date(
-                                      student.lastAttendance
-                                    ).toLocaleDateString()
-                                  : "Never"}
-                              </td>
-                            </tr>
-                          )
-                        )}
+                      <tbody className="divide-y divide-slate-100">
+                        {classStats.studentStats.map((student: any) => (
+                          <tr key={student.studentId} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="px-4 py-3 text-xs font-bold text-slate-900 whitespace-nowrap">
+                              {student.studentName}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
+                              {student.studentEmail}
+                            </td>
+                            <td className="px-4 py-3 text-center text-xs text-emerald-600 font-bold whitespace-nowrap">
+                              {student.presentSessions}
+                            </td>
+                            <td className="px-4 py-3 text-center text-xs text-amber-600 font-bold whitespace-nowrap">
+                              {student.lateSessions}
+                            </td>
+                            <td className="px-4 py-3 text-center text-xs text-rose-600 font-bold whitespace-nowrap">
+                              {student.absentSessions}
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                  parseFloat(student.attendanceRate) >= 80
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : parseFloat(student.attendanceRate) >= 60
+                                    ? "bg-amber-100 text-amber-800"
+                                    : "bg-rose-100 text-rose-800"
+                                }`}
+                              >
+                                {student.attendanceRate}%
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center text-xs text-slate-500 whitespace-nowrap">
+                              {student.lastAttendance
+                                ? new Date(student.lastAttendance).toLocaleDateString("vi-VN")
+                                : "Chưa từng"}
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
                 </div>
 
                 {/* Session Performance Table */}
-                <div className="bg-white border rounded-lg overflow-hidden">
-                  <div className="bg-gray-50 px-4 py-3 border-b">
-                    <h4 className="text-lg font-semibold text-gray-800">
-                      📅 Session Performance
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+                  <div className="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-slate-800">
+                      Lịch sử các buổi học
                     </h4>
+                    <span className="text-xs text-slate-500">
+                      {classStats.sessionStats.length} buổi học
+                    </span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-100">
+                      <thead className="bg-slate-100/75 text-slate-600 border-b border-slate-200">
                         <tr>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
-                            Session
+                          <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                            Buổi học
                           </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                            Date
+                          <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                            Ngày diễn ra
                           </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                            Status
+                          <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                            Trạng thái
                           </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                            Present
+                          <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                            Có mặt
                           </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                            Late
+                          <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                            Đi muộn
                           </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                            Absent
+                          <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                            Vắng
                           </th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-600">
-                            Rate
+                          <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                            Tỉ lệ
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {classStats.sessionStats.map(
-                          (session: any, index: number) => (
-                            <tr
-                              key={session.sessionId}
-                              className={
-                                index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                              }
-                            >
-                              <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                {session.sessionTitle}
-                              </td>
-                              <td className="px-4 py-3 text-center text-sm text-gray-600">
-                                {new Date(
-                                  session.startTime
-                                ).toLocaleDateString()}
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <span
-                                  className={`px-2 py-1 rounded text-xs font-medium ${
-                                    session.isActive
-                                      ? "bg-green-100 text-green-800"
-                                      : "bg-gray-100 text-gray-800"
-                                  }`}
-                                >
-                                  {session.isActive ? "Active" : "Inactive"}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-center text-sm text-green-600 font-medium">
-                                {session.presentStudents}
-                              </td>
-                              <td className="px-4 py-3 text-center text-sm text-yellow-600 font-medium">
-                                {session.lateStudents}
-                              </td>
-                              <td className="px-4 py-3 text-center text-sm text-red-600 font-medium">
-                                {session.absentStudents}
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <span
-                                  className={`px-2 py-1 rounded text-xs font-medium ${
-                                    parseFloat(session.attendanceRate) >= 80
-                                      ? "bg-green-100 text-green-800"
-                                      : parseFloat(session.attendanceRate) >= 60
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : "bg-red-100 text-red-800"
-                                  }`}
-                                >
-                                  {session.attendanceRate}%
-                                </span>
-                              </td>
-                            </tr>
-                          )
-                        )}
+                      <tbody className="divide-y divide-slate-100">
+                        {classStats.sessionStats.map((session: any) => (
+                          <tr key={session.sessionId} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="px-4 py-3 text-xs font-bold text-slate-900 whitespace-nowrap">
+                              {session.sessionTitle}
+                            </td>
+                            <td className="px-4 py-3 text-center text-xs text-slate-500 whitespace-nowrap">
+                              {new Date(session.startTime).toLocaleDateString("vi-VN")}
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                                  session.isActive
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : "bg-slate-100 text-slate-700"
+                                }`}
+                              >
+                                {session.isActive ? "Đang mở" : "Đã kết thúc"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center text-xs text-emerald-600 font-bold whitespace-nowrap">
+                              {session.presentStudents}
+                            </td>
+                            <td className="px-4 py-3 text-center text-xs text-amber-600 font-bold whitespace-nowrap">
+                              {session.lateStudents}
+                            </td>
+                            <td className="px-4 py-3 text-center text-xs text-rose-600 font-bold whitespace-nowrap">
+                              {session.absentStudents}
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                  parseFloat(session.attendanceRate) >= 80
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : parseFloat(session.attendanceRate) >= 60
+                                    ? "bg-amber-100 text-amber-800"
+                                    : "bg-rose-100 text-rose-800"
+                                }`}
+                              >
+                                {session.attendanceRate}%
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
                 </div>
               </div>
             )}
-
-            
           </div>
         </div>
+      )}
+
+      {/* Gradebook Modal */}
+      {selectedClassForGrades && (
+        <div className="fixed inset-0 bg-gray-900/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col animate__animated animate__zoomIn animate__faster">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-xl">
+              <h2 className="text-xl font-bold text-gray-800">Bảng Điểm: {selectedClassForGrades.name}</h2>
+              <button onClick={() => setSelectedClassForGrades(null)} className="p-2 hover:bg-gray-200 rounded-full">
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <Gradebook classId={selectedClassForGrades.id} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Class Materials Modal */}
+      {selectedClassForMaterials && (
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-4 md:p-5 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-indigo-600" />
+                  Tài liệu học tập: <span className="text-indigo-600">{selectedClassForMaterials.name}</span>
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">Quản lý link tài liệu, video bài giảng, Google Drive, Slide cho lớp</p>
+              </div>
+              <button
+                onClick={() => setSelectedClassForMaterials(null)}
+                className="p-1.5 hover:bg-gray-200 rounded-full transition-colors text-gray-500 hover:text-gray-700 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50">
+              <ClassMaterialsPanel
+                classId={selectedClassForMaterials.id}
+                className={selectedClassForMaterials.name}
+                token={localStorage.getItem('token')}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Attendance Modal */}
+      {selectedSessionForAttendance && selectedClass && (
+        <ManualAttendance 
+          session={selectedSessionForAttendance} 
+          classId={selectedClass.id}
+          onClose={() => setSelectedSessionForAttendance(null)} 
+        />
+      )}
+
+      {/* Student Management Modal */}
+      {isStudentManagementOpen && (
+        <StudentManagementModal
+          onClose={() => setIsStudentManagementOpen(false)}
+          classes={classes.map(c => ({ id: c.id, name: c.name }))}
+          onDataChanged={fetchClasses}
+        />
+      )}
+
+      {/* Tuition Management Modal */}
+      {isTuitionModalOpen && (
+        <TuitionManagementModal
+          onClose={() => setIsTuitionModalOpen(false)}
+          classes={classes.map(c => ({ id: c.id, name: c.name }))}
+        />
       )}
     </div>
   );

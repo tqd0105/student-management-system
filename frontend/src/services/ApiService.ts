@@ -149,6 +149,245 @@ class ApiService {
     localStorage.removeItem('user');
   }
 
+  static async getProfile() {
+    const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  static loginWithGoogle() {
+    window.location.href = `${API_BASE_URL}/api/auth/google`;
+  }
+
+  // ── Teacher: Student Management ──
+
+  /** Lấy tất cả SV trong hệ thống (kèm tìm kiếm) */
+  static async getTeacherAllStudents(params?: { search?: string; classId?: string }) {
+    const url = new URL(`${API_BASE_URL}/api/teacher/students`);
+    if (params?.search) url.searchParams.set('search', params.search);
+    if (params?.classId) url.searchParams.set('classId', params.classId);
+    const response = await fetch(url.toString(), { headers: this.getHeaders() });
+    return this.handleResponse(response);
+  }
+
+  /** Lấy SV trong lớp (kèm thống kê điểm danh) */
+  static async getClassStudents(classId: string) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/students`, {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  /** Thêm SV vào lớp (bằng email) */
+  static async addStudentToClass(classId: string, studentEmail: string) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/students`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ studentEmail }),
+    });
+    return this.handleResponse(response);
+  }
+
+  /** Xóa SV khỏi lớp */
+  static async removeStudentFromClass(classId: string, studentId: string) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/students/${studentId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  // ── Teacher: Manual Attendance ──
+  static async markManualAttendance(sessionId: string, studentId: string, status: 'PRESENT' | 'LATE' | 'ABSENT') {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/sessions/${sessionId}/attendance`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ studentId, status }),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async getSessionAttendanceStats(sessionId: string) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/sessions/${sessionId}/stats`, {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  // ── Teacher: Assignments & Grades ──
+  static async getClassAssignments(classId: string) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/assignments`, {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async createAssignment(classId: string, data: { title: string; description?: string | null; dueDate?: string | null; attachmentUrl?: string | null; materialId?: string | null }) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/assignments`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async updateAssignment(assignmentId: string, data: { title?: string; description?: string | null; dueDate?: string | null; attachmentUrl?: string | null; materialId?: string | null }) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/assignments/${assignmentId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async getClassMaterials(classId: string) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/materials`, {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async deleteAssignment(assignmentId: string) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/assignments/${assignmentId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async getClassGrades(classId: string) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/grades`, {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async updateGrades(classId: string, updates: { studentId: string; assignmentId: string; score?: number | null; feedback?: string | null }[]) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/grades`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ updates }),
+    });
+    return this.handleResponse(response);
+  }
+
+  // Teacher: Student Management (Quản lý hồ sơ & thông tin học sinh)
+  static async getManagedStudents(params?: { search?: string; classId?: string }) {
+    const url = new URL(`${API_BASE_URL}/api/teacher/managed-students`);
+    if (params?.search) url.searchParams.set('search', params.search);
+    if (params?.classId) url.searchParams.set('classId', params.classId);
+
+    const response = await fetch(url.toString(), {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async getStudentProfileDetail(studentId: string) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/managed-students/${studentId}`, {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async updateStudentProfile(studentId: string, data: any) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/managed-students/${studentId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async createQuickStudent(data: {
+    name: string;
+    email: string;
+    password?: string;
+    classId?: string;
+    phone?: string;
+    studentCode?: string;
+    gender?: string;
+  }) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/managed-students`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse(response);
+  }
+
+  // Teacher: Tuition & Fee Management (Quản lý học phí)
+  static async getTuitionFees(params?: { classId?: string; status?: string; search?: string; studentId?: string }) {
+    const url = new URL(`${API_BASE_URL}/api/teacher/tuition-fees`);
+    if (params?.classId && params.classId !== 'ALL') url.searchParams.set('classId', params.classId);
+    if (params?.status && params.status !== 'ALL') url.searchParams.set('status', params.status);
+    if (params?.search) url.searchParams.set('search', params.search);
+    if (params?.studentId) url.searchParams.set('studentId', params.studentId);
+
+    const response = await fetch(url.toString(), {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async getTuitionStats(classId?: string) {
+    const url = new URL(`${API_BASE_URL}/api/teacher/tuition-fees/stats`);
+    if (classId && classId !== 'ALL') url.searchParams.set('classId', classId);
+
+    const response = await fetch(url.toString(), {
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async createTuitionFee(data: {
+    studentId: string;
+    classId?: string;
+    title: string;
+    amount: number;
+    dueDate?: string;
+    note?: string;
+  }) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/tuition-fees`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async recordTuitionPayment(feeId: string, data: {
+    amountPaid: number;
+    paymentMethod?: string;
+    paidAt?: string;
+    note?: string;
+  }) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/tuition-fees/${feeId}/payment`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async updateTuitionFee(feeId: string, data: any) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/tuition-fees/${feeId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse(response);
+  }
+
+  static async deleteTuitionFee(feeId: string) {
+    const response = await fetch(`${API_BASE_URL}/api/teacher/tuition-fees/${feeId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
   // Admin: Create Teacher Account
   static async createTeacherAccount(teacherData: {
     name: string;
@@ -320,6 +559,41 @@ class ApiService {
   static async getStudentProfile() {
     return this.makeRequest(`${API_BASE_URL}/api/student/profile`, {
       headers: this.getHeaders(),
+    });
+  }
+
+  static async getStudentGrades(classId?: string) {
+    const url = new URL(`${API_BASE_URL}/api/student/grades`);
+    if (classId) {
+      url.searchParams.append('classId', classId);
+    }
+    return this.makeRequest(url.toString(), {
+      headers: this.getHeaders(),
+    });
+  }
+
+  static async getStudentTuitionFees() {
+    return this.makeRequest(`${API_BASE_URL}/api/student/tuition-fees`, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  /** Lấy danh sách bài tập & hạn nộp của sinh viên */
+  static async getStudentAssignments(params?: { classId?: string; status?: string }) {
+    const url = new URL(`${API_BASE_URL}/api/student/assignments`);
+    if (params?.classId) url.searchParams.set('classId', params.classId);
+    if (params?.status) url.searchParams.set('status', params.status);
+    return this.makeRequest(url.toString(), {
+      headers: this.getHeaders(),
+    });
+  }
+
+  /** Nộp bài tập dạng URL (Google Drive, GitHub, Figma, Docs...) */
+  static async submitAssignment(assignmentId: string, data: { submissionUrl: string; submissionNotes?: string }) {
+    return this.makeRequest(`${API_BASE_URL}/api/student/assignments/${assignmentId}/submit`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
     });
   }
 }

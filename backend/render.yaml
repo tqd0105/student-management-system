@@ -28,3 +28,9 @@ services:
         value: https://sms-fe-lovat.vercel.app/
       - key: APP_2FA_NAME
         value: "Student Management System"
+      - key: GOOGLE_CLIENT_ID
+        value: "YOUR_GOOGLE_CLIENT_ID"
+      - key: GOOGLE_CLIENT_SECRET
+        value: "YOUR_GOOGLE_CLIENT_SECRET"
+      - key: BACKEND_URL
+        value: "https://student-management-system-udhy.onrender.com"

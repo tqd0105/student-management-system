@@ -11,7 +11,12 @@ import {
   scanQRAndCheckIn,
   getAttendanceHistory,
   getStudentProfile,
-  simpleCheckIn
+  simpleCheckIn,
+  getStudentGrades,
+  getStudentAssignments,
+  getStudentTuitionFees,
+  getClassMaterials,
+  submitAssignment,
 } from '../controllers/student';
 
 const router = Router();
@@ -29,5 +34,18 @@ router.get('/classes', getStudentClasses);                          // Lấy dan
 router.post('/scan-qr', scanQRAndCheckIn);                          // Quét QR và điểm danh
 router.get('/attendance', getAttendanceHistory);                    // Lịch sử điểm danh
 router.post('/checkin', simpleCheckIn);                             // Điểm danh đơn giản (legacy)
+
+// Grade Routes
+router.get('/grades', getStudentGrades);                            // Bảng điểm của sinh viên
+
+// Assignment & Submission Routes
+router.get('/assignments', getStudentAssignments);                  // Danh sách bài tập & hạn nộp
+router.post('/assignments/:assignmentId/submit', submitAssignment); // Nộp link bài tập
+
+// Tuition Fee Routes
+router.get('/tuition-fees', getStudentTuitionFees);                 // Học phí của sinh viên
+
+// Learning Materials Routes
+router.get('/classes/:classId/materials', getClassMaterials);       // Tài liệu học tập của lớp
 
 export default router;

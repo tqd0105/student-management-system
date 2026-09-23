@@ -5,11 +5,13 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { LogOut, Trash2 } from 'lucide-react';
+import Footer from './Footer';
+import DTechContactModal from './DTechContactModal';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -18,6 +20,7 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { user, logout, isAuthenticated, loading } = useAuth();
   const router = useRouter();
+  const [isDTechModalOpen, setIsDTechModalOpen] = useState(false);
 
   React.useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -119,7 +122,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen " >  
+    <div className="min-h-screen flex flex-col justify-between bg-gray-50">  
       {/* Top Navigation */}
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -148,14 +151,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               </div>
 
               {/* Logout Button */}
-              <button
+              {/* <button
                 onClick={handleDeleteAccount}
                 className="bg-red-600 text-white md:p-3 lg:px-4 lg:py-2 rounded-full shadow-md hover:bg-red-700 flex items-center space-x-0 lg:space-x-2 hidden md:flex cursor-pointer"
                 title="Delete Account"
               >
                 <Trash2 className="w-4 h-4" />
                 <span className='hidden lg:block'>Delete</span>
-              </button>
+              </button> */}
               <button
                 onClick={handleLogout}
                 className="bg-gray-600 text-white p-3 md:p-3 lg:px-4 lg:py-2 rounded-full shadow-md hover:bg-gray-700 flex items-center space-x-0 lg:space-x-2 cursor-pointer"
@@ -172,13 +175,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8"
-        
-      >
+      <main className="flex-1 max-w-7xl w-full mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {children}
         </div>
       </main>
+
+      {/* Footer */}
+      <Footer onOpenContactModal={() => setIsDTechModalOpen(true)} />
+
+      {/* DTECH Contact Modal */}
+      <DTechContactModal
+        isOpen={isDTechModalOpen}
+        onClose={() => setIsDTechModalOpen(false)}
+      />
     </div>
   );
 };

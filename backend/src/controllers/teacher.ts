@@ -9,6 +9,8 @@ import { PrismaClient } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import QRCode from 'qrcode';
 import { UserPayload } from '../types';
+import { AuthUtils } from '../utils/auth';
+import { ensureStudentProfileAndCode, generateNextStudentCode } from '../utils/studentCode';
 
 const prisma = new PrismaClient();
 
@@ -540,6 +542,164 @@ export const resumeSession = async (req: AuthenticatedRequest, res: Response): P
   }
 };
 
+// Lấy tất cả sinh viên trong hệ thống (để giáo viên tìm và thêm vào lớp)
+export const getAllStudents = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const { search, classId } = req.query;
+
+    // Tìm kiếm theo tên hoặc email
+    const whereClause: any = { role: 'STUDENT' };
+    if (search && typeof search === 'string' && search.trim()) {
+      whereClause.OR = [
+        { name: { contains: search.trim(), mode: 'insensitive' } },
+        { email: { contains: search.trim(), mode: 'insensitive' } },
+      ];
+    }
+
+    const students = await prisma.user.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+        createdAt: true,
+        studentEnrollments: {
+          select: {
+            classId: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+                teacherId: true,
+              }
+            }
+          }
+        }
+      },
+      orderBy: { name: 'asc' },
+      take: 100, // Giới hạn 100 SV mỗi lần tìm
+    });
+
+    // Đánh dấu SV đã vào lớp nào của giáo viên này
+    const studentsWithStatus = students.map(s => {
+      const myClassEnrollments = s.studentEnrollments.filter(
+        e => e.class.teacherId === teacherId
+      );
+      const isInTargetClass = classId
+        ? s.studentEnrollments.some(e => e.classId === classId)
+        : false;
+
+      return {
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        avatar: s.avatar,
+        createdAt: s.createdAt,
+        enrolledClasses: myClassEnrollments.map(e => ({
+          id: e.class.id,
+          name: e.class.name,
+        })),
+        isInTargetClass,
+      };
+    });
+
+    return res.json({
+      success: true,
+      data: studentsWithStatus,
+      total: studentsWithStatus.length,
+    });
+  } catch (error) {
+    console.error('Error getting all students:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Lấy danh sách sinh viên trong một lớp cụ thể (kèm thống kê điểm danh)
+export const getClassStudents = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    const { classId } = req.params;
+
+    if (!teacherId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    // Kiểm tra lớp thuộc giáo viên này
+    const classInfo = await prisma.class.findFirst({
+      where: { id: classId, teacherId }
+    });
+
+    if (!classInfo) {
+      return res.status(404).json({ success: false, message: 'Class not found or access denied' });
+    }
+
+    const enrollments = await prisma.classEnrollment.findMany({
+      where: { classId },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            createdAt: true,
+          }
+        }
+      },
+      orderBy: { enrolledAt: 'desc' }
+    });
+
+    // Lấy tổng số session của lớp để tính tỷ lệ điểm danh
+    const totalSessions = await prisma.attendanceSession.count({
+      where: { classId }
+    });
+
+    // Lấy attendance logs cho từng sinh viên trong lớp này
+    const studentIds = enrollments.map(e => e.student.id);
+    const attendanceLogs = await prisma.attendanceLog.findMany({
+      where: {
+        studentId: { in: studentIds },
+        session: { is: { classId } }
+      },
+      select: { studentId: true, status: true }
+    });
+
+    // Tổng hợp dữ liệu
+    const studentsData = enrollments.map(e => {
+      const logs = attendanceLogs.filter(l => l.studentId === e.student.id);
+      const present = logs.filter(l => l.status === 'PRESENT').length;
+      const late = logs.filter(l => l.status === 'LATE').length;
+      return {
+        ...e.student,
+        enrolledAt: e.enrolledAt,
+        attendanceStats: {
+          totalSessions,
+          attended: present + late,
+          present,
+          late,
+          absent: totalSessions - present - late,
+          rate: totalSessions > 0 ? Math.round(((present + late) / totalSessions) * 100) : 0,
+        }
+      };
+    });
+
+    return res.json({
+      success: true,
+      data: studentsData,
+      class: { id: classInfo.id, name: classInfo.name },
+    });
+  } catch (error) {
+    console.error('Error getting class students:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
 // Thêm sinh viên vào lớp
 export const addStudentToClass = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
   try {
@@ -841,7 +1001,10 @@ export const getSessionAttendanceStats = async (req: AuthenticatedRequest, res: 
     const session = await prisma.attendanceSession.findFirst({
       where: {
         id: sessionId,
-        teacherId: teacherId
+        OR: [
+          { teacherId: teacherId },
+          { class: { teacherId: teacherId } }
+        ]
       },
       include: {
         class: {
@@ -883,6 +1046,7 @@ export const getSessionAttendanceStats = async (req: AuthenticatedRequest, res: 
         studentName: student.name,
         studentEmail: student.email,
         status: attendanceRecord ? attendanceRecord.status : 'ABSENT',
+        hasRecord: !!attendanceRecord,
         checkinTime: attendanceRecord?.checkedAt || null,
         timeFromStart: attendanceRecord && attendanceRecord.checkedAt ? 
           Math.floor((attendanceRecord.checkedAt.getTime() - session.startTime.getTime()) / 1000 / 60) : null
@@ -906,7 +1070,8 @@ export const getSessionAttendanceStats = async (req: AuthenticatedRequest, res: 
       lateStudents: lateCount,
       absentStudents: allStudents.length - presentCount - lateCount,
       attendanceRate: allStudents.length > 0 ? ((presentCount + lateCount) / allStudents.length * 100).toFixed(1) : 0,
-      attendanceDetails: attendanceStats
+      attendanceDetails: attendanceStats,
+      logs: attendanceRecords
     };
 
     return res.json({
@@ -1040,5 +1205,1066 @@ export const getClassAttendanceStats = async (req: AuthenticatedRequest, res: Re
       success: false,
       message: 'Internal server error'
     });
+  }
+};
+
+// --- MANUAL ATTENDANCE ---
+export const manualAttendance = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    const { sessionId } = req.params;
+    const { studentId, status } = req.body; // status: 'PRESENT', 'LATE', 'ABSENT'
+
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    // Validate session ownership
+    const session = await prisma.attendanceSession.findFirst({
+      where: {
+        id: sessionId,
+        OR: [
+          { teacherId },
+          { class: { teacherId } }
+        ]
+      }
+    });
+
+    if (!session) return res.status(404).json({ success: false, message: 'Session not found' });
+
+    // Validate student is in class
+    const enrollment = await prisma.classEnrollment.findFirst({
+      where: { classId: session.classId, studentId }
+    });
+
+    if (!enrollment) return res.status(400).json({ success: false, message: 'Student not in this class' });
+
+    const validStatuses = ['PRESENT', 'LATE', 'ABSENT'];
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    const log = await prisma.attendanceLog.upsert({
+      where: {
+        studentId_sessionId: {
+          studentId,
+          sessionId
+        }
+      },
+      update: {
+        status: status as any,
+        deviceId: 'MANUAL_TEACHER',
+        checkedAt: new Date()
+      },
+      create: {
+        studentId,
+        sessionId,
+        status: status as any,
+        deviceId: 'MANUAL_TEACHER'
+      }
+    });
+
+    return res.json({ success: true, data: log, message: 'Attendance updated manually' });
+  } catch (error) {
+    console.error('Error manual attendance:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// --- GRADEBOOK & ASSIGNMENTS ---
+
+export const getClassAssignments = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    const { classId } = req.params;
+
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const classInfo = await prisma.class.findFirst({ where: { id: classId, teacherId }});
+    if (!classInfo) return res.status(404).json({ success: false, message: 'Class not found' });
+
+    const assignments = await prisma.assignment.findMany({
+      where: { classId },
+      include: {
+        material: {
+          select: { id: true, title: true, url: true, type: true }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    return res.json({ success: true, data: assignments });
+  } catch (error) {
+    console.error('Error getting assignments:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const createAssignment = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    const { classId } = req.params;
+    const { title, description, dueDate, attachmentUrl, materialId } = req.body;
+
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const classInfo = await prisma.class.findFirst({ where: { id: classId, teacherId }});
+    if (!classInfo) return res.status(404).json({ success: false, message: 'Class not found' });
+
+    const assignment = await prisma.assignment.create({
+      data: {
+        classId,
+        title,
+        description,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        attachmentUrl: attachmentUrl?.trim() || null,
+        materialId: materialId || null
+      },
+      include: {
+        material: {
+          select: { id: true, title: true, url: true, type: true }
+        }
+      }
+    });
+
+    return res.status(201).json({ success: true, data: assignment });
+  } catch (error) {
+    console.error('Error creating assignment:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const updateAssignment = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    const { assignmentId } = req.params;
+    const { title, description, dueDate, attachmentUrl, materialId } = req.body;
+
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      include: { class: true }
+    });
+
+    if (!assignment || assignment.class.teacherId !== teacherId) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    const updated = await prisma.assignment.update({
+      where: { id: assignmentId },
+      data: {
+        title,
+        description,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        ...(attachmentUrl !== undefined && { attachmentUrl: attachmentUrl?.trim() || null }),
+        ...(materialId !== undefined && { materialId: materialId || null })
+      },
+      include: {
+        material: {
+          select: { id: true, title: true, url: true, type: true }
+        }
+      }
+    });
+
+    return res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Error updating assignment:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const deleteAssignment = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    const { assignmentId } = req.params;
+
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      include: { class: true }
+    });
+
+    if (!assignment || assignment.class.teacherId !== teacherId) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    await prisma.assignment.delete({
+      where: { id: assignmentId }
+    });
+
+    return res.json({ success: true, message: 'Assignment deleted' });
+  } catch (error) {
+    console.error('Error deleting assignment:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const getClassGrades = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    const { classId } = req.params;
+
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const classInfo = await prisma.class.findFirst({ where: { id: classId, teacherId }});
+    if (!classInfo) return res.status(404).json({ success: false, message: 'Class not found' });
+
+    const grades = await prisma.grade.findMany({
+      where: {
+        assignment: { classId }
+      }
+    });
+
+    return res.json({ success: true, data: grades });
+  } catch (error) {
+    console.error('Error getting grades:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+export const updateGrades = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    const { classId } = req.params;
+    const { updates } = req.body; // updates: [{ studentId, assignmentId, score, feedback }]
+
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const classInfo = await prisma.class.findFirst({ where: { id: classId, teacherId }});
+    if (!classInfo) return res.status(404).json({ success: false, message: 'Class not found' });
+
+    // Use transaction for multiple updates
+    const results = await prisma.$transaction(
+      updates.map((update: any) => 
+        prisma.grade.upsert({
+          where: {
+            assignmentId_studentId: {
+              assignmentId: update.assignmentId,
+              studentId: update.studentId
+            }
+          },
+          update: {
+            score: update.score !== undefined ? update.score : null,
+            feedback: update.feedback
+          },
+          create: {
+            assignmentId: update.assignmentId,
+            studentId: update.studentId,
+            score: update.score !== undefined ? update.score : null,
+            feedback: update.feedback
+          }
+        })
+      )
+    );
+
+    return res.json({ success: true, data: results, message: 'Grades updated' });
+  } catch (error) {
+    console.error('Error updating grades:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// ==========================================
+// QUẢN LÝ THÔNG TIN HỌC SINH (STUDENT MANAGEMENT)
+// ==========================================
+
+// Lấy danh sách học sinh quản lý (toàn bộ hoặc lọc theo lớp/từ khóa)
+export const getAllManagedStudents = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { search, classId } = req.query;
+
+    const whereCondition: any = {
+      role: 'STUDENT',
+    };
+
+    if (classId && typeof classId === 'string' && classId !== 'ALL') {
+      whereCondition.studentEnrollments = {
+        some: { classId }
+      };
+    }
+
+    if (search && typeof search === 'string' && search.trim()) {
+      const q = search.trim();
+      whereCondition.OR = [
+        { name: { contains: q, mode: 'insensitive' } },
+        { email: { contains: q, mode: 'insensitive' } },
+        { studentProfile: { studentCode: { contains: q, mode: 'insensitive' } } },
+        { studentProfile: { phone: { contains: q, mode: 'insensitive' } } },
+      ];
+    }
+
+    const students = await prisma.user.findMany({
+      where: whereCondition,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+        createdAt: true,
+        studentProfile: true,
+        studentEnrollments: {
+          select: {
+            class: {
+              select: {
+                id: true,
+                name: true,
+                isActive: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Đảm bảo những học sinh chưa có MSSV sẽ được tự động cấp phát ngay lập tức
+    const formattedStudents = await Promise.all(
+      students.map(async (s) => {
+        let profile = s.studentProfile;
+        if (!profile || !profile.studentCode) {
+          profile = await ensureStudentProfileAndCode(s.id);
+        }
+        return {
+          id: s.id,
+          name: s.name,
+          email: s.email,
+          avatar: s.avatar,
+          createdAt: s.createdAt,
+          profile: profile || null,
+          enrolledClasses: s.studentEnrollments.map(e => e.class)
+        };
+      })
+    );
+
+    return res.json({
+      success: true,
+      data: formattedStudents,
+      total: formattedStudents.length
+    });
+  } catch (error) {
+    console.error('Error getting managed students:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Lấy thông tin chi tiết hồ sơ một học sinh
+export const getStudentProfile = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { studentId } = req.params;
+
+    const student = await prisma.user.findUnique({
+      where: { id: studentId },
+      include: {
+        studentProfile: true,
+        studentEnrollments: {
+          include: {
+            class: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                isActive: true
+              }
+            }
+          }
+        },
+        grades: {
+          include: {
+            assignment: {
+              select: {
+                id: true,
+                title: true,
+                classId: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!student || student.role !== 'STUDENT') {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    let profile = student.studentProfile;
+    if (!profile || !profile.studentCode) {
+      profile = await ensureStudentProfileAndCode(student.id);
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        id: student.id,
+        name: student.name,
+        email: student.email,
+        avatar: student.avatar,
+        createdAt: student.createdAt,
+        profile,
+        enrolledClasses: student.studentEnrollments.map(e => e.class),
+        grades: student.grades
+      }
+    });
+  } catch (error) {
+    console.error('Error getting student profile:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Cập nhật hồ sơ học sinh
+export const updateStudentProfile = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { studentId } = req.params;
+    const { 
+      name, 
+      studentCode, 
+      phone, 
+      dateOfBirth, 
+      gender, 
+      address, 
+      parentName, 
+      parentPhone, 
+      status, 
+      notes 
+    } = req.body;
+
+    const student = await prisma.user.findUnique({
+      where: { id: studentId }
+    });
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    // Nếu sửa tên học sinh
+    if (name && name.trim() && name.trim() !== student.name) {
+      await prisma.user.update({
+        where: { id: studentId },
+        data: { name: name.trim() }
+      });
+    }
+
+    // Kiểm tra trùng lặp studentCode nếu sửa sang mã khác
+    if (studentCode && studentCode.trim()) {
+      const existing = await prisma.studentProfile.findFirst({
+        where: {
+          studentCode: studentCode.trim(),
+          userId: { not: studentId }
+        }
+      });
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: `Mã số sinh viên ${studentCode} đã tồn tại trong hệ thống.`
+        });
+      }
+    }
+
+    const updatedProfile = await prisma.studentProfile.upsert({
+      where: { userId: studentId },
+      create: {
+        userId: studentId,
+        studentCode: studentCode && studentCode.trim() ? studentCode.trim() : await generateNextStudentCode(),
+        phone: phone ? phone.trim() : null,
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+        gender: gender || null,
+        address: address ? address.trim() : null,
+        parentName: parentName ? parentName.trim() : null,
+        parentPhone: parentPhone ? parentPhone.trim() : null,
+        status: status || 'ACTIVE',
+        notes: notes ? notes.trim() : null
+      },
+      update: {
+        studentCode: studentCode && studentCode.trim() ? studentCode.trim() : undefined,
+        phone: phone !== undefined ? (phone ? phone.trim() : null) : undefined,
+        dateOfBirth: dateOfBirth !== undefined ? (dateOfBirth ? new Date(dateOfBirth) : null) : undefined,
+        gender: gender !== undefined ? gender : undefined,
+        address: address !== undefined ? (address ? address.trim() : null) : undefined,
+        parentName: parentName !== undefined ? (parentName ? parentName.trim() : null) : undefined,
+        parentPhone: parentPhone !== undefined ? (parentPhone ? parentPhone.trim() : null) : undefined,
+        status: status !== undefined ? status : undefined,
+        notes: notes !== undefined ? (notes ? notes.trim() : null) : undefined
+      }
+    });
+
+    return res.json({
+      success: true,
+      message: 'Cập nhật hồ sơ học sinh thành công',
+      data: updatedProfile
+    });
+  } catch (error) {
+    console.error('Error updating student profile:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Tạo nhanh tài khoản học sinh
+export const createStudentQuickAccount = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { name, email, password, classId, phone, studentCode, gender } = req.body;
+
+    if (!name || !email) {
+      return res.status(400).json({ success: false, message: 'Tên và Email là bắt buộc' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Kiểm tra trùng email
+    const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'Email này đã được sử dụng trong hệ thống.' });
+    }
+
+    // Tự động sinh MSSV nếu không điền
+    let finalCode = studentCode && studentCode.trim() ? studentCode.trim() : await generateNextStudentCode();
+    if (studentCode && studentCode.trim()) {
+      const codeExists = await prisma.studentProfile.findUnique({ where: { studentCode: finalCode } });
+      if (codeExists) {
+        return res.status(400).json({ success: false, message: `Mã số sinh viên ${finalCode} đã tồn tại.` });
+      }
+    }
+
+    const defaultPassword = password && password.trim() ? password.trim() : '123456';
+    const hashedPassword = await AuthUtils.hashPassword(defaultPassword);
+
+    const newUser = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: cleanEmail,
+        password: hashedPassword,
+        role: 'STUDENT',
+        isVerified: true,
+        studentProfile: {
+          create: {
+            studentCode: finalCode,
+            phone: phone ? phone.trim() : null,
+            gender: gender || null,
+            status: 'ACTIVE'
+          }
+        },
+        ...(classId ? {
+          studentEnrollments: {
+            create: {
+              classId
+            }
+          }
+        } : {})
+      },
+      include: {
+        studentProfile: true
+      }
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: `Tạo tài khoản học sinh thành công! MSSV: ${finalCode}`,
+      data: newUser
+    });
+  } catch (error) {
+    console.error('Error creating quick student account:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// ==========================================
+// QUẢN LÝ HỌC PHÍ (TUITION & FEE MANAGEMENT)
+// ==========================================
+
+// Lấy danh sách phiếu học phí
+export const getTuitionFees = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { classId, status, search, studentId } = req.query;
+
+    const whereClause: any = {};
+
+    if (studentId && typeof studentId === 'string') {
+      whereClause.studentId = studentId;
+    }
+
+    if (classId && typeof classId === 'string' && classId !== 'ALL') {
+      whereClause.classId = classId;
+    }
+
+    if (status && typeof status === 'string' && status !== 'ALL') {
+      whereClause.status = status;
+    }
+
+    if (search && typeof search === 'string' && search.trim()) {
+      const q = search.trim();
+      whereClause.OR = [
+        { title: { contains: q, mode: 'insensitive' } },
+        { student: { name: { contains: q, mode: 'insensitive' } } },
+        { student: { email: { contains: q, mode: 'insensitive' } } },
+        { student: { studentProfile: { studentCode: { contains: q, mode: 'insensitive' } } } },
+      ];
+    }
+
+    const fees = await prisma.tuitionFee.findMany({
+      where: whereClause,
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            studentProfile: true,
+          }
+        },
+        class: {
+          select: {
+            id: true,
+            name: true,
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Tự động kiểm tra quá hạn đối với các khoản chưa đóng đủ
+    const now = new Date();
+    const updatedFees = fees.map(f => {
+      let currentStatus = f.status;
+      if (currentStatus !== 'PAID' && f.dueDate && new Date(f.dueDate) < now) {
+        currentStatus = 'OVERDUE' as any;
+      }
+      return {
+        ...f,
+        status: currentStatus,
+        remainingAmount: Math.max(0, f.amount - f.paidAmount)
+      };
+    });
+
+    return res.json({
+      success: true,
+      data: updatedFees,
+      total: updatedFees.length
+    });
+  } catch (error) {
+    console.error('Error getting tuition fees:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Thống kê tài chính học phí
+export const getTuitionStats = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { classId } = req.query;
+    const whereClause: any = {};
+    if (classId && typeof classId === 'string' && classId !== 'ALL') {
+      whereClause.classId = classId;
+    }
+
+    const fees = await prisma.tuitionFee.findMany({
+      where: whereClause,
+    });
+
+    const now = new Date();
+    let totalAmount = 0;
+    let paidAmount = 0;
+    let paidCount = 0;
+    let unpaidCount = 0;
+    let partialCount = 0;
+    let overdueCount = 0;
+
+    fees.forEach(f => {
+      totalAmount += f.amount;
+      paidAmount += f.paidAmount;
+
+      if (f.status === 'PAID') {
+        paidCount++;
+      } else if (f.dueDate && new Date(f.dueDate) < now) {
+        overdueCount++;
+      } else if (f.paidAmount > 0) {
+        partialCount++;
+      } else {
+        unpaidCount++;
+      }
+    });
+
+    const remainingAmount = Math.max(0, totalAmount - paidAmount);
+    const completionRate = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
+
+    return res.json({
+      success: true,
+      data: {
+        totalAmount,
+        paidAmount,
+        remainingAmount,
+        completionRate,
+        totalInvoices: fees.length,
+        paidCount,
+        unpaidCount,
+        partialCount,
+        overdueCount
+      }
+    });
+  } catch (error) {
+    console.error('Error getting tuition stats:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Tạo khoản thu học phí cho một học sinh
+export const createTuitionFee = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { studentId, classId, title, amount, dueDate, note } = req.body;
+
+    if (!studentId || !title || !amount) {
+      return res.status(400).json({ success: false, message: 'Vui lòng chọn học sinh, tên khoản thu và số tiền' });
+    }
+
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Số tiền phải lớn hơn 0' });
+    }
+
+    const student = await prisma.user.findUnique({
+      where: { id: studentId }
+    });
+    if (!student || student.role !== 'STUDENT') {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy học sinh' });
+    }
+
+    const now = new Date();
+    const parsedDueDate = dueDate ? new Date(dueDate) : null;
+    let initialStatus = 'UNPAID';
+    if (parsedDueDate && parsedDueDate < now) {
+      initialStatus = 'OVERDUE';
+    }
+
+    const newFee = await prisma.tuitionFee.create({
+      data: {
+        studentId,
+        classId: classId || null,
+        title: title.trim(),
+        amount: numAmount,
+        paidAmount: 0,
+        status: initialStatus as any,
+        dueDate: parsedDueDate,
+        note: note ? note.trim() : null
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            studentProfile: true
+          }
+        },
+        class: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Tạo khoản thu học phí thành công',
+      data: newFee
+    });
+  } catch (error) {
+    console.error('Error creating tuition fee:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Ghi nhận thanh toán / Thu học phí
+export const recordTuitionPayment = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { feeId } = req.params;
+    const { amountPaid, paymentMethod, paidAt, note } = req.body;
+
+    const fee = await prisma.tuitionFee.findUnique({
+      where: { id: feeId }
+    });
+
+    if (!fee) {
+      return res.status(404).json({ success: false, message: 'Khoản thu không tồn tại' });
+    }
+
+    const additionalPay = Number(amountPaid);
+    if (isNaN(additionalPay) || additionalPay <= 0) {
+      return res.status(400).json({ success: false, message: 'Số tiền thanh toán phải lớn hơn 0' });
+    }
+
+    const newPaidAmount = fee.paidAmount + additionalPay;
+    let newStatus: any = 'UNPAID';
+
+    if (newPaidAmount >= fee.amount) {
+      newStatus = 'PAID';
+    } else if (newPaidAmount > 0) {
+      newStatus = 'PARTIAL';
+    } else if (fee.dueDate && new Date(fee.dueDate) < new Date()) {
+      newStatus = 'OVERDUE';
+    }
+
+    const updated = await prisma.tuitionFee.update({
+      where: { id: feeId },
+      data: {
+        paidAmount: newPaidAmount,
+        status: newStatus,
+        paymentMethod: paymentMethod || fee.paymentMethod || 'CASH',
+        paidAt: paidAt ? new Date(paidAt) : new Date(),
+        note: note ? note.trim() : fee.note
+      },
+      include: {
+        student: {
+          select: { id: true, name: true, email: true, studentProfile: true }
+        },
+        class: {
+          select: { id: true, name: true }
+        }
+      }
+    });
+
+    return res.json({
+      success: true,
+      message: newStatus === 'PAID' ? 'Học sinh đã hoàn thành học phí!' : 'Đã ghi nhận thanh toán thành công',
+      data: updated
+    });
+  } catch (error) {
+    console.error('Error recording payment:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Cập nhật thông tin khoản thu
+export const updateTuitionFee = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { feeId } = req.params;
+    const { title, amount, dueDate, note, status, classId } = req.body;
+
+    const fee = await prisma.tuitionFee.findUnique({
+      where: { id: feeId }
+    });
+
+    if (!fee) {
+      return res.status(404).json({ success: false, message: 'Khoản thu không tồn tại' });
+    }
+
+    const numAmount = amount !== undefined ? Number(amount) : fee.amount;
+
+    let finalStatus = status;
+    if (!finalStatus) {
+      if (fee.paidAmount >= numAmount) {
+        finalStatus = 'PAID';
+      } else if (fee.paidAmount > 0) {
+        finalStatus = 'PARTIAL';
+      } else if (dueDate && new Date(dueDate) < new Date()) {
+        finalStatus = 'OVERDUE';
+      } else {
+        finalStatus = 'UNPAID';
+      }
+    }
+
+    const updated = await prisma.tuitionFee.update({
+      where: { id: feeId },
+      data: {
+        title: title ? title.trim() : fee.title,
+        amount: numAmount,
+        classId: classId !== undefined ? classId : fee.classId,
+        dueDate: dueDate !== undefined ? (dueDate ? new Date(dueDate) : null) : fee.dueDate,
+        note: note !== undefined ? (note ? note.trim() : null) : fee.note,
+        status: finalStatus as any
+      },
+      include: {
+        student: {
+          select: { id: true, name: true, email: true, studentProfile: true }
+        },
+        class: {
+          select: { id: true, name: true }
+        }
+      }
+    });
+
+    return res.json({
+      success: true,
+      message: 'Cập nhật khoản thu thành công',
+      data: updated
+    });
+  } catch (error) {
+    console.error('Error updating tuition fee:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Xóa khoản thu học phí
+export const deleteTuitionFee = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { feeId } = req.params;
+
+    const fee = await prisma.tuitionFee.findUnique({
+      where: { id: feeId }
+    });
+
+    if (!fee) {
+      return res.status(404).json({ success: false, message: 'Khoản thu không tồn tại' });
+    }
+
+    await prisma.tuitionFee.delete({
+      where: { id: feeId }
+    });
+
+    return res.json({
+      success: true,
+      message: 'Đã xóa phiếu học phí'
+    });
+  } catch (error) {
+    console.error('Error deleting tuition fee:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// ─── MATERIAL (Learning Resources) Controllers ───────────────────────────────
+
+// Lấy danh sách tài liệu của một lớp học
+export const getMaterials = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { classId } = req.params;
+
+    // Verify teacher owns this class
+    const cls = await prisma.class.findFirst({ where: { id: classId, teacherId } });
+    if (!cls) return res.status(403).json({ success: false, message: 'Không có quyền truy cập lớp này' });
+
+    const materials = await prisma.material.findMany({
+      where: { classId },
+      orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+    });
+
+    return res.json({ success: true, data: materials });
+  } catch (error) {
+    console.error('Error getting materials:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Tạo tài liệu học tập mới
+export const createMaterial = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { classId } = req.params;
+    const { title, url, type, description, order } = req.body;
+
+    if (!title?.trim()) return res.status(400).json({ success: false, message: 'Tiêu đề tài liệu không được để trống' });
+    if (!url?.trim()) return res.status(400).json({ success: false, message: 'URL tài liệu không được để trống' });
+
+    // Verify teacher owns this class
+    const cls = await prisma.class.findFirst({ where: { id: classId, teacherId } });
+    if (!cls) return res.status(403).json({ success: false, message: 'Không có quyền truy cập lớp này' });
+
+    const material = await prisma.material.create({
+      data: {
+        classId,
+        title: title.trim(),
+        url: url.trim(),
+        type: type || 'link',
+        description: description?.trim() || null,
+        order: order ?? 0,
+      },
+    });
+
+    return res.status(201).json({ success: true, data: material, message: 'Đã thêm tài liệu' });
+  } catch (error) {
+    console.error('Error creating material:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Cập nhật tài liệu
+export const updateMaterial = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { materialId } = req.params;
+    const { title, url, type, description, order } = req.body;
+
+    const existing = await prisma.material.findUnique({
+      where: { id: materialId },
+      include: { class: { select: { teacherId: true } } },
+    });
+
+    if (!existing) return res.status(404).json({ success: false, message: 'Tài liệu không tồn tại' });
+    if (existing.class.teacherId !== teacherId) return res.status(403).json({ success: false, message: 'Không có quyền' });
+
+    const updated = await prisma.material.update({
+      where: { id: materialId },
+      data: {
+        ...(title && { title: title.trim() }),
+        ...(url && { url: url.trim() }),
+        ...(type && { type }),
+        ...(description !== undefined && { description: description?.trim() || null }),
+        ...(order !== undefined && { order }),
+      },
+    });
+
+    return res.json({ success: true, data: updated, message: 'Đã cập nhật tài liệu' });
+  } catch (error) {
+    console.error('Error updating material:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// Xóa tài liệu
+export const deleteMaterial = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  try {
+    const teacherId = req.user?.userId;
+    if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const { materialId } = req.params;
+
+    const existing = await prisma.material.findUnique({
+      where: { id: materialId },
+      include: { class: { select: { teacherId: true } } },
+    });
+
+    if (!existing) return res.status(404).json({ success: false, message: 'Tài liệu không tồn tại' });
+    if (existing.class.teacherId !== teacherId) return res.status(403).json({ success: false, message: 'Không có quyền' });
+
+    await prisma.material.delete({ where: { id: materialId } });
+
+    return res.json({ success: true, message: 'Đã xóa tài liệu' });
+  } catch (error) {
+    console.error('Error deleting material:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
