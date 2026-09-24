@@ -7,6 +7,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import {
   X,
   BookOpen,
@@ -294,13 +295,20 @@ const StudentMaterialsModal: React.FC<StudentMaterialsModalProps> = ({ classId, 
     fetchMaterials();
   }, [fetchMaterials]);
 
-  // Tự động đồng bộ khi quay lại tab hoặc có sự kiện cập nhật tài liệu
+  // Tự động đồng bộ khi quay lại tab hoặc có sự kiện cập nhật tài liệu — throttle 30 giây
   useEffect(() => {
+    let lastFocusFetch = 0;
+    const THROTTLE_MS = 30_000;
+
     const handleSync = () => {
       fetchMaterials(true);
     };
     const handleFocus = () => {
-      fetchMaterials(true);
+      const now = Date.now();
+      if (now - lastFocusFetch >= THROTTLE_MS) {
+        lastFocusFetch = now;
+        fetchMaterials(true);
+      }
     };
 
     window.addEventListener('sms:refresh-materials', handleSync);
@@ -351,15 +359,15 @@ const StudentMaterialsModal: React.FC<StudentMaterialsModalProps> = ({ classId, 
   const activeMeta = activePreview ? getMeta(activePreview.type) : null;
   const activeDestinationUrl = activePreview ? ensureUrl(activePreview.url) : '#';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
       {/* Modal Container */}
       <div
-        className={`relative z-10 w-full bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col transition-all duration-300 ${
-          activePreview ? 'max-w-4xl h-[92vh]' : 'max-w-2xl max-h-[90vh]'
+        className={`relative z-10 w-full bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col transition-all duration-300 ${
+          activePreview ? 'sm:max-w-4xl h-[95dvh] sm:h-[92vh]' : 'sm:max-w-2xl h-[90dvh] sm:max-h-[90vh]'
         }`}
       >
         {/* ── Header ────────────────────────────────────────────────────── */}
@@ -746,6 +754,8 @@ const StudentMaterialsModal: React.FC<StudentMaterialsModalProps> = ({ classId, 
       </div>
     </div>
   );
+
+  return ReactDOM.createPortal(modalContent, document.body);
 };
 
 export default StudentMaterialsModal;

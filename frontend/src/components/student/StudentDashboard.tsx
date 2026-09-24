@@ -87,16 +87,23 @@ export default function StudentDashboard() {
     fetchAssignmentsCount();
   }, [refreshTrigger]); // Refresh stats when refreshTrigger changes
 
-  // Tự động đồng bộ ngay khi quay lại tab hoặc khi có sự kiện nộp bài/chấm điểm
+  // Tự động đồng bộ khi có sự kiện — focus throttle 60 giây để tránh rate limit
   useEffect(() => {
+    let lastFocusFetch = 0;
+    const THROTTLE_MS = 60_000; // 60 giây cho dashboard (3 API calls/lần)
+
     const handleSync = () => {
       fetchAssignmentsCount();
       fetchStudentStats();
     };
     const handleFocus = () => {
-      fetchAssignmentsCount();
-      fetchStudentStats();
-      checkUnpaidTuition();
+      const now = Date.now();
+      if (now - lastFocusFetch >= THROTTLE_MS) {
+        lastFocusFetch = now;
+        fetchAssignmentsCount();
+        fetchStudentStats();
+        checkUnpaidTuition();
+      }
     };
 
     window.addEventListener('sms:refresh-assignments', handleSync);
@@ -651,21 +658,10 @@ export default function StudentDashboard() {
 
       {/* Attendance History Modal */}
       {isHistoryOpen && (
-        <div className="fixed inset-0 bg-gray-900/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[85vh] overflow-y-auto mx-4">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">📋 Attendance History</h3>
-              <button
-                onClick={() => setIsHistoryOpen(false)}
-                className="text-gray-500 hover:text-gray-700 text-3xl font-bold"
-              >
-                ×
-              </button>
-            </div>
-
-            <AttendanceHistory refreshTrigger={refreshTrigger} />
-          </div>
-        </div>
+        <AttendanceHistory
+          refreshTrigger={refreshTrigger}
+          onClose={() => setIsHistoryOpen(false)}
+        />
       )}
 
       {/* Student Grades Modal */}

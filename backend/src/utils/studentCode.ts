@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../prisma';
 
 /**
  * Tự động tạo và đảm bảo Mã Số Sinh Viên (MSSV) cho học sinh theo quy luật:

@@ -4,7 +4,46 @@
  * Centralized API communication với backend
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://student-management-system-udhy.onrender.com';
+/**
+ * Tự động xác định URL backend phù hợp:
+ * - Khi chạy trên browser: Nếu truy cập qua IP mạng LAN (ví dụ 192.168.x.x trên điện thoại),
+ *   tự động trỏ API về http://<IP_LAN>:3001 để điện thoại kết nối đúng backend local.
+ * - Khi chạy trên localhost hoặc production, dùng NEXT_PUBLIC_API_URL.
+ */
+const getApiBaseUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+
+    // 1. Môi trường Production (Vercel hoặc custom production domain)
+    const isProductionHost = hostname.includes('vercel.app') || (process.env.NODE_ENV === 'production' && !hostname.includes('loca.lt') && !hostname.includes('ngrok'));
+    if (isProductionHost && !hostname.includes('loca.lt') && !hostname.includes('ngrok') && !hostname.includes('trycloudflare.com')) {
+      return process.env.NEXT_PUBLIC_API_URL || 'https://student-management-system-udhy.onrender.com';
+    }
+
+    // 2. Môi trường Test qua Tunnel (Localtunnel, Ngrok, Cloudflare)
+    if (hostname.includes('loca.lt') || hostname.includes('ngrok') || hostname.includes('trycloudflare.com')) {
+      return '';
+    }
+
+    // 3. Môi trường LAN (Wi-Fi nội bộ)
+    const isLAN = /^(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)$/.test(hostname);
+    if (isLAN) {
+      if (protocol === 'https:') {
+        return '';
+      }
+      return `http://${hostname}:3001`;
+    }
+
+    // 4. Localhost
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    }
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'https://student-management-system-udhy.onrender.com';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 class ApiService {
   private static getHeaders(includeAuth: boolean = true): HeadersInit {

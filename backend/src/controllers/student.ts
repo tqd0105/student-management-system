@@ -5,11 +5,9 @@
  */
 
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma';
 import { UserPayload } from '../types';
 import { ensureStudentProfileAndCode } from '../utils/studentCode';
-
-const prisma = new PrismaClient();
 
 interface AuthenticatedRequest extends Request {
   user?: UserPayload;

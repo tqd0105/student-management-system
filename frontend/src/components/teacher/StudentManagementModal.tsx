@@ -200,54 +200,60 @@ export default function StudentManagementModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-3 sm:p-5">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden animate__animated animate__zoomIn animate__faster">
+    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-2 sm:p-4 md:p-5">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200 w-full max-w-6xl max-h-[94vh] sm:max-h-[92vh] flex flex-col overflow-hidden animate__animated animate__zoomIn animate__faster">
         
         {/* Header Modal */}
-        <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 text-white flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            {/* <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
-              <Users size={22} className="text-white" />
-            </div> */}
-            <div>
-              <h2 className="text-lg sm:text-xl font-extrabold tracking-tight"> Quản Lý Học Sinh</h2>
-              <p className="text-xs text-blue-100 font-medium">Hồ sơ cá nhân, mã số sinh viên tự động (MSSV), lớp học và thông tin liên hệ</p>
+        <div className="p-4 sm:p-5 border-b border-gray-200 bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 text-white flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0 shadow-inner">
+              <Users size={20} className="text-white" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg md:text-xl font-extrabold tracking-tight truncate">
+                Quản Lý Danh Sách Học Sinh
+              </h2>
+              <p className="text-xs text-blue-100 font-medium truncate">
+                Hồ sơ cá nhân, MSSV tự động, thông tin liên hệ và lớp học
+              </p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-full transition-colors text-white/80 hover:text-white"
+            className="p-1.5 sm:p-2 hover:bg-white/20 rounded-full transition-colors text-white/80 hover:text-white cursor-pointer shrink-0 ml-2"
+            aria-label="Đóng"
           >
-            <X size={22} />
+            <X size={20} />
           </button>
         </div>
 
-        {/* Toolbar: Stats + Filters + Actions */}
-        <div className="p-4 bg-gray-50 border-b border-gray-200 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Toolbar: Search + Filters + Stat */}
+        <div className="p-3 sm:p-4 bg-gray-50 border-b border-gray-200 space-y-2.5 shrink-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
             {/* Search Box */}
-            <div className="relative flex-1 min-w-[240px] max-w-md">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <div className="relative flex-1 min-w-[200px] max-w-md">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Tìm theo tên, email, MSSV, số điện thoại..."
-                className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 shadow-sm"
+                placeholder="Tìm theo tên, email, MSSV, SĐT..."
+                className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 shadow-2xs"
               />
             </div>
 
-            {/* Class Filter */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 border border-gray-300 rounded-xl text-xs shadow-sm">
-                <BookOpen size={14} className="text-gray-500" />
-                <span className="font-semibold text-gray-600">Lớp:</span>
+            {/* Filters */}
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+              {/* Class Filter */}
+              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 border border-gray-300 rounded-xl text-xs shadow-2xs">
+                <BookOpen size={13} className="text-gray-500 shrink-0" />
+                <span className="font-semibold text-gray-600 hidden sm:inline">Lớp:</span>
                 <select
                   value={selectedClassId}
                   onChange={e => setSelectedClassId(e.target.value)}
-                  className="bg-transparent outline-none font-medium text-gray-800 cursor-pointer"
+                  className="bg-transparent outline-none font-medium text-gray-800 cursor-pointer w-full text-xs"
                 >
-                  <option value="ALL">Tất cả các lớp ({classes.length})</option>
+                  <option value="ALL">Tất cả lớp ({classes.length})</option>
                   {classes.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -255,41 +261,31 @@ export default function StudentManagementModal({
               </div>
 
               {/* Status Filter */}
-              <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 border border-gray-300 rounded-xl text-xs shadow-sm">
-                <Filter size={14} className="text-gray-500" />
-                <span className="font-semibold text-gray-600">Trạng thái:</span>
+              <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 border border-gray-300 rounded-xl text-xs shadow-2xs">
+                <Filter size={13} className="text-gray-500 shrink-0" />
+                <span className="font-semibold text-gray-600 hidden sm:inline">Trạng thái:</span>
                 <select
                   value={statusFilter}
                   onChange={e => setStatusFilter(e.target.value)}
-                  className="bg-transparent outline-none font-medium text-gray-800 cursor-pointer"
+                  className="bg-transparent outline-none font-medium text-gray-800 cursor-pointer w-full text-xs"
                 >
                   <option value="ALL">Tất cả</option>
                   <option value="ACTIVE">Đang học</option>
                   <option value="SUSPENDED">Bảo lưu</option>
-                  <option value="GRADUATED">Đã tốt nghiệp</option>
+                  <option value="GRADUATED">Tốt nghiệp</option>
                 </select>
               </div>
-
-              {/* Add Student Button */}
-              {/* <button
-                onClick={() => setIsCreatingStudent(true)}
-                className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
-              >
-                <Plus size={15} />
-                <span>+ Thêm Học Sinh Mới</span>
-              </button> */}
             </div>
           </div>
 
           {/* Quick Stat Pill */}
-          <div className="flex items-center gap-4 text-xs text-gray-500">
-            <span>Tổng cộng: <strong className="text-gray-800 font-bold">{filteredStudents.length}</strong> </span>
-            <span>•</span>
-            <span className="text-indigo-600 font-medium">MSSV: <strong>SV{new Date().getFullYear().toString().slice(-2)}XXXX</strong></span>
+          <div className="flex items-center justify-between text-xs text-gray-500 pt-0.5">
+            <span>Tổng cộng: <strong className="text-gray-800 font-bold">{filteredStudents.length}</strong> sinh viên</span>
+            <span className="text-indigo-600 font-medium hidden sm:inline">Quy chuẩn MSSV: <strong>SV{new Date().getFullYear().toString().slice(-2)}XXXX</strong></span>
           </div>
         </div>
 
-        {/* Students Table */}
+        {/* Students List Container */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="text-center py-16 text-gray-400">
@@ -298,93 +294,168 @@ export default function StudentManagementModal({
             </div>
           ) : filteredStudents.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
-              <Users size={48} className="mx-auto mb-2 text-gray-300" />
-              <p className="font-bold text-gray-600">Không tìm thấy học sinh nào</p>
-              <p className="text-xs text-gray-400 mt-1">Hãy thử đổi từ khóa tìm kiếm hoặc bấm "+ Thêm Học Sinh Mới".</p>
+              <Users size={44} className="mx-auto mb-2 text-gray-300" />
+              <p className="font-bold text-gray-600 text-sm">Không tìm thấy sinh viên nào</p>
+              <p className="text-xs text-gray-400 mt-1">Hãy thử thay đổi từ khóa tìm kiếm hoặc lọc theo lớp khác.</p>
             </div>
           ) : (
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs text-gray-600 uppercase bg-gray-100/70 sticky top-0 z-10 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap">MSSV</th>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap">Học Sinh</th>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap">Liên Hệ</th>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap">Lớp Học</th>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap text-center">Trạng Thái</th>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap text-right">Thao Tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredStudents.map((s, idx) => {
+            <>
+              {/* MOBILE CARDS VIEW (< md) */}
+              <div className="block md:hidden space-y-2.5 p-3 bg-gray-50/50">
+                {filteredStudents.map((s) => {
                   const mssv = s.profile?.studentCode || '—';
-                  const phone = s.profile?.phone || 'Chưa cập nhật';
+                  const phone = s.profile?.phone || 'Chưa có SĐT';
                   const genderText = s.profile?.gender === 'FEMALE' ? 'Nữ' : s.profile?.gender === 'OTHER' ? 'Khác' : 'Nam';
 
                   return (
-                    <tr key={s.id} className="hover:bg-indigo-50/30 transition-colors">
-                      {/* MSSV Badge */}
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="font-mono text-xs font-bold px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-200 tracking-wider shadow-xs">
-                          {mssv}
-                        </span>
-                      </td>
-
-                      {/* Name & Email */}
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                    <div 
+                      key={s.id} 
+                      className="bg-white rounded-2xl p-3.5 border border-gray-200/90 shadow-2xs space-y-2.5"
+                    >
+                      {/* Card Header: Avatar, Name, Email, Status */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
                             {s.name ? s.name.charAt(0).toUpperCase() : 'S'}
                           </div>
-                          <div>
-                            <p className="font-bold text-gray-800 text-sm">{s.name}</p>
-                            <p className="text-xs text-gray-400">{s.email}</p>
+                          <div className="min-w-0">
+                            <p className="font-bold text-gray-900 text-xs sm:text-sm truncate">{s.name}</p>
+                            <p className="text-[11px] text-gray-400 truncate">{s.email}</p>
                           </div>
                         </div>
-                      </td>
-
-                      {/* Phone & Gender */}
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <p className="text-xs font-semibold text-gray-700 flex items-center gap-1">
-                          <Phone size={12} className="text-gray-400" />
-                          {phone}
-                        </p>
-                        <p className="text-[11px] text-gray-400">Giới tính: {genderText}</p>
-                      </td>
-
-                      {/* Enrolled Classes */}
-                      <td className="px-4 py-3">
-                        <div className="flex flex-nowrap gap-1 max-w-xs">
-                          {s.enrolledClasses.length > 0 ? (
-                            s.enrolledClasses.map(c => (
-                              <span key={c.id} className="whitespace-nowrap text-[11px] px-2 py-0.5 bg-gray-100 text-gray-700 rounded font-medium border border-gray-200">
-                                {c.name}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-gray-300 italic">Chưa vào lớp nào</span>
-                          )}
+                        <div className="shrink-0">
+                          {getStatusBadge(s.profile?.status)}
                         </div>
-                      </td>
+                      </div>
 
-                      {/* Status */}
-                      <td className="px-4 py-3 text-center whitespace-nowrap">
-                        {getStatusBadge(s.profile?.status)}
-                      </td>
+                      {/* Card Meta: MSSV, Gender, Phone */}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+                        <span className="font-mono text-[11px] font-bold px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md border border-indigo-200 tracking-wider">
+                          {mssv}
+                        </span>
+                        <span className="text-[11px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md border border-gray-200">
+                          {genderText}
+                        </span>
+                        <span className="text-[11px] text-gray-600 flex items-center gap-1">
+                          <Phone size={11} className="text-gray-400" />
+                          <span>{phone}</span>
+                        </span>
+                      </div>
 
-                      {/* Action */}
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                      {/* Card Classes */}
+                      {s.enrolledClasses.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 pt-0.5">
+                          {s.enrolledClasses.map(c => (
+                            <span key={c.id} className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md font-medium border border-blue-200/70">
+                              {c.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-gray-400 italic">Chưa vào lớp nào</p>
+                      )}
+
+                      {/* Card Actions */}
+                      <div className="pt-2 border-t border-gray-100 flex justify-end">
                         <button
                           onClick={() => handleOpenEdit(s)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 hover:border-indigo-400 hover:text-indigo-600 rounded-lg text-xs font-semibold text-gray-700 shadow-xs transition-colors cursor-pointer"
+                          className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs active:scale-98"
                         >
-                          <Edit3 size={13} /> Sửa hồ sơ
+                          <Edit3 size={13} />
+                          <span>Chỉnh sửa hồ sơ</span>
                         </button>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+
+              {/* DESKTOP TABLE VIEW (>= md) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="text-xs text-gray-600 uppercase bg-gray-100/80 sticky top-0 z-10 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap">MSSV</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap">Học Sinh</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap">Liên Hệ</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap">Lớp Học</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap text-center">Trạng Thái</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap text-right">Thao Tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredStudents.map((s) => {
+                      const mssv = s.profile?.studentCode || '—';
+                      const phone = s.profile?.phone || 'Chưa cập nhật';
+                      const genderText = s.profile?.gender === 'FEMALE' ? 'Nữ' : s.profile?.gender === 'OTHER' ? 'Khác' : 'Nam';
+
+                      return (
+                        <tr key={s.id} className="hover:bg-indigo-50/20 transition-colors">
+                          {/* MSSV Badge */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="font-mono text-xs font-bold px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-200 tracking-wider shadow-xs">
+                              {mssv}
+                            </span>
+                          </td>
+
+                          {/* Name & Email */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                                {s.name ? s.name.charAt(0).toUpperCase() : 'S'}
+                              </div>
+                              <div>
+                                <p className="font-bold text-gray-800 text-sm">{s.name}</p>
+                                <p className="text-xs text-gray-400">{s.email}</p>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Phone & Gender */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <p className="text-xs font-semibold text-gray-700 flex items-center gap-1">
+                              <Phone size={12} className="text-gray-400" />
+                              {phone}
+                            </p>
+                            <p className="text-[11px] text-gray-400">Giới tính: {genderText}</p>
+                          </td>
+
+                          {/* Enrolled Classes */}
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                              {s.enrolledClasses.length > 0 ? (
+                                s.enrolledClasses.map(c => (
+                                  <span key={c.id} className="whitespace-nowrap text-[11px] px-2 py-0.5 bg-gray-100 text-gray-700 rounded font-medium border border-gray-200">
+                                    {c.name}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-xs text-gray-300 italic">Chưa vào lớp nào</span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Status */}
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {getStatusBadge(s.profile?.status)}
+                          </td>
+
+                          {/* Action */}
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            <button
+                              onClick={() => handleOpenEdit(s)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 hover:border-indigo-400 hover:text-indigo-600 rounded-lg text-xs font-semibold text-gray-700 shadow-xs transition-colors cursor-pointer"
+                            >
+                              <Edit3 size={13} /> Sửa hồ sơ
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

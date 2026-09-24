@@ -121,7 +121,7 @@ export default function StudentDirectory({
       <div className="mb-5">
         {targetClassName && (
           <p className="text-sm text-indigo-600 font-semibold mb-1">
-            📚 Đang thêm sinh viên vào: <span className="font-bold">{targetClassName}</span>
+             Đang thêm sinh viên vào: <span className="font-bold">{targetClassName}</span>
           </p>
         )}
         <div className="relative">
@@ -195,7 +195,7 @@ export default function StudentDirectory({
                   {student.enrolledClasses.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {student.enrolledClasses.map(c => (
-                        <span key={c.id} className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full">
+                        <span key={c.id} className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md">
                           {c.name}
                         </span>
                       ))}
@@ -219,7 +219,7 @@ export default function StudentDirectory({
                       disabled={busy}
                       className="cursor-pointer flex-shrink-0 px-3 py-1.5 text-xs font-medium text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg transition-colors disabled:opacity-50"
                     >
-                      {isAdding ? '...' : '+ Thêm'}
+                      {isAdding ? '...' : 'Thêm'}
                     </button>
                   )
                 )}

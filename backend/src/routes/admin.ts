@@ -6,12 +6,11 @@
 
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma';
 import { requireAuth } from '../middleware/auth';
 import { sendEmail, EmailTemplates } from '../utils/emailService';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Auth middleware
 const authMiddleware = requireAuth([]);
