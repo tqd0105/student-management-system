@@ -7,6 +7,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import ApiService from '@/services/ApiService';
 import {
   X,
@@ -82,13 +83,20 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
     fetchGrades();
   }, []);
 
-  // Tự động đồng bộ khi quay lại tab trình duyệt hoặc khi có sự kiện cập nhật điểm
+  // Tự động đồng bộ khi quay lại tab trình duyệt — throttle 30 giây
   useEffect(() => {
+    let lastFocusFetch = 0;
+    const THROTTLE_MS = 30_000;
+
     const handleSync = () => {
       fetchGrades(true);
     };
     const handleFocus = () => {
-      fetchGrades(true);
+      const now = Date.now();
+      if (now - lastFocusFetch >= THROTTLE_MS) {
+        lastFocusFetch = now;
+        fetchGrades(true);
+      }
     };
 
     window.addEventListener('sms:refresh-grades', handleSync);
@@ -185,21 +193,21 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
     window.print();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative z-10 w-full max-w-5xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[92vh] animate__animated animate__zoomIn animate__faster">
+      <div className="relative z-10 w-full sm:max-w-5xl bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[95dvh] sm:h-auto sm:max-h-[92vh] animate__animated animate__zoomIn animate__faster">
         {/* ── Top Header ─────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/80 shrink-0 gap-3">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-gray-100 bg-gray-50/80 shrink-0 gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="p-2.5 rounded-xl bg-amber-100 text-amber-600 shrink-0 shadow-2xs">
               <Award className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-base font-bold text-gray-900 truncate flex items-center gap-2">
+              <h3 className="text-sm sm:text-base font-bold text-gray-900 truncate flex items-center gap-2">
                 <span>Bảng Điểm Học Vụ & Thành Tích</span>
                 <span className={`px-2.5 py-0.5 rounded-full text-[11px] border ${rankInfo.pill}`}>
                   {rankInfo.text}
@@ -243,7 +251,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
 
         {/* ── Academic Summary Cards ────────────────────────────────────── */}
         {!loading && !error && gradesData.length > 0 && (
-          <div className="px-6 py-3.5 border-b border-gray-100 bg-white grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0">
+          <div className="px-4 sm:px-6 py-3.5 border-b border-gray-100 bg-white grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 shrink-0">
             {/* GPA Thang 10 */}
             <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-200/80">
               <div className="flex items-center justify-between">
@@ -324,7 +332,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
         )}
 
         {/* ── Content: Gradebook Table per Class ────────────────────────── */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 bg-slate-50/50">
           {loading ? (
             <div className="text-center py-20 flex flex-col items-center justify-center gap-2">
               <Loader2 size={32} className="animate-spin text-amber-500" />
@@ -355,7 +363,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
             filteredData.map((cls) => (
               <div
                 key={cls.classId}
-                className="bg-white rounded-2xl border border-gray-200/90 shadow-xs overflow-hidden"
+                className="bg-white rounded-xl sm:rounded-2xl border border-gray-200/90 shadow-xs overflow-hidden"
               >
                 {/* Class Header Banner */}
                 <div className="p-4 bg-gray-50/80 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
@@ -492,7 +500,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
         </div>
 
         {/* ── Footer ─────────────────────────────────────────────────────── */}
-        <div className="px-6 py-3.5 border-t border-gray-100 bg-gray-50/70 shrink-0 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-3.5 border-t border-gray-100 bg-gray-50/70 shrink-0 flex items-center justify-between">
           <p className="text-xs text-gray-500">
             Tổng cộng: {gradesData.length} môn học · {allGradedScores.length} bài đã chấm
           </p>
@@ -506,4 +514,6 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
       </div>
     </div>
   );
+
+  return ReactDOM.createPortal(modalContent, document.body);
 }

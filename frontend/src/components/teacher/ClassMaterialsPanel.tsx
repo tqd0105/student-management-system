@@ -315,20 +315,20 @@ const ClassMaterialsPanel: React.FC<ClassMaterialsPanelProps> = ({ classId, clas
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
       {/* Panel Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/60">
-        <div className="flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-blue-600" />
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900">Tài liệu học tập</h2>
-            <p className="text-xs text-gray-500">{className} · {materials.length} tài liệu</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-3.5 sm:px-5 py-3 sm:py-4 border-b border-gray-100 bg-gray-50/60">
+        <div className="flex items-center gap-2 min-w-0">
+          <BookOpen className="w-5 h-5 text-blue-600 shrink-0" />
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-gray-900 truncate">Tài liệu học tập</h2>
+            <p className="text-xs text-gray-500 truncate">{className} · {materials.length} tài liệu</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-end w-full sm:w-auto shrink-0">
           <button
             type="button"
             onClick={handleManualRefresh}
             disabled={isRefreshing || loading}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold transition-colors cursor-pointer shadow-2xs disabled:opacity-60"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold transition-colors cursor-pointer shadow-2xs disabled:opacity-60"
             title="Tải lại danh sách tài liệu"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing || loading ? 'animate-spin text-blue-600' : 'text-gray-500'}`} />
@@ -336,16 +336,16 @@ const ClassMaterialsPanel: React.FC<ClassMaterialsPanelProps> = ({ classId, clas
           </button>
           <button
             onClick={() => { setEditTarget(null); setShowForm(true); }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors cursor-pointer shadow-sm"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors cursor-pointer shadow-sm whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
-            Thêm tài liệu
+            <span>Thêm tài liệu</span>
           </button>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-3 sm:p-4">
         {loading ? (
           <div className="flex items-center justify-center py-12 text-gray-400">
             <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -365,7 +365,7 @@ const ClassMaterialsPanel: React.FC<ClassMaterialsPanelProps> = ({ classId, clas
               return (
                 <div
                   key={mat.id}
-                  className="flex items-start gap-3 p-3.5 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/60 transition-all group"
+                  className="flex items-start gap-2.5 sm:gap-3 p-3 sm:p-3.5 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/60 transition-all group"
                 >
                   {/* Type icon */}
                   <div className={`p-2 rounded-lg shrink-0 ${meta.color}`}>
@@ -382,14 +382,14 @@ const ClassMaterialsPanel: React.FC<ClassMaterialsPanelProps> = ({ classId, clas
                       href={ensureUrl(mat.url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-blue-600 hover:underline mt-0.5 truncate block max-w-sm"
+                      className="text-xs text-blue-600 hover:underline mt-0.5 truncate block max-w-xs sm:max-w-sm"
                     >
                       {mat.url}
                     </a>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  {/* Actions (visible on mobile touch, hover reveal on sm/desktop) */}
+                  <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
                     <a
                       href={ensureUrl(mat.url)}
                       target="_blank"

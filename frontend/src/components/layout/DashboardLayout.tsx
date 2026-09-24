@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut, Trash2 } from 'lucide-react';
 import Footer from './Footer';
 import DTechContactModal from './DTechContactModal';
+import { API_BASE_URL } from '@/config/api';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -51,7 +52,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://192.168.1.4:3001'}/api/users/delete-account`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/delete-account`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,

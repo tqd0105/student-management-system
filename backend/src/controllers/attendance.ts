@@ -6,10 +6,8 @@
 
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma';
 import * as crypto from 'crypto';
-
-const prisma = new PrismaClient();
 
 class AttendanceController {
   /**

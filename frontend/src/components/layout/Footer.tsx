@@ -76,7 +76,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenContactModal }) => {
     <footer className="w-full bg-white border-t border-gray-200 mt-10">
 
       {/* ── DTECH SOLUTIONS AGENCY SECTION ── */}
-      <div className="bg-gray-50 border-b border-gray-200">
+      <div className="hidden bg-gray-50 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
 
           {/* Header Row */}

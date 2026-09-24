@@ -7,6 +7,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import ApiService from '@/services/ApiService';
 import {
   X,
@@ -143,12 +144,20 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
   }, [fetchAssignments]);
 
   // Tự động đồng bộ khi quay lại tab trình duyệt hoặc có sự kiện cập nhật bài tập
+  // Throttle: chỉ re-fetch qua focus nếu đã >= 30 giây kể từ lần cuối
   useEffect(() => {
+    let lastFocusFetch = 0;
+    const THROTTLE_MS = 30_000; // 30 giây
+
     const handleSync = () => {
       fetchAssignments(true);
     };
     const handleFocus = () => {
-      fetchAssignments(true);
+      const now = Date.now();
+      if (now - lastFocusFetch >= THROTTLE_MS) {
+        lastFocusFetch = now;
+        fetchAssignments(true);
+      }
     };
 
     window.addEventListener('sms:refresh-assignments', handleSync);
@@ -286,15 +295,15 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
     return matchClass && matchStatus && matchSearch;
   });
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative z-10 w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[92vh] animate__animated animate__zoomIn animate__faster">
+      <div className="relative z-10 w-full sm:max-w-4xl bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[95dvh] sm:h-auto sm:max-h-[92vh] animate__animated animate__zoomIn animate__faster">
         {/* ── Top Header ─────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/80 shrink-0 gap-3">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-gray-100 bg-gray-50/80 shrink-0 gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-600 shrink-0 shadow-2xs">
               <FileText className="w-5 h-5" />
@@ -335,7 +344,7 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
         </div>
 
         {/* ── Quick Stats Row ────────────────────────────────────────────── */}
-        <div className="px-5 py-3 border-b border-gray-100 bg-white grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
+        <div className="px-4 sm:px-5 py-3 border-b border-gray-100 bg-white grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 shrink-0">
           <button
             onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')}
             className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
@@ -394,7 +403,7 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
         </div>
 
         {/* ── Toolbar: Class Filter + Search ────────────────────────────── */}
-        <div className="px-5 py-3 border-b border-gray-100 bg-white flex flex-col sm:flex-row gap-2.5 shrink-0">
+        <div className="px-4 sm:px-5 py-3 border-b border-gray-100 bg-white flex flex-col sm:flex-row gap-2 sm:gap-2.5 shrink-0">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-gray-400" />
             <input
@@ -434,7 +443,7 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
         </div>
 
         {/* ── Content: Assignments List ─────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 bg-slate-50/50">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5 bg-slate-50/50">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-2">
               <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
@@ -677,7 +686,7 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
         </div>
 
         {/* ── Footer ─────────────────────────────────────────────────────── */}
-        <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/70 shrink-0 flex items-center justify-between">
+        <div className="px-4 sm:px-5 py-3.5 border-t border-gray-100 bg-gray-50/70 shrink-0 flex items-center justify-between">
           <p className="text-xs text-gray-500">
             Hiển thị {filteredAssignments.length} / {summary.total} bài tập
           </p>
@@ -692,8 +701,8 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
 
       {/* ── Submission Dialog ───────────────────────────────────────────── */}
       {activeSubmission && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs">
-          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate__animated animate__zoomIn animate__faster">
+        <div className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="relative w-full sm:max-w-lg bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden animate__animated animate__zoomIn animate__faster">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/80">
               <div>
                 <h4 className="text-sm font-bold text-gray-900">
@@ -800,4 +809,6 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
       )}
     </div>
   );
+
+  return ReactDOM.createPortal(modalContent, document.body);
 }

@@ -6,10 +6,8 @@
 
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma';
 import { WhereCondition } from '../types';
-
-const prisma = new PrismaClient();
 
 class ClassController {
   /**

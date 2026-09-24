@@ -8,10 +8,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://student-management-system-udhy.onrender.com";
+import { API_BASE_URL } from "@/config/api";
 
 const DEMO_ACCOUNTS = [
   {
@@ -70,7 +67,8 @@ export default function HomePage() {
   }, []);
 
   const handleGoogleLogin = () => {
-    window.location.href = `${API_BASE_URL}/api/auth/google`;
+    const returnUrl = encodeURIComponent(window.location.origin);
+    window.location.href = `${API_BASE_URL}/api/auth/google?redirect_to=${returnUrl}`;
   };
 
   const handleDemoLogin = async (email: string, password: string) => {

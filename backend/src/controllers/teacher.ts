@@ -5,14 +5,12 @@
  */
 
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma';
 import { v4 as uuidv4 } from 'uuid';
 import QRCode from 'qrcode';
 import { UserPayload } from '../types';
 import { AuthUtils } from '../utils/auth';
 import { ensureStudentProfileAndCode, generateNextStudentCode } from '../utils/studentCode';
-
-const prisma = new PrismaClient();
 
 interface AuthenticatedRequest extends Request {
   user?: UserPayload;

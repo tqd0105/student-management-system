@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import {
   X,
   CreditCard,
@@ -193,11 +194,11 @@ export default function StudentTuitionModal({ isOpen, onClose }: StudentTuitionM
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-gray-100">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+      <div className="bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl w-full sm:max-w-5xl h-[95dvh] sm:h-auto sm:max-h-[92vh] flex flex-col overflow-hidden border border-gray-100">
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 px-6 py-5 text-white flex items-center justify-between shadow-md">
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 px-4 sm:px-6 py-4 sm:py-5 text-white flex items-center justify-between shadow-md shrink-0">
           <div className="flex items-center space-x-3">
             <div className="p-2.5 bg-white/20 backdrop-blur-md rounded-xl text-white">
               <CreditCard className="w-6 h-6" />
@@ -235,9 +236,9 @@ export default function StudentTuitionModal({ isOpen, onClose }: StudentTuitionM
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 bg-slate-50/50">
           {/* Summary KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
               <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
                 <FileText className="w-6 h-6" />
@@ -370,112 +371,174 @@ export default function StudentTuitionModal({ isOpen, onClose }: StudentTuitionM
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-200">
-                      <th className="py-3.5 px-4">Khoản thu / Lớp học</th>
-                      <th className="py-3.5 px-4 text-right">Số tiền</th>
-                      <th className="py-3.5 px-4 text-right whitespace-nowrap">Đã nộp</th>
-                      <th className="py-3.5 px-4 text-right">Còn lại</th>
-                      <th className="py-3.5 px-4">Hạn nộp</th>
-                      <th className="py-3.5 px-4 text-center">Trạng thái</th>
-                      <th className="py-3.5 px-4 text-center">Cú pháp nộp</th>
-                      <th className="py-3.5 px-4">Ghi chú</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {filteredFees.map((fee) => {
-                      const isSelected = selectedFee?.id === fee.id;
-                      const feeSyntax = `${cleanCode} - ${cleanName} - ${toUnaccentedUpper(fee.title)}`;
-                      return (
-                        <tr
-                          key={fee.id}
-                          onClick={() => setSelectedFeeId(fee.id)}
-                          className={`transition-colors cursor-pointer ${
-                            isSelected ? 'bg-emerald-50/80 ring-1 ring-inset ring-emerald-300' : 'hover:bg-slate-50/70'
-                          }`}
-                        >
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              {isSelected && (
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <>
+                {/* —— Desktop Table (hidden on mobile) —— */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-200">
+                        <th className="py-3.5 px-4">Khoản thu / Lớp học</th>
+                        <th className="py-3.5 px-4 text-right">Số tiền</th>
+                        <th className="py-3.5 px-4 text-right whitespace-nowrap">Đã nộp</th>
+                        <th className="py-3.5 px-4 text-right">Còn lại</th>
+                        <th className="py-3.5 px-4">Hạn nộp</th>
+                        <th className="py-3.5 px-4 text-center">Trạng thái</th>
+                        <th className="py-3.5 px-4 text-center">Cú pháp nộp</th>
+                        <th className="py-3.5 px-4">Ghi chú</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {filteredFees.map((fee) => {
+                        const isSelected = selectedFee?.id === fee.id;
+                        const feeSyntax = `${cleanCode} - ${cleanName} - ${toUnaccentedUpper(fee.title)}`;
+                        return (
+                          <tr
+                            key={fee.id}
+                            onClick={() => setSelectedFeeId(fee.id)}
+                            className={`transition-colors cursor-pointer ${
+                              isSelected ? 'bg-emerald-50/80 ring-1 ring-inset ring-emerald-300' : 'hover:bg-slate-50/70'
+                            }`}
+                          >
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-2">
+                                {isSelected && (
+                                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                )}
+                                <div className="font-semibold text-slate-900 whitespace-nowrap">{fee.title}</div>
+                              </div>
+                              {fee.class ? (
+                                <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5 whitespace-nowrap">
+                                  <BookOpen className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>{fee.class.name}</span>
+                                  {fee.class.teacher?.name && (
+                                    <span className="text-slate-400">({fee.class.teacher.name})</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="text-xs text-slate-400 mt-0.5">Khoản thu riêng cá nhân</div>
                               )}
-                              <div className="font-semibold text-slate-900 whitespace-nowrap">{fee.title}</div>
+                            </td>
+                            <td className="py-4 px-4 text-right font-medium text-slate-900">
+                              {formatVND(fee.amount)}
+                            </td>
+                            <td className="py-4 px-4 text-right font-medium text-emerald-600">
+                              {formatVND(fee.paidAmount)}
+                            </td>
+                            <td className="py-4 px-4 text-right font-bold text-rose-600">
+                              {formatVND(fee.remainingAmount)}
+                            </td>
+                            <td className="py-4 px-4 text-xs text-slate-600 whitespace-nowrap">
+                              {fee.dueDate ? (
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>{new Date(fee.dueDate).toLocaleDateString('vi-VN')}</span>
+                                </div>
+                              ) : (
+                                <span className="text-slate-400">Không có</span>
+                              )}
+                            </td>
+                            <td className="py-4 px-4 text-center whitespace-nowrap">
+                              {getStatusBadge(fee.status)}
+                            </td>
+                            <td className="py-4 px-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                              {fee.status === 'PAID' ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Đã xong</span>
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedFeeId(fee.id);
+                                    copyToClipboard(feeSyntax, `row-${fee.id}`);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 border border-emerald-200 hover:border-emerald-300 transition-all cursor-pointer shadow-xs"
+                                  title={`Sao chép: ${feeSyntax}`}
+                                >
+                                  {copiedText === `row-${fee.id}` ? (
+                                    <><Check className="w-3.5 h-3.5 text-emerald-600" /><span className="text-emerald-700 font-bold">Đã chép</span></>
+                                  ) : (
+                                    <><Copy className="w-3.5 h-3.5 text-slate-500" /><span>Chép cú pháp</span></>
+                                  )}
+                                </button>
+                              )}
+                            </td>
+                            <td className="py-4 px-4 text-xs text-slate-500 max-w-xs truncate">
+                              {fee.note || (fee.paidAt ? `Đã thanh toán ngày ${new Date(fee.paidAt).toLocaleDateString('vi-VN')}` : '—')}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* —— Mobile Card List (visible only on mobile) —— */}
+                <div className="sm:hidden divide-y divide-slate-100">
+                  {filteredFees.map((fee) => {
+                    const isSelected = selectedFee?.id === fee.id;
+                    const feeSyntax = `${cleanCode} - ${cleanName} - ${toUnaccentedUpper(fee.title)}`;
+                    return (
+                      <div
+                        key={fee.id}
+                        onClick={() => setSelectedFeeId(fee.id)}
+                        className={`p-4 cursor-pointer transition-colors ${
+                          isSelected ? 'bg-emerald-50/80 border-l-4 border-emerald-500' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {isSelected && <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 mt-1" />}
+                            <div>
+                              <p className="font-semibold text-slate-900 text-sm leading-snug">{fee.title}</p>
+                              {fee.class ? (
+                                <p className="text-xs text-slate-500 mt-0.5">{fee.class.name}{fee.class.teacher?.name ? ` · ${fee.class.teacher.name}` : ''}</p>
+                              ) : (
+                                <p className="text-xs text-slate-400 mt-0.5">Khoản thu riêng</p>
+                              )}
                             </div>
-                            {fee.class ? (
-                              <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5 whitespace-nowrap">
-                                <BookOpen className="w-3.5 h-3.5 text-slate-400" />
-                                <span>{fee.class.name}</span>
-                                {fee.class.teacher?.name && (
-                                  <span className="text-slate-400">({fee.class.teacher.name})</span>
-                                )}
-                              </div>
+                          </div>
+                          {getStatusBadge(fee.status)}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-xs mt-2">
+                          <div className="bg-slate-50 rounded-lg p-2">
+                            <p className="text-slate-400 text-[10px] font-medium">Tổng tiền</p>
+                            <p className="font-bold text-slate-800 mt-0.5">{formatVND(fee.amount)}</p>
+                          </div>
+                          <div className="bg-emerald-50 rounded-lg p-2">
+                            <p className="text-emerald-600 text-[10px] font-medium">Đã nộp</p>
+                            <p className="font-bold text-emerald-700 mt-0.5">{formatVND(fee.paidAmount)}</p>
+                          </div>
+                          <div className={`rounded-lg p-2 ${fee.remainingAmount > 0 ? 'bg-rose-50' : 'bg-slate-50'}`}>
+                            <p className={`text-[10px] font-medium ${fee.remainingAmount > 0 ? 'text-rose-600' : 'text-slate-400'}`}>Còn lại</p>
+                            <p className={`font-bold mt-0.5 ${fee.remainingAmount > 0 ? 'text-rose-700' : 'text-slate-500'}`}>{formatVND(fee.remainingAmount)}</p>
+                          </div>
+                        </div>
+                        {fee.dueDate && (
+                          <div className="flex items-center gap-1 text-xs text-slate-500 mt-2">
+                            <Calendar className="w-3 h-3" />
+                            <span>Hạn nộp: {new Date(fee.dueDate).toLocaleDateString('vi-VN')}</span>
+                          </div>
+                        )}
+                        {fee.status !== 'PAID' && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setSelectedFeeId(fee.id); copyToClipboard(feeSyntax, `row-${fee.id}`); }}
+                            className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-all cursor-pointer"
+                          >
+                            {copiedText === `row-${fee.id}` ? (
+                              <><Check className="w-3.5 h-3.5 text-emerald-600" /><span>Đã chép cú pháp!</span></>
                             ) : (
-                              <div className="text-xs text-slate-400 mt-0.5">Khoản thu riêng cá nhân</div>
+                              <><Copy className="w-3.5 h-3.5" /><span>Sao chép nội dung chuyển khoản</span></>
                             )}
-                          </td>
-                          <td className="py-4 px-4 text-right font-medium text-slate-900">
-                            {formatVND(fee.amount)}
-                          </td>
-                          <td className="py-4 px-4 text-right font-medium text-emerald-600">
-                            {formatVND(fee.paidAmount)}
-                          </td>
-                          <td className="py-4 px-4 text-right font-bold text-rose-600">
-                            {formatVND(fee.remainingAmount)}
-                          </td>
-                          <td className="py-4 px-4 text-xs text-slate-600 whitespace-nowrap">
-                            {fee.dueDate ? (
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                                <span>{new Date(fee.dueDate).toLocaleDateString('vi-VN')}</span>
-                              </div>
-                            ) : (
-                              <span className="text-slate-400">Không có</span>
-                            )}
-                          </td>
-                          <td className="py-4 px-4 text-center whitespace-nowrap">
-                            {getStatusBadge(fee.status)}
-                          </td>
-                          <td className="py-4 px-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            {fee.status === 'PAID' ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>Đã xong</span>
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedFeeId(fee.id);
-                                  copyToClipboard(feeSyntax, `row-${fee.id}`);
-                                }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 border border-emerald-200 hover:border-emerald-300 transition-all cursor-pointer shadow-xs"
-                                title={`Sao chép: ${feeSyntax}`}
-                              >
-                                {copiedText === `row-${fee.id}` ? (
-                                  <>
-                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                    <span className="text-emerald-700 font-bold">Đã chép</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy className="w-3.5 h-3.5 text-slate-500" />
-                                    <span>Chép cú pháp</span>
-                                  </>
-                                )}
-                              </button>
-                            )}
-                          </td>
-                          <td className="py-4 px-4 text-xs text-slate-500 max-w-xs truncate">
-                            {fee.note || (fee.paidAt ? `Đã thanh toán ngày ${new Date(fee.paidAt).toLocaleDateString('vi-VN')}` : '—')}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
 
@@ -666,4 +729,6 @@ export default function StudentTuitionModal({ isOpen, onClose }: StudentTuitionM
       </div>
     </div>
   );
+
+  return ReactDOM.createPortal(modalContent, document.body);
 }

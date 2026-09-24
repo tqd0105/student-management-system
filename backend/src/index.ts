@@ -9,7 +9,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { PrismaClient } from '@prisma/client';
+import os from 'os';
+import prisma from './prisma';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -32,22 +33,32 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Initialize Prisma client
-const prisma = new PrismaClient();
-
 // Security Middleware - bảo mật headers
 app.use(helmet());
 
-// CORS Configuration - cho phép frontend kết nối
-const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'http://192.168.88.175:3000',
-    'http://0.0.0.0:3000',
-    'http://192.168.1.4:3000',
-    'https://sms-fe-lovat.vercel.app',
-    process.env.FRONTEND_URL || ''
-  ].filter(url => url !== ''),
+// CORS Configuration - Tự động cho phép localhost, Vercel và mọi IP trong mạng LAN (không cần hardcode)
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Cho phép các request không có origin header (mobile app, postman, curl, server-to-server)
+    if (!origin) return callback(null, true);
+
+    // 1. Cho phép localhost (bất kỳ port nào: 3000, 3001, ...)
+    const isLocalhost = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
+    // 2. Tự động cho phép mọi IP mạng nội bộ LAN:
+    //    192.168.x.x, 10.x.x.x, 172.16-31.x.x, 0.0.0.0 (bất kỳ port nào)
+    const isLocalLAN = /^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|0\.0\.0\.0)(:\d+)?$/.test(origin);
+
+    // 3. Domain Production trên Vercel hoặc cấu hình trong .env (kể cả preview deploy *.vercel.app)
+    const isVercel = /^https:\/\/.*\.vercel\.app$/.test(origin) || origin === process.env.FRONTEND_URL;
+
+    // Trong môi trường dev, hoặc nếu khớp các điều kiện trên -> Cho phép
+    if (isLocalhost || isLocalLAN || isVercel || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error(`Blocked by CORS: Origin ${origin} not allowed`));
+    }
+  },
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -113,14 +124,29 @@ process.on('SIGINT', async () => {
 });
 
 // Start server
+const getLocalIP = (): string => {
+  try {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+      for (const iface of interfaces[name] || []) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          return iface.address;
+        }
+      }
+    }
+  } catch {}
+  return '0.0.0.0';
+};
+
 app.listen(Number(PORT), '0.0.0.0', () => {
+  const localIP = getLocalIP();
   console.log(`
 🚀 Student Management System API
 📌 Server running on port ${PORT}
 🌐 Environment: ${process.env.NODE_ENV || 'development'}
 👥 Developed by: DTECH TEAM
-📱 Local: http://localhost:${PORT}/health
-📱 Network: http://192.168.88.175:${PORT}/health
+📱 Local:   http://localhost:${PORT}/health
+📱 Network: http://${localIP}:${PORT}/health
   `);
 });
 

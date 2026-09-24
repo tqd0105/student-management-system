@@ -6,11 +6,9 @@
 
 import { Request, Response } from 'express';
 import { OAuth2Client } from 'google-auth-library';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma';
 import { AuthUtils } from '../utils/auth';
 import { ensureStudentProfileAndCode } from '../utils/studentCode';
-
-const prisma = new PrismaClient();
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
@@ -32,11 +30,14 @@ export class GoogleAuthController {
    */
   static initiateGoogleAuth(req: Request, res: Response) {
     const client = getOAuthClient();
+    // Lấy client origin từ query hoặc referer để biết redirect về đâu (localhost hay IP điện thoại)
+    const returnUrl = (req.query.redirect_to as string) || (req.headers.referer ? new URL(req.headers.referer).origin : '') || FRONTEND_URL;
 
     const authUrl = client.generateAuthUrl({
       access_type: 'offline',
       scope: ['email', 'profile', 'openid'],
       prompt: 'select_account', // Luôn hiện chọn tài khoản
+      state: returnUrl, // Google sẽ trả lại state này nguyên vẹn trong callback
     });
 
     res.redirect(authUrl);
@@ -47,15 +48,21 @@ export class GoogleAuthController {
    * GET /api/auth/google/callback?code=xxx
    */
   static async googleCallback(req: Request, res: Response) {
-    const { code, error } = req.query;
+    const { code, error, state } = req.query;
+
+    // Xác định frontend url cần redirect về (nếu có state hợp lệ từ client)
+    let targetFrontendUrl = FRONTEND_URL;
+    if (state && typeof state === 'string' && (state.startsWith('http://') || state.startsWith('https://'))) {
+      targetFrontendUrl = state.replace(/\/$/, '');
+    }
 
     // User từ chối đăng nhập
     if (error) {
-      return res.redirect(`${FRONTEND_URL}/?error=google_denied`);
+      return res.redirect(`${targetFrontendUrl}/?error=google_denied`);
     }
 
     if (!code || typeof code !== 'string') {
-      return res.redirect(`${FRONTEND_URL}/?error=no_code`);
+      return res.redirect(`${targetFrontendUrl}/?error=no_code`);
     }
 
     try {
@@ -150,12 +157,12 @@ export class GoogleAuthController {
       }));
 
       // Redirect về frontend với token
-      const redirectUrl = `${FRONTEND_URL}/auth/google/success?token=${token}&user=${userInfo}`;
+      const redirectUrl = `${targetFrontendUrl}/auth/google/success?token=${token}&user=${userInfo}`;
       return res.redirect(redirectUrl);
 
     } catch (err) {
       console.error('❌ Google OAuth callback error:', err);
-      return res.redirect(`${FRONTEND_URL}/?error=oauth_failed`);
+      return res.redirect(`${targetFrontendUrl}/?error=oauth_failed`);
     }
   }
 }

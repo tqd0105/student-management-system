@@ -387,74 +387,75 @@ export default function TuitionManagementModal({ onClose, classes }: TuitionMana
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900/60 flex items-center justify-center z-50 p-3 sm:p-5">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden animate__animated animate__zoomIn animate__faster">
+    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-2 sm:p-4 md:p-6">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200/90 w-full max-w-6xl max-h-[94vh] sm:max-h-[92vh] flex flex-col overflow-hidden animate__animated animate__zoomIn animate__faster">
         
         {/* Header */}
-        <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-amber-600 via-indigo-700 to-indigo-800 text-white flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            {/* <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
-              <Wallet size={22} className="text-white" />
-            </div> */}
-            <div>
-              <h2 className="text-lg sm:text-xl font-extrabold tracking-tight"> Quản Lý Học Phí & Công Nợ</h2>
-              <p className="text-xs text-amber-100 font-medium">Theo dõi các khoản thu học phí, ghi nhận thanh toán và báo cáo công nợ</p>
+        <div className="p-3.5 sm:p-5 border-b border-gray-200 bg-gradient-to-r from-amber-600 via-indigo-700 to-indigo-800 text-white flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner shrink-0">
+              <CreditCard size={18} className="text-white sm:w-5 sm:h-5" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-xl font-extrabold tracking-tight truncate">Quản Lý Học Phí & Công Nợ</h2>
+              <p className="text-[11px] sm:text-xs text-amber-100 font-medium truncate">Theo dõi các khoản thu học phí, ghi nhận thanh toán và báo cáo</p>
             </div>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-full transition-colors text-white/80 hover:text-white"
+            className="p-1.5 sm:p-2 hover:bg-white/20 rounded-full transition-colors text-white/80 hover:text-white cursor-pointer shrink-0 ml-2"
+            title="Đóng cửa sổ"
           >
-            <X size={22} />
+            <X size={20} className="sm:w-5 sm:h-5" />
           </button>
         </div>
 
         {/* 4 KPI Summary Cards */}
         {stats && (
-          <div className="p-4 bg-gray-50 border-b border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-xs">
-              <div className="flex items-center justify-between text-gray-500 mb-1">
-                <span className="text-xs font-semibold">Tổng học phí</span>
-                <DollarSign size={16} className="text-indigo-500" />
+          <div className="p-2.5 sm:p-4 bg-gray-50/80 border-b border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 shrink-0">
+            <div className="bg-white p-2.5 sm:p-3.5 rounded-xl border border-gray-200 shadow-xs">
+              <div className="flex items-center justify-between text-gray-500 mb-0.5 sm:mb-1">
+                <span className="text-[10px] sm:text-xs font-semibold">Tổng học phí</span>
+                <DollarSign size={14} className="text-indigo-500 sm:w-4 sm:h-4" />
               </div>
-              <p className="text-base sm:text-lg font-extrabold text-gray-900">{formatVND(stats.totalAmount)}</p>
-              <p className="text-[11px] text-gray-400 mt-0.5">{stats.totalInvoices} phiếu khoản thu</p>
+              <p className="text-sm sm:text-lg font-extrabold text-gray-900 truncate">{formatVND(stats.totalAmount)}</p>
+              <p className="text-[10px] sm:text-[11px] text-gray-400 mt-0.5 truncate">{stats.totalInvoices} phiếu thu</p>
             </div>
 
-            <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-xs">
-              <div className="flex items-center justify-between text-gray-500 mb-1">
-                <span className="text-xs font-semibold">Đã thu về</span>
-                <CheckCircle2 size={16} className="text-emerald-500" />
+            <div className="bg-white p-2.5 sm:p-3.5 rounded-xl border border-gray-200 shadow-xs">
+              <div className="flex items-center justify-between text-gray-500 mb-0.5 sm:mb-1">
+                <span className="text-[10px] sm:text-xs font-semibold">Đã thu về</span>
+                <CheckCircle2 size={14} className="text-emerald-500 sm:w-4 sm:h-4" />
               </div>
-              <p className="text-base sm:text-lg font-extrabold text-emerald-600">{formatVND(stats.paidAmount)}</p>
-              <p className="text-[11px] text-emerald-600/80 font-medium mt-0.5">{stats.paidCount} phiếu đã đóng đủ</p>
+              <p className="text-sm sm:text-lg font-extrabold text-emerald-600 truncate">{formatVND(stats.paidAmount)}</p>
+              <p className="text-[10px] sm:text-[11px] text-emerald-600/80 font-medium mt-0.5 truncate">{stats.paidCount} phiếu đã đóng</p>
             </div>
 
-            <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-xs">
-              <div className="flex items-center justify-between text-gray-500 mb-1">
-                <span className="text-xs font-semibold">Còn nợ / Chưa nộp</span>
-                <AlertCircle size={16} className="text-rose-500" />
+            <div className="bg-white p-2.5 sm:p-3.5 rounded-xl border border-gray-200 shadow-xs">
+              <div className="flex items-center justify-between text-gray-500 mb-0.5 sm:mb-1">
+                <span className="text-[10px] sm:text-xs font-semibold">Còn nợ / Chưa nộp</span>
+                <AlertCircle size={14} className="text-rose-500 sm:w-4 sm:h-4" />
               </div>
-              <p className="text-base sm:text-lg font-extrabold text-rose-600">{formatVND(stats.remainingAmount)}</p>
-              <p className="text-[11px] text-rose-600/80 font-medium mt-0.5">{stats.unpaidCount} chưa nộp • {stats.partialCount} nộp 1 phần</p>
+              <p className="text-sm sm:text-lg font-extrabold text-rose-600 truncate">{formatVND(stats.remainingAmount)}</p>
+              <p className="text-[10px] sm:text-[11px] text-rose-600/80 font-medium mt-0.5 truncate">{stats.unpaidCount} chưa nộp • {stats.partialCount} nợ</p>
             </div>
 
-            <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-xs">
-              <div className="flex items-center justify-between text-gray-500 mb-1">
-                <span className="text-xs font-semibold">Tỷ lệ hoàn thành</span>
-                <span className="text-xs font-bold text-indigo-600">{stats.completionRate}%</span>
+            <div className="bg-white p-2.5 sm:p-3.5 rounded-xl border border-gray-200 shadow-xs">
+              <div className="flex items-center justify-between text-gray-500 mb-0.5 sm:mb-1">
+                <span className="text-[10px] sm:text-xs font-semibold">Tỷ lệ thu</span>
+                <span className="text-[10px] sm:text-xs font-bold text-indigo-600">{stats.completionRate}%</span>
               </div>
-              <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden mt-2">
+              <div className="w-full bg-gray-200 h-2 sm:h-2.5 rounded-full overflow-hidden mt-1 sm:mt-2">
                 <div 
                   className="bg-gradient-to-r from-indigo-500 to-emerald-500 h-full rounded-full transition-all duration-500"
                   style={{ width: `${Math.min(100, stats.completionRate)}%` }}
                 />
               </div>
-              <p className="text-[11px] text-gray-400 mt-1.5">
+              <p className="text-[10px] sm:text-[11px] text-gray-400 mt-1 truncate">
                 {stats.overdueCount > 0 ? (
-                  <span className="text-rose-600 font-bold">⚠️ Có {stats.overdueCount} khoản quá hạn</span>
+                  <span className="text-rose-600 font-bold">⚠️ {stats.overdueCount} khoản quá hạn</span>
                 ) : (
-                  <span className="text-emerald-600">Không có khoản quá hạn</span>
+                  <span className="text-emerald-600 font-medium">Không quá hạn</span>
                 )}
               </p>
             </div>
@@ -462,30 +463,30 @@ export default function TuitionManagementModal({ onClose, classes }: TuitionMana
         )}
 
         {/* Toolbar: Filters & Actions */}
-        <div className="p-4 bg-white border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-col sm:flex-row items-start gap-2.5 flex-wrap flex-1 min-w-[250px]">
-            {/* Search Input */}
-            <div className="relative min-w-[100px] max-w-sm flex-1">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Tìm theo tên học sinh, email, MSSV, khoản thu..."
-                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl text-xs bg-gray-50 outline-none focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-all"
-              />
-            </div>
+        <div className="p-3 sm:p-4 bg-white border-b border-gray-200 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 shrink-0">
+          {/* Search Input */}
+          <div className="relative w-full md:flex-1 md:max-w-xs">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Tìm tên học sinh, email, MSSV, khoản thu..."
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl text-xs bg-gray-50 outline-none focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-all"
+            />
+          </div>
 
+          {/* Filters: 2 cols on Mobile, inline on Desktop */}
+          <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full md:w-auto">
             {/* Class Filter */}
-            <div className='flex gap-2'>
-            <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-2 border border-gray-300 rounded-xl text-xs">
-              <BookOpen size={14} className="text-gray-500" />
+            <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 sm:px-3 py-2 border border-gray-300 rounded-xl text-xs min-w-0">
+              <BookOpen size={14} className="text-gray-500 shrink-0" />
               <select
                 value={selectedClassId}
                 onChange={e => setSelectedClassId(e.target.value)}
-                className="bg-transparent outline-none font-semibold text-gray-700 cursor-pointer"
+                className="bg-transparent outline-none font-semibold text-gray-700 cursor-pointer w-full truncate"
               >
-                <option value="ALL">Tất cả các lớp</option>
+                <option value="ALL">Tất cả lớp</option>
                 {classes.map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
@@ -493,12 +494,12 @@ export default function TuitionManagementModal({ onClose, classes }: TuitionMana
             </div>
 
             {/* Status Filter */}
-            <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-2 border border-gray-300 rounded-xl text-xs">
-              <Filter size={14} className="text-gray-500" />
+            <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 sm:px-3 py-2 border border-gray-300 rounded-xl text-xs min-w-0">
+              <Filter size={14} className="text-gray-500 shrink-0" />
               <select
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
-                className="bg-transparent outline-none font-semibold text-gray-700 cursor-pointer"
+                className="bg-transparent outline-none font-semibold text-gray-700 cursor-pointer w-full truncate"
               >
                 <option value="ALL">Tất cả trạng thái</option>
                 <option value="PAID">Đã đóng đủ</option>
@@ -507,30 +508,29 @@ export default function TuitionManagementModal({ onClose, classes }: TuitionMana
                 <option value="OVERDUE">Quá hạn nộp</option>
               </select>
             </div>
-            </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-row sm:flex-col md:flex-row items-center gap-2">
+          <div className="flex items-center gap-2 w-full md:w-auto justify-end pt-1 md:pt-0">
             <button
               onClick={exportToCSV}
-              className="flex items-center gap-1.5 bg-white border border-gray-300 text-gray-700 px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-gray-100 transition-colors shadow-2xs cursor-pointer"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white border border-gray-300 text-gray-700 px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-gray-100 transition-colors shadow-2xs cursor-pointer"
               title="Xuất file CSV báo cáo học phí"
             >
               <Download size={14} />
-              <span>Xuất CSV</span>
+              <span className='hidden sm:block'>Xuất CSV</span>
             </button>
             <button
               onClick={handleOpenCreateModal}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer whitespace-nowrap"
             >
               <Plus size={15} />
-              <span> Tạo Khoản Thu </span>
+              <span>Tạo Khoản Thu</span>
             </button>
           </div>
         </div>
 
-        {/* Tuition Fees Table */}
+        {/* Content: Dual View (Desktop Table + Mobile Cards) */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="text-center py-16 text-gray-400">
@@ -538,130 +538,234 @@ export default function TuitionManagementModal({ onClose, classes }: TuitionMana
               <p className="text-xs">Đang tải danh sách học phí...</p>
             </div>
           ) : filteredFees.length === 0 ? (
-            <div className="text-center py-16 text-gray-400">
+            <div className="text-center py-16 text-gray-400 p-4">
               <CreditCard size={48} className="mx-auto mb-2 text-gray-300" />
               <p className="font-bold text-gray-600">Chưa có khoản thu học phí nào</p>
-              <p className="text-xs text-gray-400 mt-1">Bấm "+ Tạo Khoản Thu / Ghi Nợ" để tạo phiếu thu học phí cho học sinh.</p>
+              <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">Bấm "+ Tạo Khoản Thu" để tạo phiếu thu học phí cho học sinh.</p>
             </div>
           ) : (
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs text-gray-600 uppercase bg-gray-100/80 sticky top-0 z-10 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap">Học Sinh</th>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap">Khoản Thu</th>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap">Lớp</th>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap text-right">Số Tiền</th>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap text-right">Đã Nộp</th>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap text-right">Còn Nợ</th>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap">Hạn Nộp</th>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap text-center">Trạng Thái</th>
-                  <th className="px-4 py-3 font-bold whitespace-nowrap text-right">Thao Tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
+            <>
+              {/* 1. Mobile Cards View (sm/mobile screens < 768px) */}
+              <div className="block md:hidden p-3 space-y-3">
                 {filteredFees.map((f) => {
                   const mssv = f.student.studentProfile?.studentCode || '—';
                   const rem = Math.max(0, f.amount - f.paidAmount);
 
                   return (
-                    <tr key={f.id} className="hover:bg-indigo-50/20 transition-colors">
-                      {/* Student info */}
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-[11px] font-bold px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-200">
-                            {mssv}
-                          </span>
-                          <div>
-                            <p className="font-bold text-gray-800 text-xs sm:text-sm">{f.student.name}</p>
-                            <p className="text-[11px] text-gray-400">{f.student.email}</p>
+                    <div 
+                      key={f.id} 
+                      className="bg-white rounded-2xl p-3.5 border border-gray-200/90 shadow-xs hover:shadow-md transition-all space-y-2.5"
+                    >
+                      {/* Top Row: Student info & Status */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-200">
+                              {mssv}
+                            </span>
+                            <p className="font-bold text-gray-900 text-sm truncate">{f.student.name}</p>
                           </div>
+                          <p className="text-[11px] text-gray-400 truncate mt-0.5">{f.student.email}</p>
                         </div>
-                      </td>
+                        <div className="shrink-0">
+                          {getStatusBadge(f.status)}
+                        </div>
+                      </div>
 
-                      {/* Title & Note */}
-                      <td className="px-4 py-3">
-                        <p className="font-bold text-gray-800 text-xs sm:text-sm whitespace-nowrap">{f.title}</p>
-                        {f.note && <p className="text-[11px] text-gray-400 italic truncate max-w-xs">{f.note}</p>}
-                      </td>
-
-                      {/* Class */}
-                      <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-600">
-                        {f.class ? (
-                          <span className="px-2 py-0.5 bg-gray-100 rounded font-medium border border-gray-200">
-                            {f.class.name}
+                      {/* Middle: Title & Class */}
+                      <div className="bg-gray-50/70 p-2.5 rounded-xl border border-gray-100 space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-gray-800 truncate">{f.title}</span>
+                          <span className="px-2 py-0.5 bg-white text-gray-600 rounded text-[11px] font-semibold border border-gray-200 shrink-0 ml-1">
+                            {f.class ? f.class.name : 'Chung'}
                           </span>
-                        ) : (
-                          <span className="text-gray-400 italic">Chung</span>
+                        </div>
+                        {f.note && (
+                          <p className="text-[11px] text-gray-500 italic line-clamp-1">{f.note}</p>
                         )}
-                      </td>
+                      </div>
 
-                      {/* Amount */}
-                      <td className="px-4 py-3 text-right font-bold text-gray-800 whitespace-nowrap">
-                        {formatVND(f.amount)}
-                      </td>
+                      {/* Financials 3-column breakdown */}
+                      <div className="grid grid-cols-3 gap-2 text-center bg-slate-50/60 p-2 rounded-xl border border-slate-100">
+                        <div>
+                          <p className="text-[10px] font-semibold text-gray-500">Tổng tiền</p>
+                          <p className="text-xs font-bold text-gray-900 mt-0.5 truncate">{formatVND(f.amount)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-semibold text-gray-500">Đã nộp</p>
+                          <p className="text-xs font-bold text-emerald-600 mt-0.5 truncate">{formatVND(f.paidAmount)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-semibold text-gray-500">Còn nợ</p>
+                          <p className={`text-xs font-bold mt-0.5 truncate ${rem > 0 ? 'text-rose-600' : 'text-gray-400'}`}>
+                            {formatVND(rem)}
+                          </p>
+                        </div>
+                      </div>
 
-                      {/* Paid Amount */}
-                      <td className="px-4 py-3 text-right font-bold text-emerald-600 whitespace-nowrap">
-                        {formatVND(f.paidAmount)}
-                      </td>
-
-                      {/* Remaining Amount */}
-                      <td className="px-4 py-3 text-right font-bold whitespace-nowrap">
-                        <span className={rem > 0 ? 'text-rose-600' : 'text-gray-400'}>
-                          {formatVND(rem)}
-                        </span>
-                      </td>
-
-                      {/* Due Date */}
-                      <td className="px-4 py-3 whitespace-nowrap text-xs">
-                        {f.dueDate ? (
-                          <span className={f.status === 'OVERDUE' ? 'text-rose-600 font-bold' : 'text-gray-600'}>
-                            {new Date(f.dueDate).toLocaleDateString('vi-VN')}
+                      {/* Card Footer: Due Date & Actions */}
+                      <div className="flex items-center justify-between pt-1 border-t border-gray-100 text-xs">
+                        <div className="text-[11px] text-gray-500 flex items-center gap-1">
+                          <Clock size={12} className="text-gray-400" />
+                          <span>Hạn:</span>
+                          <span className={f.status === 'OVERDUE' ? 'text-rose-600 font-bold' : 'font-medium'}>
+                            {f.dueDate ? new Date(f.dueDate).toLocaleDateString('vi-VN') : '—'}
                           </span>
-                        ) : (
-                          <span className="text-gray-300">—</span>
-                        )}
-                      </td>
+                        </div>
 
-                      {/* Status */}
-                      <td className="px-4 py-3 text-center whitespace-nowrap">
-                        {getStatusBadge(f.status)}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center gap-1.5">
                           {f.status !== 'PAID' && (
                             <button
                               onClick={() => handleOpenPayment(f)}
-                              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                              title="Ghi nhận nộp tiền"
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95"
                             >
-                              <CreditCard size={13} />
+                              <CreditCard size={12} />
                               <span>Thu tiền</span>
                             </button>
                           )}
                           <button
                             onClick={() => handleOpenEdit(f)}
                             className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-                            title="Chỉnh sửa khoản thu"
+                            title="Sửa"
                           >
                             <Edit3 size={14} />
                           </button>
                           <button
                             onClick={() => handleDeleteFee(f.id, f.title)}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-                            title="Xóa khoản thu"
+                            className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title="Xóa"
                           >
                             <Trash2 size={14} />
                           </button>
                         </div>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+
+              {/* 2. Desktop Table View (>= 768px screens) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="text-xs text-gray-600 uppercase bg-gray-100/80 sticky top-0 z-10 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap">Học Sinh</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap">Khoản Thu</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap">Lớp</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap text-right">Số Tiền</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap text-right">Đã Nộp</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap text-right">Còn Nợ</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap">Hạn Nộp</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap text-center">Trạng Thái</th>
+                      <th className="px-4 py-3 font-bold whitespace-nowrap text-right">Thao Tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredFees.map((f) => {
+                      const mssv = f.student.studentProfile?.studentCode || '—';
+                      const rem = Math.max(0, f.amount - f.paidAmount);
+
+                      return (
+                        <tr key={f.id} className="hover:bg-indigo-50/20 transition-colors">
+                          {/* Student info */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-[11px] font-bold px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-200">
+                                {mssv}
+                              </span>
+                              <div>
+                                <p className="font-bold text-gray-800 text-xs sm:text-sm">{f.student.name}</p>
+                                <p className="text-[11px] text-gray-400">{f.student.email}</p>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Title & Note */}
+                          <td className="px-4 py-3">
+                            <p className="font-bold text-gray-800 text-xs sm:text-sm whitespace-nowrap">{f.title}</p>
+                            {f.note && <p className="text-[11px] text-gray-400 italic truncate max-w-xs">{f.note}</p>}
+                          </td>
+
+                          {/* Class */}
+                          <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-600">
+                            {f.class ? (
+                              <span className="px-2 py-0.5 bg-gray-100 rounded font-medium border border-gray-200">
+                                {f.class.name}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 italic">Chung</span>
+                            )}
+                          </td>
+
+                          {/* Amount */}
+                          <td className="px-4 py-3 text-right font-bold text-gray-800 whitespace-nowrap">
+                            {formatVND(f.amount)}
+                          </td>
+
+                          {/* Paid Amount */}
+                          <td className="px-4 py-3 text-right font-bold text-emerald-600 whitespace-nowrap">
+                            {formatVND(f.paidAmount)}
+                          </td>
+
+                          {/* Remaining Amount */}
+                          <td className="px-4 py-3 text-right font-bold whitespace-nowrap">
+                            <span className={rem > 0 ? 'text-rose-600 font-bold' : 'text-gray-400'}>
+                              {formatVND(rem)}
+                            </span>
+                          </td>
+
+                          {/* Due Date */}
+                          <td className="px-4 py-3 whitespace-nowrap text-xs">
+                            {f.dueDate ? (
+                              <span className={f.status === 'OVERDUE' ? 'text-rose-600 font-bold' : 'text-gray-600'}>
+                                {new Date(f.dueDate).toLocaleDateString('vi-VN')}
+                              </span>
+                            ) : (
+                              <span className="text-gray-300">—</span>
+                            )}
+                          </td>
+
+                          {/* Status */}
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {getStatusBadge(f.status)}
+                          </td>
+
+                          {/* Actions */}
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {f.status !== 'PAID' && (
+                                <button
+                                  onClick={() => handleOpenPayment(f)}
+                                  className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                                  title="Ghi nhận nộp tiền"
+                                >
+                                  <CreditCard size={13} />
+                                  <span>Thu tiền</span>
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleOpenEdit(f)}
+                                className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                                title="Chỉnh sửa khoản thu"
+                              >
+                                <Edit3 size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteFee(f.id, f.title)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                                title="Xóa khoản thu"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -1,16 +1,35 @@
-// API Configuration - Auto-detect device
+// API Configuration - Auto-detect device & network
 const getApiBaseUrl = () => {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:3001';
+    const protocol = window.location.protocol;
+
+    // 1. Môi trường Production (Vercel hoặc custom production domain)
+    const isProductionHost = hostname.includes('vercel.app') || (process.env.NODE_ENV === 'production' && !hostname.includes('loca.lt') && !hostname.includes('ngrok'));
+    if (isProductionHost && !hostname.includes('loca.lt') && !hostname.includes('ngrok') && !hostname.includes('trycloudflare.com')) {
+      return process.env.NEXT_PUBLIC_API_URL || 'https://student-management-system-udhy.onrender.com';
     }
-    return 'https://student-management-system-udhy.onrender.com';
+
+    // 2. Môi trường Test qua Tunnel (Localtunnel, Ngrok, Cloudflare)
+    if (hostname.includes('loca.lt') || hostname.includes('ngrok') || hostname.includes('trycloudflare.com')) {
+      return '';
+    }
+
+    // 3. Môi trường LAN (Wi-Fi nội bộ)
+    const isLAN = /^(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)$/.test(hostname);
+    if (isLAN) {
+      if (protocol === 'https:') {
+        return '';
+      }
+      return `http://${hostname}:3001`;
+    }
+
+    // 4. Localhost
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    }
   }
-  return 'https://student-management-system-udhy.onrender.com';
+  return process.env.NEXT_PUBLIC_API_URL || 'https://student-management-system-udhy.onrender.com';
 };
 
 export const API_BASE_URL = getApiBaseUrl();

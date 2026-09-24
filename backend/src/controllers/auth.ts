@@ -6,12 +6,10 @@
 
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma';
 import { AuthUtils } from '../utils/auth';
 import emailServiceInstance from '../utils/emailService';
 import { ensureStudentProfileAndCode } from '../utils/studentCode';
-
-const prisma = new PrismaClient();
 
 class AuthController {
   /**
