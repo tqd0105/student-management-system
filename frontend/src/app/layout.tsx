@@ -12,8 +12,14 @@ const lexendDeca = Lexend_Deca({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://sms-fe-lovat.vercel.app'),
   title: "Portal | LIGHTBRAVE.EDU",
   description: "A modern student management portal featuring QR code-based attendance, class management, and academic progress tracking.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/images/favicon.ico",
+    apple: "/images/apple-touch-icon.png",
+  },
   
   // Simple Open Graph for link preview
   openGraph: {
@@ -32,11 +38,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
-      <head>
-        {/* Simple favicon */}
-        <link rel="icon" href="/images/favicon.ico" sizes="any" />
-        <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
-      </head>
       <body
         className={`${lexendDeca.variable} font-sans antialiased h-full bg-gray-50`}
       >

@@ -8,6 +8,7 @@ import { Request, Response } from 'express';
 import prisma from '../prisma';
 import { UserPayload } from '../types';
 import { ensureStudentProfileAndCode } from '../utils/studentCode';
+import { getClientIp, getPublicWanIp, isNetworkMatch } from '../utils/clientIp';
 
 interface AuthenticatedRequest extends Request {
   user?: UserPayload;
@@ -81,11 +82,19 @@ export const scanQRAndCheckIn = async (req: AuthenticatedRequest, res: Response)
     const { qrData, latitude, longitude } = req.body;
 
     if (!studentId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
+      return res.status(401).json({ 
+        success: false, 
+        code: 'UNAUTHORIZED',
+        message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.' 
+      });
     }
 
     if (!qrData) {
-      return res.status(400).json({ success: false, message: 'QR data is required' });
+      return res.status(400).json({ 
+        success: false, 
+        code: 'QR_REQUIRED',
+        message: 'Không tìm thấy dữ liệu mã QR.' 
+      });
     }
 
     // Parse QR data
@@ -93,13 +102,21 @@ export const scanQRAndCheckIn = async (req: AuthenticatedRequest, res: Response)
     try {
       parsedData = JSON.parse(qrData);
     } catch (error) {
-      return res.status(400).json({ success: false, message: 'Invalid QR code format' });
+      return res.status(400).json({ 
+        success: false, 
+        code: 'INVALID_FORMAT',
+        message: 'Mã QR không đúng định dạng của hệ thống điểm danh.' 
+      });
     }
 
     const { sessionId, qrCode, classId } = parsedData;
 
     if (!sessionId || !qrCode || !classId) {
-      return res.status(400).json({ success: false, message: 'Invalid QR code data' });
+      return res.status(400).json({ 
+        success: false, 
+        code: 'INVALID_DATA',
+        message: 'Mã QR thiếu thông tin lớp học hoặc phiên điểm danh.' 
+      });
     }
 
     // Tìm session và kiểm tra
@@ -114,14 +131,75 @@ export const scanQRAndCheckIn = async (req: AuthenticatedRequest, res: Response)
         }
       },
       include: {
-        class: true
+        class: true,
+        networkProfile: true
       }
     });
 
     if (!session) {
+      // Tìm xem có session nào có id này không để báo lý do cụ thể
+      const existingSession = await prisma.attendanceSession.findUnique({
+        where: { id: sessionId },
+        include: { class: true }
+      });
+
+      let message = 'Mã QR không hợp lệ hoặc phiên điểm danh chưa được mở.';
+      let code = 'QR_INVALID';
+
+      if (existingSession) {
+        if (!existingSession.isActive) {
+          message = `Phiên điểm danh "${existingSession.title}" của lớp "${existingSession.class.name}" đã được giảng viên kết thúc.`;
+          code = 'SESSION_INACTIVE';
+        } else if (new Date() > new Date(existingSession.qrExpiresAt)) {
+          message = `Mã QR của buổi học "${existingSession.title}" của lớp "${existingSession.class.name}" đã hết hạn. Vui lòng quét mã QR mới nhất trên màn hình giảng viên.`;
+          code = 'QR_EXPIRED';
+        } else {
+          message = `Mã QR đã được làm mới. Vui lòng quét lại mã QR đang hiển thị trên màn hình giảng viên.`;
+          code = 'QR_REGENERATED';
+        }
+      }
+
       return res.status(400).json({ 
         success: false, 
-        message: 'QR code is invalid, expired, or session is not active' 
+        code,
+        message,
+        data: existingSession ? {
+          sessionTitle: existingSession.title,
+          className: existingSession.class.name
+        } : undefined
+      });
+    }
+
+    const clientIp = getClientIp(req);
+    const serverWanIp = await getPublicWanIp();
+    const networkMatched = !session.networkProfile || isNetworkMatch(session.networkProfile.publicIp, clientIp, serverWanIp);
+
+    console.log('📡 [Attendance QR Scan] Network Verification:', {
+      clientIp,
+      requiredIp: session.networkProfile?.publicIp,
+      serverWanIp,
+      networkMatched,
+      enforcementMode: session.networkEnforcementMode,
+      headers: {
+        'cf-connecting-ip': req.headers['cf-connecting-ip'],
+        'x-real-ip': req.headers['x-real-ip'],
+        'x-forwarded-for': req.headers['x-forwarded-for'],
+        'req.ip': req.ip
+      }
+    });
+
+    if (session.networkEnforcementMode === 'REQUIRED' && !networkMatched) {
+      return res.status(403).json({
+        success: false,
+        code: 'NETWORK_MISMATCH',
+        message: `Hệ thống phát hiện bạn đang ở ngoài khu vực lớp học, vui lòng di chuyển vào khu vực lớp học để điểm danh.`,
+        details: {
+          detectedIp: clientIp,
+          requiredNetwork: session.networkProfile?.name || 'Wi-Fi phòng học',
+          requiredIp: session.networkProfile?.publicIp,
+          sessionTitle: session.title,
+          className: session.class.name
+        }
       });
     }
 
@@ -136,7 +214,13 @@ export const scanQRAndCheckIn = async (req: AuthenticatedRequest, res: Response)
     if (!enrollment) {
       return res.status(403).json({ 
         success: false, 
-        message: 'You are not enrolled in this class' 
+        code: 'NOT_ENROLLED',
+        message: `Bạn chưa đăng ký hoặc chưa có tên trong danh sách lớp học "${session.class.name}".`,
+        data: {
+          sessionTitle: session.title,
+          className: session.class.name,
+          classId: session.class.id
+        }
       });
     }
 
@@ -151,8 +235,11 @@ export const scanQRAndCheckIn = async (req: AuthenticatedRequest, res: Response)
     if (existingRecord) {
       return res.status(400).json({ 
         success: false, 
-        message: 'You have already checked in for this session',
+        code: 'ALREADY_CHECKED_IN',
+        message: 'Bạn đã hoàn thành điểm danh cho buổi học này rồi!',
         data: {
+          sessionTitle: session.title,
+          className: session.class.name,
           checkinTime: existingRecord.checkedAt,
           status: existingRecord.status
         }
@@ -179,26 +266,39 @@ export const scanQRAndCheckIn = async (req: AuthenticatedRequest, res: Response)
         checkedAt: now,
         latitude: latitude,
         longitude: longitude,
-        deviceId: req.get('User-Agent') || 'unknown'
+        deviceId: req.get('User-Agent') || 'unknown',
+        clientIp,
+        networkMatched,
+        networkCheckReason: session.networkProfile ? (networkMatched ? 'MATCH' : 'MISMATCH_FLAGGED') : 'NOT_CONFIGURED'
       }
     });
 
+    const isLate = status === 'LATE';
+
     return res.json({
       success: true,
+      code: 'CHECKIN_SUCCESS',
+      message: isLate 
+        ? `Điểm danh thành công! Bạn được ghi nhận có mặt nhưng trễ (${minutesDiff} phút).` 
+        : 'Điểm danh thành công! Bạn đã có mặt đúng giờ.',
       data: {
         sessionTitle: session.title,
         className: session.class.name,
         checkinTime: attendanceRecord.checkedAt,
-        status: attendanceRecord.status
-      },
-      message: `Check-in successful! Status: ${status}`
+        status: attendanceRecord.status,
+        minutesDiff,
+        clientIp,
+        networkMatched,
+        networkName: session.networkProfile?.name || 'Mạng tiêu chuẩn'
+      }
     });
 
   } catch (error) {
     console.error('Error scanning QR and check-in:', error);
     return res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      code: 'SERVER_ERROR',
+      message: 'Đã xảy ra lỗi máy chủ trong quá trình xử lý điểm danh.'
     });
   }
 };

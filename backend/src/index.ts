@@ -30,6 +30,8 @@ import { generalLimiter, authLimiter } from './middleware/rateLimiter';
 
 // Initialize Express app
 const app = express();
+// Trust reverse proxies (Next.js rewrites, Cloudflare Tunnel, Vercel/Render)
+app.set('trust proxy', process.env.TRUST_PROXY === 'false' ? false : true);
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 

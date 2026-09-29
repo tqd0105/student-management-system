@@ -6,6 +6,7 @@
 
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth';
+import { getNetworkProfiles, detectNetwork, createNetworkProfile, deleteNetworkProfile } from '../controllers/networkProfile';
 import {
   getTeacherClasses,
   createClass,
@@ -52,6 +53,12 @@ const router = Router();
 
 // Middleware: Yêu cầu đăng nhập và là TEACHER
 router.use(requireAuth(['TEACHER', 'ADMIN']));
+
+// Network profiles are created from the teacher's server-observed IP.
+router.get('/network-profiles', getNetworkProfiles);
+router.get('/network-profiles/detect', detectNetwork);
+router.post('/network-profiles', createNetworkProfile);
+router.delete('/network-profiles/:profileId', deleteNetworkProfile);
 
 // Class Management Routes
 router.get('/classes', getTeacherClasses);                          // Lấy danh sách lớp

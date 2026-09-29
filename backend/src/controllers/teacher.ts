@@ -237,7 +237,7 @@ export const createAttendanceSession = async (req: AuthenticatedRequest, res: Re
     
     const teacherId = req.user?.userId;
     const { classId } = req.params;
-    const { title } = req.body;
+    const { title, networkProfileId, networkEnforcementMode = 'OFF' } = req.body;
 
     console.log('Teacher ID:', teacherId);
     console.log('Class ID:', classId);
@@ -264,6 +264,18 @@ export const createAttendanceSession = async (req: AuthenticatedRequest, res: Re
       return res.status(404).json({ success: false, message: 'Class not found or access denied' });
     }
 
+    if (!['OFF', 'REQUIRED', 'FLAG_ONLY'].includes(networkEnforcementMode)) {
+      return res.status(400).json({ success: false, message: 'Invalid network enforcement mode' });
+    }
+
+    let networkProfile = null;
+    if (networkProfileId) {
+      networkProfile = await prisma.networkProfile.findFirst({
+        where: { id: networkProfileId, ownerId: teacherId, isActive: true }
+      });
+      if (!networkProfile) return res.status(400).json({ success: false, message: 'Network profile not found or inactive' });
+    }
+
     console.log('✅ Creating session...');
     const session = await prisma.attendanceSession.create({
       data: {
@@ -274,7 +286,12 @@ export const createAttendanceSession = async (req: AuthenticatedRequest, res: Re
         endTime: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
         qrCode: null, // No QR initially
         qrExpiresAt: null,
-        isActive: false // Inactive until QR is generated
+        isActive: false, // Inactive until QR is generated
+        networkProfileId: networkProfile?.id || null,
+        networkEnforcementMode: networkProfile ? networkEnforcementMode : 'OFF'
+      },
+      include: {
+        networkProfile: true
       }
     });
 
@@ -416,6 +433,9 @@ export const getClassSessions = async (req: AuthenticatedRequest, res: Response)
 
     const sessions = await prisma.attendanceSession.findMany({
       where: { classId },
+      include: {
+        networkProfile: true
+      },
       orderBy: {
         createdAt: 'desc'
       }
@@ -1005,6 +1025,7 @@ export const getSessionAttendanceStats = async (req: AuthenticatedRequest, res: 
         ]
       },
       include: {
+        networkProfile: true,
         class: {
           include: {
             enrollments: {
@@ -1047,12 +1068,16 @@ export const getSessionAttendanceStats = async (req: AuthenticatedRequest, res: 
         hasRecord: !!attendanceRecord,
         checkinTime: attendanceRecord?.checkedAt || null,
         timeFromStart: attendanceRecord && attendanceRecord.checkedAt ? 
-          Math.floor((attendanceRecord.checkedAt.getTime() - session.startTime.getTime()) / 1000 / 60) : null
+          Math.floor((attendanceRecord.checkedAt.getTime() - session.startTime.getTime()) / 1000 / 60) : null,
+        clientIp: attendanceRecord?.clientIp || null,
+        networkMatched: attendanceRecord?.networkMatched ?? null,
+        networkCheckReason: attendanceRecord?.networkCheckReason || null
       };
     });
 
     const presentCount = attendanceRecords.filter(r => r.status === 'PRESENT').length;
     const lateCount = attendanceRecords.filter(r => r.status === 'LATE').length;
+    const mismatchedNetworkCount = attendanceRecords.filter(r => r.networkMatched === false).length;
 
     const stats = {
       sessionInfo: {
@@ -1061,12 +1086,15 @@ export const getSessionAttendanceStats = async (req: AuthenticatedRequest, res: 
         className: session.class.name,
         startTime: session.startTime,
         endTime: session.endTime,
-        isActive: session.isActive
+        isActive: session.isActive,
+        networkProfile: session.networkProfile,
+        networkEnforcementMode: session.networkEnforcementMode
       },
       totalStudents: allStudents.length,
       presentStudents: presentCount,
       lateStudents: lateCount,
       absentStudents: allStudents.length - presentCount - lateCount,
+      mismatchedNetworkCount,
       attendanceRate: allStudents.length > 0 ? ((presentCount + lateCount) / allStudents.length * 100).toFixed(1) : 0,
       attendanceDetails: attendanceStats,
       logs: attendanceRecords

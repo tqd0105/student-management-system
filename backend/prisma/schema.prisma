@@ -3,20 +3,21 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
   id                 String                   @id @default(cuid())
   email              String                   @unique
-  password           String?                  // Optional - Google users don't have password
+  password           String?
   name               String
   role               Role                     @default(STUDENT)
   isVerified         Boolean                  @default(false)
   googleId           String?                  @unique
-  avatar             String?                  // Google profile picture
-  authProvider       String                   @default("email") // "email" | "google"
+  avatar             String?
+  authProvider       String                   @default("email")
   deviceId           String?
   createdAt          DateTime                 @default(now())
   updatedAt          DateTime                 @updatedAt
@@ -28,6 +29,7 @@ model User {
   grades             Grade[]
   studentProfile     StudentProfile?
   tuitionFees        TuitionFee[]
+  networkProfiles    NetworkProfile[]         @relation("OwnerNetworkProfiles")
 
   @@map("users")
 }
@@ -40,12 +42,12 @@ model Class {
   isActive           Boolean             @default(true)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+  assignments        Assignment[]
   attendanceSessions AttendanceSession[]
   enrollments        ClassEnrollment[]
-  assignments        Assignment[]
-  tuitionFees        TuitionFee[]
-  materials          Material[]
   teacher            User                @relation("TeacherClasses", fields: [teacherId], references: [id])
+  materials          Material[]
+  tuitionFees        TuitionFee[]
 
   @@map("classes")
 }
@@ -63,37 +65,44 @@ model ClassEnrollment {
 }
 
 model AttendanceSession {
-  id             String          @id @default(cuid())
-  teacherId      String
-  classId        String
-  title          String?
-  startTime      DateTime
-  endTime        DateTime
-  locationLat    Float?
-  locationLng    Float?
-  radiusMeters   Int?            @default(100)
-  qrCode         String?         @unique
-  qrExpiresAt    DateTime?
-  isActive       Boolean         @default(false)
-  createdAt      DateTime        @default(now())
-  attendanceLogs AttendanceLog[]
-  class          Class           @relation(fields: [classId], references: [id])
-  teacher        User            @relation("SessionCreator", fields: [teacherId], references: [id])
+  id                     String                 @id @default(cuid())
+  teacherId              String
+  classId                String
+  title                  String?
+  startTime              DateTime
+  endTime                DateTime
+  locationLat            Float?
+  locationLng            Float?
+  radiusMeters           Int?                   @default(100)
+  qrCode                 String?                @unique
+  qrExpiresAt            DateTime?
+  isActive               Boolean                @default(false)
+  createdAt              DateTime               @default(now())
+  networkProfileId       String?
+  networkEnforcementMode NetworkEnforcementMode @default(OFF)
+  attendanceLogs         AttendanceLog[]
+  class                  Class                  @relation(fields: [classId], references: [id])
+  teacher                User                   @relation("SessionCreator", fields: [teacherId], references: [id])
+  networkProfile         NetworkProfile?        @relation(fields: [networkProfileId], references: [id], onDelete: SetNull)
 
+  @@index([networkProfileId])
   @@map("attendance_sessions")
 }
 
 model AttendanceLog {
-  id        String            @id @default(cuid())
-  studentId String
-  sessionId String
-  deviceId  String
-  checkedAt DateTime          @default(now())
-  status    AttendanceStatus  @default(PRESENT)
-  latitude  Float?
-  longitude Float?
-  session   AttendanceSession @relation(fields: [sessionId], references: [id])
-  student   User              @relation(fields: [studentId], references: [id])
+  id                 String            @id @default(cuid())
+  studentId          String
+  sessionId          String
+  deviceId           String
+  checkedAt          DateTime          @default(now())
+  status             AttendanceStatus  @default(PRESENT)
+  latitude           Float?
+  longitude          Float?
+  clientIp           String?
+  networkMatched     Boolean?
+  networkCheckReason String?
+  session            AttendanceSession @relation(fields: [sessionId], references: [id])
+  student            User              @relation(fields: [studentId], references: [id])
 
   @@unique([studentId, sessionId])
   @@map("attendance_logs")
@@ -123,31 +132,18 @@ model DeviceRegistration {
   @@map("device_registrations")
 }
 
-enum Role {
-  ADMIN
-  TEACHER
-  STUDENT
-}
-
-enum AttendanceStatus {
-  PRESENT
-  LATE
-  ABSENT
-  INVALID
-}
-
 model Assignment {
   id            String    @id @default(cuid())
   classId       String
   title         String
   description   String?
   dueDate       DateTime?
-  attachmentUrl String?   // Link tài liệu đính kèm tùy chỉnh (YouTube, Drive, Docs, GitHub...)
-  materialId    String?   // ID tài liệu trong lớp nếu chọn từ kho tài liệu
-  material      Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+  attachmentUrl String?
+  materialId    String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   class         Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  material      Material? @relation(fields: [materialId], references: [id])
   grades        Grade[]
 
   @@map("assignments")
@@ -159,9 +155,9 @@ model Grade {
   studentId       String
   score           Float?
   feedback        String?
-  submissionUrl   String?    // Link Google Drive, GitHub, Docs, Figma, Notion...
-  submissionNotes String?    // Ghi chú của sinh viên khi nộp
-  submittedAt     DateTime?  // Thời điểm nộp bài
+  submissionUrl   String?
+  submissionNotes String?
+  submittedAt     DateTime?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   assignment      Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
@@ -177,39 +173,66 @@ model StudentProfile {
   studentCode String?   @unique
   phone       String?
   dateOfBirth DateTime?
-  gender      String?   // MALE, FEMALE, OTHER
+  gender      String?
   address     String?
   parentName  String?
   parentPhone String?
-  status      String    @default("ACTIVE") // ACTIVE, SUSPENDED, GRADUATED
+  status      String    @default("ACTIVE")
   notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("student_profiles")
 }
 
 model TuitionFee {
-  id            String     @id @default(cuid())
+  id            String    @id @default(cuid())
   studentId     String
   classId       String?
   title         String
   amount        Float
-  paidAmount    Float      @default(0)
-  status        FeeStatus  @default(UNPAID)
+  paidAmount    Float     @default(0)
+  status        FeeStatus @default(UNPAID)
   dueDate       DateTime?
   paidAt        DateTime?
   paymentMethod String?
   note          String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-
-  student       User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  class         Class?     @relation(fields: [classId], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  class         Class?    @relation(fields: [classId], references: [id])
+  student       User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("tuition_fees")
+}
+
+model Material {
+  id          String       @id @default(cuid())
+  classId     String
+  title       String
+  description String?
+  url         String
+  type        String       @default("link")
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  assignments Assignment[]
+  class       Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@map("materials")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  INVALID
 }
 
 enum FeeStatus {
@@ -219,19 +242,25 @@ enum FeeStatus {
   OVERDUE
 }
 
-model Material {
-  id          String   @id @default(cuid())
-  classId     String
-  title       String
-  description String?
-  url         String                    // Link YouTube / Google Drive / GitHub / Notion...
-  type        String   @default("link") // 'video' | 'document' | 'slide' | 'link' | 'github'
-  order       Int      @default(0)      // Thứ tự hiển thị
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model NetworkProfile {
+  id             String                 @id @default(cuid())
+  ownerId        String
+  name           String
+  publicIp       String
+  provider       String?
+  isActive       Boolean                @default(true)
+  lastVerifiedAt DateTime               @default(now())
+  createdAt      DateTime               @default(now())
+  owner          User                   @relation("OwnerNetworkProfiles", fields: [ownerId], references: [id], onDelete: Cascade)
+  sessions       AttendanceSession[]
 
-  class       Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
-  assignments Assignment[]
+  @@unique([ownerId, publicIp])
+  @@index([ownerId, isActive])
+  @@map("network_profiles")
+}
 
-  @@map("materials")
+enum NetworkEnforcementMode {
+  OFF
+  REQUIRED
+  FLAG_ONLY
 }

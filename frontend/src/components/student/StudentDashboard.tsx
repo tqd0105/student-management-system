@@ -10,6 +10,7 @@ import StudentAssignmentsModal from '@/components/student/StudentAssignmentsModa
 import StudentTuitionModal from '@/components/student/StudentTuitionModal';
 import TuitionReminderModal from '@/components/student/TuitionReminderModal';
 import StudentMaterialsModal from '@/components/student/StudentMaterialsModal';
+import CheckInResultModal, { CheckInModalData } from '@/components/student/CheckInResultModal';
 import ApiService from '@/services/ApiService';
 import { API_BASE_URL } from '@/config/api';
 
@@ -65,6 +66,7 @@ export default function StudentDashboard() {
   }>({ count: 0, totalRemaining: 0, fees: [] });
   const [studentCode, setStudentCode] = useState<string>(user?.studentProfile?.studentCode || '');
   const [scanResult, setScanResult] = useState<string>('');
+  const [checkInModalData, setCheckInModalData] = useState<CheckInModalData | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -238,62 +240,114 @@ export default function StudentDashboard() {
     // Validate QR format before sending
     try {
       const parsedQR = JSON.parse(qrCode);
-      // console.log('✅ QR validation successful:', parsedQR);
-      // console.log('🔑 Required fields check:', {
-      //   hasSessionId: !!parsedQR.sessionId,
-      //   hasQrCode: !!parsedQR.qrCode,
-      //   hasClassId: !!parsedQR.classId,
-      //   hasTimestamp: !!parsedQR.timestamp
-      // });
-    } catch (validateError) {
-      // console.error('❌ QR validation failed:', validateError);
-      setScanResult('❌ Invalid QR code format');
+      if (!parsedQR.sessionId || !parsedQR.qrCode || !parsedQR.classId) {
+        throw new Error('Dữ liệu QR không đầy đủ');
+      }
+    } catch {
       setIsQRScannerOpen(false);
+      setCheckInModalData({
+        isOpen: true,
+        type: 'ERROR',
+        title: 'Mã QR Không Đúng Định Dạng',
+        message: 'Mã QR vừa quét không phải là mã điểm danh hợp lệ của hệ thống.',
+      });
       return;
     }
 
     try {
-      // console.log('🌐 Sending API request...');
       const response = await ApiService.scanQRAndCheckIn(qrCode);
-      // console.log('✅ Response data:', response);
-
-      if (response.success) {
-        // console.log('✅ Scan successful!');
-        setScanResult(`✅ ${response.message || 'Check-in successful! You have been marked as present.'}`);
-        setIsQRScannerOpen(false);
-
-        // Refresh attendance history
-        setRefreshTrigger(prev => prev + 1);
-
-        // Auto-hide success message after 5 seconds
-        setTimeout(() => setScanResult(''), 5000);
-      } else {
-        // console.log('❌ Scan failed:', response.message);
-        setScanResult(`❌ Error: ${response.message || 'Check-in failed'}`);
-        setIsQRScannerOpen(false);
-      }
-    } catch (error) {
-      // console.error('❌ QR Scan error:', error);
-
-      // More detailed error message
-      let errorMessage = '❌ Network error. Please try again.';
-      if (error instanceof Error) {
-        if (error.message.includes('Network connection failed')) {
-          errorMessage = '❌ Cannot connect to server. Please check your internet connection.';
-        } else if (error.message.includes('500')) {
-          errorMessage = '❌ Server error. Please try again later.';
-        } else if (error.message.includes('401')) {
-          errorMessage = '❌ Session expired. Please login again.';
-        } else {
-          errorMessage = `❌ Error: ${error.message}`;
-        }
-      }
-
-      setScanResult(errorMessage);
       setIsQRScannerOpen(false);
 
-      // Auto-hide error message after 8 seconds
-      setTimeout(() => setScanResult(''), 8000);
+      if (response.success) {
+        const isLate = response.data?.status === 'LATE';
+        setCheckInModalData({
+          isOpen: true,
+          type: isLate ? 'LATE' : 'SUCCESS',
+          title: isLate ? 'Điểm Danh Thành Công (Muộn)' : 'Điểm Danh Thành Công!',
+          message: response.message,
+          className: response.data?.className,
+          sessionTitle: response.data?.sessionTitle,
+          checkinTime: response.data?.checkinTime,
+          status: response.data?.status,
+          minutesDiff: response.data?.minutesDiff,
+          clientIp: response.data?.clientIp,
+          networkName: response.data?.networkName,
+        });
+
+        // Refresh attendance history and stats
+        setRefreshTrigger(prev => prev + 1);
+      } else {
+        setCheckInModalData({
+          isOpen: true,
+          type: 'ERROR',
+          title: 'Điểm Danh Thất Bại',
+          message: response.message || 'Không thể ghi nhận điểm danh.',
+        });
+      }
+    } catch (error: any) {
+      setIsQRScannerOpen(false);
+
+      const errCode = error?.code || error?.response?.code;
+      const errDetails = error?.details || error?.response?.details;
+      const errData = error?.data || error?.response?.data;
+      const errMsg = error?.message || 'Đã xảy ra lỗi trong quá trình xử lý.';
+
+      if (errCode === 'NETWORK_MISMATCH') {
+        setCheckInModalData({
+          isOpen: true,
+          type: 'NETWORK_MISMATCH',
+          title: 'Phát Hiện Gian Lận!',
+          message: errMsg,
+          className: errDetails?.className,
+          sessionTitle: errDetails?.sessionTitle,
+          detectedIp: errDetails?.detectedIp,
+          requiredNetwork: errDetails?.requiredNetwork,
+          requiredIp: errDetails?.requiredIp,
+        });
+      } else if (errCode === 'ALREADY_CHECKED_IN') {
+        setCheckInModalData({
+          isOpen: true,
+          type: 'ALREADY_CHECKED_IN',
+          title: 'Đã Điểm Danh Trước Đó',
+          message: errMsg,
+          className: errData?.className,
+          sessionTitle: errData?.sessionTitle,
+          checkinTime: errData?.checkinTime,
+          status: errData?.status,
+        });
+      } else if (errCode === 'QR_EXPIRED' || errCode === 'SESSION_INACTIVE' || errCode === 'QR_REGENERATED') {
+        setCheckInModalData({
+          isOpen: true,
+          type: 'QR_EXPIRED',
+          title: errCode === 'SESSION_INACTIVE' ? 'Phiên Điểm Danh Đã Đóng' : 'Mã QR Hết Hiệu Lực',
+          message: errMsg,
+          className: errData?.className,
+          sessionTitle: errData?.sessionTitle,
+        });
+      } else if (errCode === 'NOT_ENROLLED') {
+        setCheckInModalData({
+          isOpen: true,
+          type: 'NOT_ENROLLED',
+          title: 'Chưa Đăng Ký Lớp Học',
+          message: errMsg,
+          className: errData?.className,
+          sessionTitle: errData?.sessionTitle,
+        });
+      } else {
+        let displayMsg = errMsg;
+        if (errMsg.includes('Network connection failed')) {
+          displayMsg = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng của bạn.';
+        } else if (errMsg.includes('Session expired') || errMsg.includes('401')) {
+          displayMsg = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại tài khoản sinh viên.';
+        }
+
+        setCheckInModalData({
+          isOpen: true,
+          type: 'ERROR',
+          title: 'Điểm Danh Không Thành Công',
+          message: displayMsg,
+        });
+      }
     }
   };
 
@@ -462,18 +516,6 @@ export default function StudentDashboard() {
           </button>
         </div>
       </div>
-
-      {/* Scan Result Alert */}
-      {scanResult && (
-        <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4`}>
-          <div className={`p-4 rounded-lg border-2 ${scanResult.includes('✅')
-              ? 'bg-green-50 border-green-300 text-green-700'
-              : 'bg-red-50 border-red-300 text-red-700'
-            }`}>
-            <p className="font-medium">{scanResult}</p>
-          </div>
-        </div>
-      )}
 
       {/* Stats */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -655,6 +697,13 @@ export default function StudentDashboard() {
           onClose={() => setIsQRScannerOpen(false)}
         />
       )}
+
+      {/* Attendance Check-in Result Modal */}
+      <CheckInResultModal
+        data={checkInModalData}
+        onClose={() => setCheckInModalData(null)}
+        onRetryScan={() => setIsQRScannerOpen(true)}
+      />
 
       {/* Attendance History Modal */}
       {isHistoryOpen && (
