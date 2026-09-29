@@ -123,7 +123,13 @@ class ApiService {
         errorData
       });
       
-      throw new Error(errorMessage);
+      const error: any = new Error(errorMessage);
+      error.data = errorData.data;
+      error.code = errorData.code;
+      error.details = errorData.details;
+      error.status = response.status;
+      error.response = errorData;
+      throw error;
     }
     
     return errorData;

@@ -38,6 +38,9 @@ import {
   Check,
   ChevronRight,
   Sparkles,
+  Wifi,
+  Globe,
+  ShieldAlert,
 } from "lucide-react";
 
 interface Class {
@@ -63,6 +66,16 @@ interface Session {
   qrCode: string | null;
   qrExpiresAt: string | null;
   createdAt: string;
+  networkProfileId?: string | null;
+  networkEnforcementMode?: "OFF" | "REQUIRED" | "FLAG_ONLY";
+  networkProfile?: NetworkProfile | null;
+}
+
+interface NetworkProfile {
+  id: string;
+  name: string;
+  publicIp: string;
+  provider?: string | null;
 }
 
 interface QRData {
@@ -98,6 +111,11 @@ export default function TeacherDashboard() {
   const [newClassName, setNewClassName] = useState("");
   const [newClassDescription, setNewClassDescription] = useState("");
   const [newSessionTitle, setNewSessionTitle] = useState("");
+  const [networkProfiles, setNetworkProfiles] = useState<NetworkProfile[]>([]);
+  const [selectedNetworkProfileId, setSelectedNetworkProfileId] = useState("");
+  const [networkEnforcementMode, setNetworkEnforcementMode] = useState<"OFF" | "REQUIRED" | "FLAG_ONLY">("OFF");
+  const [detectedIpInfo, setDetectedIpInfo] = useState<{ clientIp: string; isPrivate: boolean } | null>(null);
+  const [detectingIp, setDetectingIp] = useState(false);
   const [studentEmail, setStudentEmail] = useState("");
   const [showQRModal, setShowQRModal] = useState(false);
   const [isEditSessionModalOpen, setIsEditSessionModalOpen] = useState(false);
@@ -125,6 +143,7 @@ export default function TeacherDashboard() {
   useEffect(() => {
     fetchClasses();
     fetchActiveQRSessions();
+    fetchNetworkProfiles();
   }, []);
 
   // Timer to automatically check and update expired QR sessions
@@ -217,12 +236,12 @@ export default function TeacherDashboard() {
 
           if (sessionsResponse.ok) {
             const sessionsData = await sessionsResponse.json();
-            
+
             for (const session of sessionsData.data || []) {
               if (session.qrCode && session.qrExpiresAt && session.isActive) {
                 const now = new Date();
                 const expiresAt = new Date(session.qrExpiresAt);
-                
+
                 if (now <= expiresAt) {
                   const qrData = JSON.stringify({
                     sessionId: session.id,
@@ -426,6 +445,110 @@ export default function TeacherDashboard() {
     }
   };
 
+  const fetchNetworkProfiles = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/api/teacher/network-profiles`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setNetworkProfiles(data.data || []);
+      }
+    } catch (error) {
+      console.error("Error loading network profiles:", error);
+    }
+  };
+
+  const detectCurrentIp = async () => {
+    try {
+      setDetectingIp(true);
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/api/teacher/network-profiles/detect`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        let detected = data.data;
+        // Nếu backend trả về localhost (127.0.0.1) hoặc private LAN, thử bổ sung WAN IP từ browser
+        if (detected?.clientIp === "127.0.0.1" || detected?.isPrivate) {
+          try {
+            const wanRes = await fetch("https://api.ipify.org?format=json");
+            if (wanRes.ok) {
+              const wanData = await wanRes.json();
+              if (wanData.ip) {
+                detected = { ...detected, clientIp: wanData.ip, publicIp: wanData.ip, isPrivate: false };
+              }
+            }
+          } catch {
+            // Giữ kết quả của backend nếu không có kết nối ra ngoài
+          }
+        }
+        setDetectedIpInfo(detected);
+        return detected;
+      }
+    } catch (error) {
+      console.error("Error detecting IP:", error);
+    } finally {
+      setDetectingIp(false);
+    }
+    return null;
+  };
+
+  const deleteNetworkProfile = async (profileId: string) => {
+    if (!confirm("Bạn có chắc muốn xóa cấu hình mạng này khỏi danh sách?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/api/teacher/network-profiles/${profileId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        setNetworkProfiles((prev) => prev.filter((p) => p.id !== profileId));
+        if (selectedNetworkProfileId === profileId) {
+          setSelectedNetworkProfileId("");
+          setNetworkEnforcementMode("OFF");
+        }
+      } else {
+        const err = await response.json();
+        alert(err.message || "Không thể xóa cấu hình mạng");
+      }
+    } catch (error) {
+      console.error("Error deleting network profile:", error);
+    }
+  };
+
+  const registerCurrentNetwork = async () => {
+    const ipInfo = await detectCurrentIp();
+    const targetIp = ipInfo?.clientIp || ipInfo?.publicIp || "";
+    const promptText = targetIp
+      ? `Đặt tên cho mạng hiện tại (IP phát hiện: ${targetIp}):`
+      : "Đặt tên cho mạng hiện tại (ví dụ: Wi-Fi Giảng Đường A101):";
+    const name = window.prompt(promptText, "Wi-Fi Giảng Đường");
+    if (!name?.trim()) return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/api/teacher/network-profiles`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          publicIp: targetIp || undefined
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Không thể đăng ký mạng");
+      setNetworkProfiles((current) => [
+        data.data,
+        ...current.filter((profile) => profile.id !== data.data.id),
+      ]);
+      setSelectedNetworkProfileId(data.data.id);
+      setNetworkEnforcementMode("REQUIRED");
+      alert(`✅ Đã lưu mạng thành công:\n${data.data.name} (IP: ${data.data.publicIp})`);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Không thể đăng ký mạng hiện tại");
+    }
+  };
   const createSession = async () => {
     if (!selectedClass) return;
 
@@ -434,6 +557,8 @@ export default function TeacherDashboard() {
       const url = `${API_BASE_URL}/api/teacher/classes/${selectedClass.id}/sessions`;
 
       const body = {
+        networkProfileId: selectedNetworkProfileId || undefined,
+        networkEnforcementMode: selectedNetworkProfileId ? networkEnforcementMode : "OFF",
         title:
           newSessionTitle ||
           `Bài học ${new Date().toLocaleDateString("vi-VN")}`,
@@ -452,6 +577,8 @@ export default function TeacherDashboard() {
         fetchClassSessions(selectedClass.id);
         setIsCreateSessionModalOpen(false);
         setNewSessionTitle("");
+        setSelectedNetworkProfileId("");
+        setNetworkEnforcementMode("OFF");
         alert("Session created successfully!");
       } else {
         const errorData = await response.json();
@@ -648,7 +775,7 @@ export default function TeacherDashboard() {
 
   const openStatsModal = async (type: "session" | "class", sessionId?: string) => {
     setStatsView(type);
-    
+
     try {
       if (type === "session" && sessionId) {
         setSelectedStatsSession(sessionId);
@@ -840,13 +967,12 @@ export default function TeacherDashboard() {
                 type="button"
                 onClick={handleRefresh}
                 disabled={isRefreshing}
-                className={`p-2.5 rounded-full shadow border cursor-pointer transition-all duration-200 active:scale-90 ${
-                  refreshSuccess
-                    ? "bg-emerald-50 text-emerald-600 border-emerald-300 ring-2 ring-emerald-200"
-                    : isRefreshing
+                className={`p-2.5 rounded-full shadow border cursor-pointer transition-all duration-200 active:scale-90 ${refreshSuccess
+                  ? "bg-emerald-50 text-emerald-600 border-emerald-300 ring-2 ring-emerald-200"
+                  : isRefreshing
                     ? "bg-blue-50 text-blue-600 border-blue-300 ring-2 ring-blue-200"
                     : "bg-white text-gray-600 hover:text-blue-600 hover:border-blue-300 border-gray-200"
-                }`}
+                  }`}
                 title={refreshSuccess ? "Đã làm mới thành công!" : "Làm mới danh sách lớp"}
                 aria-label="Làm mới danh sách lớp"
               >
@@ -854,9 +980,8 @@ export default function TeacherDashboard() {
                   <Check className="w-4 h-4 text-emerald-600 animate-in zoom-in duration-200" />
                 ) : (
                   <RefreshCw
-                    className={`w-4 h-4 transition-transform duration-500 ${
-                      isRefreshing ? "animate-spin text-blue-600" : ""
-                    }`}
+                    className={`w-4 h-4 transition-transform duration-500 ${isRefreshing ? "animate-spin text-blue-600" : ""
+                      }`}
                   />
                 )}
               </button>
@@ -866,11 +991,10 @@ export default function TeacherDashboard() {
                 <button
                   type="button"
                   onClick={() => setIsManagementMenuOpen(!isManagementMenuOpen)}
-                  className={`group relative overflow-hidden px-4 py-2 rounded-full font-bold text-sm flex items-center space-x-2 cursor-pointer transition-all duration-200 active:scale-95 shadow-md ${
-                    isManagementMenuOpen
-                      ? "bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-800 text-white shadow-purple-300/60 ring-2 ring-purple-400 ring-offset-2"
-                      : "bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-700 hover:via-indigo-700 hover:to-purple-800 text-white shadow-purple-200/50 hover:shadow-lg hover:shadow-purple-300/50"
-                  }`}
+                  className={`group relative overflow-hidden px-4 py-2 rounded-full font-bold text-sm flex items-center space-x-2 cursor-pointer transition-all duration-200 active:scale-95 shadow-md ${isManagementMenuOpen
+                    ? "bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-800 text-white shadow-purple-300/60 ring-2 ring-purple-400 ring-offset-2"
+                    : "bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-700 hover:via-indigo-700 hover:to-purple-800 text-white shadow-purple-200/50 hover:shadow-lg hover:shadow-purple-300/50"
+                    }`}
                   aria-label="Trung tâm quản lý"
                 >
                   <div className="p-1 rounded-md bg-white/15 text-white flex items-center justify-center">
@@ -878,17 +1002,16 @@ export default function TeacherDashboard() {
                   </div>
                   <span className="tracking-wide hidden sm:inline">Quản lý</span>
                   <ChevronDown
-                    className={`w-3.5 h-3.5 text-purple-200 transition-transform duration-300 ${
-                      isManagementMenuOpen ? "rotate-180 text-white" : "group-hover:translate-y-0.5"
-                    }`}
+                    className={`w-3.5 h-3.5 text-purple-200 transition-transform duration-300 ${isManagementMenuOpen ? "rotate-180 text-white" : "group-hover:translate-y-0.5"
+                      }`}
                   />
                 </button>
 
                 {isManagementMenuOpen && (
                   <>
-                    <div 
-                      className="fixed inset-0 z-40 bg-black/10 sm:bg-transparent" 
-                      onClick={() => setIsManagementMenuOpen(false)} 
+                    <div
+                      className="fixed inset-0 z-40 bg-black/10 sm:bg-transparent"
+                      onClick={() => setIsManagementMenuOpen(false)}
                     />
                     <div className="absolute sm:left-auto left-1/2 sm:-translate-x-1/2 -translate-x-1/2 mt-2.5 w-72 sm:w-80 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-purple-100/90 p-2 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 ring-1 ring-black/5 divide-y divide-gray-100">
 
@@ -1015,7 +1138,7 @@ export default function TeacherDashboard() {
               <QrCode className="w-8 h-8 text-purple-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">
-                  Active QR 
+                  Active QR
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
                   {
@@ -1031,7 +1154,7 @@ export default function TeacherDashboard() {
 
         {/* Active QR Sessions Display */}
         {qrDataCache.size > 0 && (
-          <div 
+          <div
             className="border-4 border-green-500 p-6 rounded-lg shadow-lg mb-8"
             style={{ backgroundImage: "linear-gradient(to top, rgb(186, 255, 184) 0%, rgb(255, 255, 255) 100%)" }}
           >
@@ -1055,13 +1178,12 @@ export default function TeacherDashboard() {
                 return (
                   <div
                     key={sessionId}
-                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all shadow-md ${
-                      isExpired
-                        ? "border-red-300 bg-red-50 hover:border-red-500"
-                        : isExpiringSoon
+                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all shadow-md ${isExpired
+                      ? "border-red-300 bg-red-50 hover:border-red-500"
+                      : isExpiringSoon
                         ? "border-yellow-300 bg-yellow-50 hover:border-yellow-500"
                         : "border-green-300 bg-white hover:border-green-500 hover:shadow-lg"
-                    }`}
+                      }`}
                     onClick={() => {
                       if (isExpired) {
                         alert("Mã QR đã hết hạn. Vui lòng tạo mã mới.");
@@ -1087,19 +1209,18 @@ export default function TeacherDashboard() {
                           {qrData.sessionInfo.className}
                         </p>
                         <p
-                          className={`text-xs font-bold mt-1 ${
-                            isExpired
-                              ? "text-red-600"
-                              : isExpiringSoon
+                          className={`text-xs font-bold mt-1 ${isExpired
+                            ? "text-red-600"
+                            : isExpiringSoon
                               ? "text-yellow-600"
                               : "text-green-600"
-                          }`}
+                            }`}
                         >
                           {isExpired
                             ? "❌ EXPIRED"
                             : isExpiringSoon
-                            ? "⚠️ EXPIRING SOON"
-                            : "✅ ACTIVE"}
+                              ? "⚠️ EXPIRING SOON"
+                              : "✅ ACTIVE"}
                         </p>
                         <p className="text-xs font-bold text-gray-500 mt-1">
                           ⏰ {new Date(qrData.expiresAt).toLocaleTimeString()}
@@ -1259,7 +1380,7 @@ export default function TeacherDashboard() {
                           onClick={() =>
                             removeStudent(cls.id, enrollment.student.id)
                           }
-                          className="text-white hover:bg-red-600 px-3 py-1.5 bg-red-500 rounded-full shadow flex items-center gap-1.5 text-xs font-semibold cursor-pointer shrink-0" 
+                          className="text-white hover:bg-red-600 px-3 py-1.5 bg-red-500 rounded-full shadow flex items-center gap-1.5 text-xs font-semibold cursor-pointer shrink-0"
                         >
                           <UserMinus className="w-4 h-4" />
                           <span>Xoá</span>
@@ -1313,7 +1434,10 @@ export default function TeacherDashboard() {
               <div className="p-3.5 sm:p-4 bg-gray-50 border-b border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <button
-                    onClick={() => setIsCreateSessionModalOpen(true)}
+                    onClick={() => {
+                      detectCurrentIp();
+                      setIsCreateSessionModalOpen(true);
+                    }}
                     className="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 flex items-center justify-center space-x-2 cursor-pointer shadow-xs font-bold text-xs sm:text-sm active:scale-95 transition-all"
                   >
                     <Plus className="w-4 h-4" />
@@ -1375,13 +1499,12 @@ export default function TeacherDashboard() {
                     return (
                       <div
                         key={session.id}
-                        className={`rounded-2xl shadow-xs border transition-all p-3.5 sm:p-4 ${
-                          effectiveIsActive
-                            ? "border-emerald-400 bg-emerald-50/40 ring-1 ring-emerald-300"
-                            : isQRExpired
+                        className={`rounded-2xl shadow-xs border transition-all p-3.5 sm:p-4 ${effectiveIsActive
+                          ? "border-emerald-400 bg-emerald-50/40 ring-1 ring-emerald-300"
+                          : isQRExpired
                             ? "border-rose-200 bg-rose-50/30"
                             : "border-gray-200 bg-white"
-                        }`}
+                          }`}
                       >
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                           <div className="flex-1 min-w-0">
@@ -1420,23 +1543,22 @@ export default function TeacherDashboard() {
 
                             <div className="mt-1.5 flex flex-wrap items-center gap-2">
                               <span
-                                className={`text-[11px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${
-                                  effectiveIsActive
-                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                                    : isQRExpired
+                                className={`text-[11px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${effectiveIsActive
+                                  ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                  : isQRExpired
                                     ? "bg-rose-100 text-rose-800 border border-rose-300"
                                     : session.isActive
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-gray-100 text-gray-700"
-                                }`}
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-gray-100 text-gray-700"
+                                  }`}
                               >
                                 {effectiveIsActive
                                   ? "🟢 Đang mở QR điểm danh"
                                   : isQRExpired
-                                  ? "❌ QR Đã hết hạn"
-                                  : session.isActive
-                                  ? "⚫ Buổi học đang diễn ra (Chưa bật QR)"
-                                  : "⚫ Đã kết thúc"}
+                                    ? "❌ QR Đã hết hạn"
+                                    : session.isActive
+                                      ? "⚫ Buổi học đang diễn ra (Chưa bật QR)"
+                                      : "⚫ Đã kết thúc"}
                               </span>
 
                               <span className="text-[11px] text-gray-500">
@@ -1445,15 +1567,30 @@ export default function TeacherDashboard() {
 
                               {session.qrExpiresAt && (
                                 <span
-                                  className={`text-[11px] font-semibold ${
-                                    isQRExpired
-                                      ? "text-rose-600"
-                                      : isQRExpiringSoon
+                                  className={`text-[11px] font-semibold ${isQRExpired
+                                    ? "text-rose-600"
+                                    : isQRExpiringSoon
                                       ? "text-amber-600 font-bold animate-pulse"
                                       : "text-amber-700"
-                                  }`}
+                                    }`}
                                 >
                                   ⏰ Hạn QR: {new Date(session.qrExpiresAt).toLocaleTimeString("vi-VN")}
+                                </span>
+                              )}
+
+                              {session.networkProfile && (
+                                <span
+                                  className={`text-[11px] font-semibold px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${session.networkEnforcementMode === "REQUIRED"
+                                    ? "bg-purple-100 text-purple-800 border border-purple-200"
+                                    : "bg-blue-100 text-blue-800 border border-blue-200"
+                                    }`}
+                                  title={`IP: ${session.networkProfile.publicIp}`}
+                                >
+                                  <Wifi className="w-3 h-3" />
+                                  <span>{session.networkProfile.name}</span>
+                                  <span className="opacity-75 font-normal">
+                                    ({session.networkEnforcementMode === "REQUIRED" ? "Bắt buộc IP" : "Cảnh báo IP"})
+                                  </span>
                                 </span>
                               )}
                             </div>
@@ -1634,6 +1771,8 @@ export default function TeacherDashboard() {
                 onClick={() => {
                   setIsCreateSessionModalOpen(false);
                   setNewSessionTitle("");
+                  setSelectedNetworkProfileId("");
+                  setNetworkEnforcementMode("OFF");
                 }}
                 className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-full transition-colors cursor-pointer"
               >
@@ -1654,6 +1793,84 @@ export default function TeacherDashboard() {
                   placeholder="VD: Buổi 1: Giới thiệu kiến trúc hệ thống"
                 />
               </div>
+              <div className="space-y-2.5 p-3.5 rounded-2xl bg-gray-50 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                    <Wifi className="w-4 h-4 text-blue-600" />
+                    <span>Giới Hạn Mạng Điểm Danh (IP)</span>
+                  </label>
+                  {detectingIp ? (
+                    <span className="text-[11px] text-gray-400 animate-pulse">Đang dò IP...</span>
+                  ) : detectedIpInfo ? (
+                    <span className="text-[11px] font-mono text-gray-600 bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-2xs">
+                      IP: <strong>{detectedIpInfo.clientIp}</strong>
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <select
+                    value={selectedNetworkProfileId}
+                    onChange={(e) => {
+                      setSelectedNetworkProfileId(e.target.value);
+                      if (!e.target.value) setNetworkEnforcementMode("OFF");
+                      else if (networkEnforcementMode === "OFF") setNetworkEnforcementMode("REQUIRED");
+                    }}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Không giới hạn (Cho phép mọi IP)</option>
+                    {networkProfiles.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.name} ({profile.publicIp})
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="flex items-center justify-center w-full gap-2">
+
+                    {selectedNetworkProfileId && (
+                      <button
+                        type="button"
+                        onClick={() => deleteNetworkProfile(selectedNetworkProfileId)}
+                        className="px-2.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs transition-colors cursor-pointer"
+                        title="Xóa cấu hình mạng này"
+                        aria-label="Xóa cấu hình mạng"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={registerCurrentNetwork}
+                      className="px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold hover:bg-blue-100 transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center w-full gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Lưu mạng này</span>
+                    </button>
+                  </div>
+
+                </div>
+
+                {selectedNetworkProfileId && (
+                  <div className="pt-1 space-y-1.5 border-t border-gray-200">
+                    <label className="text-[11px] font-bold text-gray-700">Chế độ kiểm tra:</label>
+                    <select
+                      value={networkEnforcementMode}
+                      onChange={(e) => setNetworkEnforcementMode(e.target.value as "REQUIRED" | "FLAG_ONLY")}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="REQUIRED">🔒 Bắt buộc cùng mạng (Chặn sinh viên khác IP)</option>
+                      <option value="FLAG_ONLY">⚠️ Ghi nhận & Cảnh báo (Cho phép nhưng đánh dấu khác IP)</option>
+                    </select>
+                    <p className="text-[11px] text-gray-500 leading-normal">
+                      {networkEnforcementMode === "REQUIRED"
+                        ? "• Sinh viên dùng 4G hoặc ở ngoài lớp sẽ bị chặn điểm danh."
+                        : "• Sinh viên vẫn được điểm danh, nhưng sẽ bị gắn cờ cảnh báo đỏ trong báo cáo thống kê."}
+                    </p>
+                  </div>
+                )}
+              </div>
               <div className="bg-blue-50 p-3.5 rounded-xl border border-blue-200 text-xs text-blue-700 leading-relaxed">
                 💡 <strong>Mẹo:</strong> Sau khi tạo buổi học, bạn có thể bấm <strong>&quot;Bật QR điểm danh&quot;</strong> để sinh mã QR tức thời cho sinh viên quét.
               </div>
@@ -1662,6 +1879,8 @@ export default function TeacherDashboard() {
                   onClick={() => {
                     setIsCreateSessionModalOpen(false);
                     setNewSessionTitle("");
+                    setSelectedNetworkProfileId("");
+                    setNetworkEnforcementMode("OFF");
                   }}
                   className="flex-1 bg-white border border-gray-300 font-bold text-gray-700 py-2.5 px-4 rounded-xl hover:bg-gray-100 transition-colors text-xs sm:text-sm cursor-pointer"
                 >
@@ -1777,14 +1996,17 @@ export default function TeacherDashboard() {
       {showQRModal && currentQR && (
         <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-4">
           <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 w-full max-w-md text-center animate__animated animate__zoomIn animate__faster shadow-2xl border border-emerald-300">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-3">
-              <QrCode className="w-6 h-6" />
+            <div className="flex justify-center items-center gap-2">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center  mb-3">
+                <QrCode className="w-6 h-6" />
+              </div>
+              <div className="flex flex-col items-start">
+                <h3 className="text-lg sm:text-xl font-extrabold mb-1 text-emerald-800 tracking-tight">
+                  MÃ QR ĐIỂM DANH
+                </h3>
+                <p className="text-xs text-gray-500 mb-4">Sinh viên mở ứng dụng di động để quét mã này</p>
+              </div>
             </div>
-            <h3 className="text-lg sm:text-xl font-extrabold mb-1 text-emerald-800 tracking-tight">
-              MÃ QR ĐIỂM DANH
-            </h3>
-            <p className="text-xs text-gray-500 mb-4">Sinh viên mở ứng dụng di động để quét mã này</p>
-
             <div className="bg-emerald-50/50 p-4 rounded-2xl mb-4 border border-emerald-100">
               <div className="bg-white p-3 rounded-xl border border-emerald-300 inline-block shadow-xs">
                 {currentQR.qrImageUrl ? (
@@ -1816,13 +2038,12 @@ export default function TeacherDashboard() {
                 <span className="text-gray-400 font-normal">Lớp:</span> <span className="font-bold text-gray-900">{currentQR.sessionInfo.className}</span>
               </p>
               <p
-                className={`font-bold ${
-                  new Date() > new Date(currentQR.expiresAt)
-                    ? "text-rose-600"
-                    : new Date(currentQR.expiresAt).getTime() - Date.now() < 60000
+                className={`font-bold ${new Date() > new Date(currentQR.expiresAt)
+                  ? "text-rose-600"
+                  : new Date(currentQR.expiresAt).getTime() - Date.now() < 60000
                     ? "text-amber-600 animate-pulse"
                     : "text-emerald-600"
-                }`}
+                  }`}
               >
                 <span className="text-gray-400 font-normal">Hết hạn lúc:</span>{" "}
                 {new Date(currentQR.expiresAt).toLocaleTimeString("vi-VN")}
@@ -1964,7 +2185,7 @@ export default function TeacherDashboard() {
             {statsView === "session" && sessionStats && (
               <div className="space-y-4">
                 <div className="bg-blue-50/70 border border-blue-200 p-3.5 rounded-2xl">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <div>
                       <p className="text-[11px] font-semibold text-gray-500">Buổi học</p>
                       <p className="font-bold text-xs sm:text-sm text-gray-900 truncate">{sessionStats.sessionInfo.title}</p>
@@ -1981,14 +2202,30 @@ export default function TeacherDashboard() {
                     </div>
                     <div>
                       <p className="text-[11px] font-semibold text-gray-500">Trạng thái</p>
-                      <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
-                        sessionStats.sessionInfo.isActive ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-700"
-                      }`}>
+                      <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${sessionStats.sessionInfo.isActive ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-700"
+                        }`}>
                         {sessionStats.sessionInfo.isActive ? "Đang mở" : "Đã đóng"}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-500">Mạng yêu cầu (IP)</p>
+                      <span className="font-bold text-xs sm:text-sm text-gray-900 truncate block" title={sessionStats.sessionInfo.networkProfile?.publicIp || ""}>
+                        {sessionStats.sessionInfo.networkProfile
+                          ? `🌐 ${sessionStats.sessionInfo.networkProfile.name} (${sessionStats.sessionInfo.networkEnforcementMode === 'REQUIRED' ? 'Bắt buộc' : 'Cảnh báo'})`
+                          : "Không giới hạn"}
                       </span>
                     </div>
                   </div>
                 </div>
+
+                {sessionStats.mismatchedNetworkCount > 0 && (
+                  <div className="bg-amber-50 border border-amber-300 p-3 rounded-xl flex items-center gap-2.5 text-amber-900 text-xs sm:text-sm font-semibold animate__animated animate__fadeIn">
+                    <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
+                    <span>
+                      ⚠️ Phát hiện <strong>{sessionStats.mismatchedNetworkCount} sinh viên</strong> quét QR từ địa chỉ IP không khớp với mạng của lớp học!
+                    </span>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3 text-center">
                   <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
@@ -2021,6 +2258,7 @@ export default function TeacherDashboard() {
                         <th className="px-4 py-3 font-bold whitespace-nowrap">Email</th>
                         <th className="px-4 py-3 font-bold whitespace-nowrap text-center">Trạng Thái</th>
                         <th className="px-4 py-3 font-bold whitespace-nowrap text-center">Giờ Quét QR</th>
+                        <th className="px-4 py-3 font-bold whitespace-nowrap text-center">Địa Chỉ IP & Mạng</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -2029,18 +2267,41 @@ export default function TeacherDashboard() {
                           <td className="px-4 py-2.5 font-bold text-xs sm:text-sm text-gray-900 whitespace-nowrap">{student.studentName}</td>
                           <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{student.studentEmail}</td>
                           <td className="px-4 py-2.5 text-center whitespace-nowrap">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                              student.status === "PRESENT"
-                                ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                                : student.status === "LATE"
+                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${student.status === "PRESENT"
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                              : student.status === "LATE"
                                 ? "bg-amber-100 text-amber-800 border border-amber-300"
                                 : "bg-rose-100 text-rose-800 border border-rose-300"
-                            }`}>
+                              }`}>
                               {student.status === "PRESENT" ? "Có mặt" : student.status === "LATE" ? "Đi muộn" : "Vắng"}
                             </span>
                           </td>
                           <td className="px-4 py-2.5 text-center text-xs text-gray-600 whitespace-nowrap">
                             {student.checkinTime ? new Date(student.checkinTime).toLocaleTimeString("vi-VN") : "—"}
+                          </td>
+                          <td className="px-4 py-2.5 text-center whitespace-nowrap">
+                            {student.clientIp ? (
+                              <div className="inline-flex items-center gap-1.5 font-mono text-xs">
+                                <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded border border-gray-200">
+                                  {student.clientIp}
+                                </span>
+                                {student.networkMatched === true && (
+                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                    ✅ Khớp mạng
+                                  </span>
+                                )}
+                                {student.networkMatched === false && (
+                                  <span
+                                    className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded"
+                                    title={student.networkCheckReason === 'MISMATCH_FLAGGED' ? 'IP không khớp mạng của giảng viên' : student.networkCheckReason || 'Khác mạng'}
+                                  >
+                                    ⚠️ Khác mạng
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-xs">—</span>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -2099,13 +2360,12 @@ export default function TeacherDashboard() {
                             <td className="px-4 py-2.5 text-center text-amber-600 font-bold text-xs whitespace-nowrap">{student.lateSessions}</td>
                             <td className="px-4 py-2.5 text-center text-rose-600 font-bold text-xs whitespace-nowrap">{student.absentSessions}</td>
                             <td className="px-4 py-2.5 text-center whitespace-nowrap">
-                              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                                parseFloat(student.attendanceRate) >= 80
-                                  ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                                  : parseFloat(student.attendanceRate) >= 60
+                              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${parseFloat(student.attendanceRate) >= 80
+                                ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                : parseFloat(student.attendanceRate) >= 60
                                   ? "bg-amber-100 text-amber-800 border border-amber-300"
                                   : "bg-rose-100 text-rose-800 border border-rose-300"
-                              }`}>
+                                }`}>
                                 {student.attendanceRate}%
                               </span>
                             </td>
@@ -2139,8 +2399,8 @@ export default function TeacherDashboard() {
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={() => setSelectedClassForGrades(null)} 
+              <button
+                onClick={() => setSelectedClassForGrades(null)}
                 className="p-1.5 sm:p-2 hover:bg-white/20 rounded-full text-white/80 hover:text-white transition-colors cursor-pointer shrink-0 ml-2"
                 aria-label="Đóng bảng điểm"
               >
@@ -2193,10 +2453,10 @@ export default function TeacherDashboard() {
 
       {/* Manual Attendance Modal */}
       {selectedSessionForAttendance && selectedClass && (
-        <ManualAttendance 
-          session={selectedSessionForAttendance} 
+        <ManualAttendance
+          session={selectedSessionForAttendance}
           classId={selectedClass.id}
-          onClose={() => setSelectedSessionForAttendance(null)} 
+          onClose={() => setSelectedSessionForAttendance(null)}
         />
       )}
 
