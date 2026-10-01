@@ -30,41 +30,24 @@ import { generalLimiter, authLimiter } from './middleware/rateLimiter';
 
 // Initialize Express app
 const app = express();
-// Trust reverse proxies (Next.js rewrites, Cloudflare Tunnel, Vercel/Render)
-app.set('trust proxy', process.env.TRUST_PROXY === 'false' ? false : true);
+// Trust reverse proxy (Nginx)
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 
 // Security Middleware - bảo mật headers
 app.use(helmet());
 
-// CORS Configuration - Tự động cho phép localhost, Vercel và mọi IP trong mạng LAN (không cần hardcode)
+// CORS Configuration - Tự động cho phép mọi domain/IP hợp lệ (localhost, IP Public, sslip.io HTTPS, Vercel, v.v.)
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Cho phép các request không có origin header (mobile app, postman, curl, server-to-server)
-    if (!origin) return callback(null, true);
-
-    // 1. Cho phép localhost (bất kỳ port nào: 3000, 3001, ...)
-    const isLocalhost = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
-
-    // 2. Tự động cho phép mọi IP mạng nội bộ LAN:
-    //    192.168.x.x, 10.x.x.x, 172.16-31.x.x, 0.0.0.0 (bất kỳ port nào)
-    const isLocalLAN = /^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|0\.0\.0\.0)(:\d+)?$/.test(origin);
-
-    // 3. Domain Production trên Vercel hoặc cấu hình trong .env (kể cả preview deploy *.vercel.app)
-    const isVercel = /^https:\/\/.*\.vercel\.app$/.test(origin) || origin === process.env.FRONTEND_URL;
-
-    // Trong môi trường dev, hoặc nếu khớp các điều kiện trên -> Cho phép
-    if (isLocalhost || isLocalLAN || isVercel || process.env.NODE_ENV !== 'production') {
-      callback(null, true);
-    } else {
-      callback(new Error(`Blocked by CORS: Origin ${origin} not allowed`));
-    }
+    // Cho phép dynamic origin để hỗ trợ cả HTTP IP lẫn HTTPS domain (sslip.io)
+    callback(null, true);
   },
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 };
 app.use(cors(corsOptions));
 

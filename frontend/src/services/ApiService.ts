@@ -15,10 +15,15 @@ const getApiBaseUrl = (): string => {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
 
-    // 1. Môi trường Production (Vercel hoặc custom production domain)
+    // 1. Môi trường Production qua Reverse Proxy (Nginx port 80/443 hoặc domain chính thức)
+    if (window.location.port === '' || window.location.port === '80' || window.location.port === '443') {
+      return '';
+    }
+
+    // 2. Môi trường Vercel hoặc custom production domain có biến NEXT_PUBLIC_API_URL
     const isProductionHost = hostname.includes('vercel.app') || (process.env.NODE_ENV === 'production' && !hostname.includes('loca.lt') && !hostname.includes('ngrok'));
     if (isProductionHost && !hostname.includes('loca.lt') && !hostname.includes('ngrok') && !hostname.includes('trycloudflare.com')) {
-      return process.env.NEXT_PUBLIC_API_URL || 'https://student-management-system-udhy.onrender.com';
+      return process.env.NEXT_PUBLIC_API_URL || '';
     }
 
     // 2. Môi trường Test qua Tunnel (Localtunnel, Ngrok, Cloudflare)
