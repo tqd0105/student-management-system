@@ -2,7 +2,8 @@
 $ErrorActionPreference = "Stop"
 
 Write-Host "🚀 [1/4] Đang đăng nhập vào Amazon ECR..." -ForegroundColor Cyan
-& "C:\Program Files\Amazon\AWSCLIV2\aws.exe" ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 002037730665.dkr.ecr.ap-southeast-1.amazonaws.com
+$pass = & "C:\Program Files\Amazon\AWSCLIV2\aws.exe" ecr get-login-password --region ap-southeast-1
+docker login --username AWS --password $pass 002037730665.dkr.ecr.ap-southeast-1.amazonaws.com
 
 Write-Host "`n📦 [2/4] Đang Build và Push Docker Image cho Backend..." -ForegroundColor Cyan
 docker build -t 002037730665.dkr.ecr.ap-southeast-1.amazonaws.com/student-management-backend:latest -f backend/Dockerfile .
