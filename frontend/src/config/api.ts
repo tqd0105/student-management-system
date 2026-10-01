@@ -4,15 +4,9 @@ const getApiBaseUrl = () => {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
 
-    // 1. Môi trường Production qua Reverse Proxy (Nginx port 80/443 hoặc domain chính thức)
-    if (window.location.port === '' || window.location.port === '80' || window.location.port === '443') {
-      return '';
-    }
-
-    // 2. Môi trường Vercel hoặc custom production domain có biến NEXT_PUBLIC_API_URL
-    const isProductionHost = hostname.includes('vercel.app') || (process.env.NODE_ENV === 'production' && !hostname.includes('loca.lt') && !hostname.includes('ngrok'));
-    if (isProductionHost && !hostname.includes('loca.lt') && !hostname.includes('ngrok') && !hostname.includes('trycloudflare.com')) {
-      return process.env.NEXT_PUBLIC_API_URL || '';
+    // 1. Môi trường Vercel -> Dùng backend Render (hoặc biến NEXT_PUBLIC_API_URL nếu có cấu hình)
+    if (hostname.includes('vercel.app')) {
+      return process.env.NEXT_PUBLIC_API_URL || 'https://student-management-system-udhy.onrender.com';
     }
 
     // 2. Môi trường Test qua Tunnel (Localtunnel, Ngrok, Cloudflare)
@@ -20,7 +14,12 @@ const getApiBaseUrl = () => {
       return '';
     }
 
-    // 3. Môi trường LAN (Wi-Fi nội bộ)
+    // 3. Môi trường Localhost
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    }
+
+    // 4. Môi trường LAN (Wi-Fi nội bộ)
     const isLAN = /^(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)$/.test(hostname);
     if (isLAN) {
       if (protocol === 'https:') {
@@ -29,9 +28,13 @@ const getApiBaseUrl = () => {
       return `http://${hostname}:3001`;
     }
 
-    // 4. Localhost
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    // 5. Môi trường AWS EC2 / Nginx Reverse Proxy (truy cập trực tiếp qua IP hoặc domain riêng có proxy /api/)
+    if (window.location.port === '' || window.location.port === '80' || window.location.port === '443') {
+      return '';
+    }
+
+    if (process.env.NODE_ENV === 'production') {
+      return process.env.NEXT_PUBLIC_API_URL || 'https://student-management-system-udhy.onrender.com';
     }
   }
   return process.env.NEXT_PUBLIC_API_URL || 'https://student-management-system-udhy.onrender.com';
