@@ -1,0 +1,88 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker Images to Amazon ECR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'ap-southeast-1' }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build and Push Backend
+      - name: Build and Push Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/student-management-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Build and Push Frontend
+      - name: Build and Push Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/student-management-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to EC2 via SSH
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Execute Remote SSH Commands on EC2
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST || '47.129.226.97' }}
+          EC2_USER: ${{ secrets.EC2_USER || 'ubuntu' }}
+          AWS_REGION: ${{ secrets.AWS_REGION || 'ap-southeast-1' }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$EC2_SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          ssh -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_HOST}" bash << 'EOF'
+            set -e
+            echo "🚀 [1/4] Logging into Amazon ECR on EC2..."
+            aws ecr get-login-password --region ap-southeast-1 | sudo docker login --username AWS --password-stdin 002037730665.dkr.ecr.ap-southeast-1.amazonaws.com
+
+            echo "📥 [2/4] Pulling latest images from ECR..."
+            cd /app
+            sudo docker compose pull
+
+            echo "🔄 [3/4] Re-creating containers with latest images..."
+            sudo docker compose up -d --remove-orphans
+
+            echo "🧹 [4/4] Pruning old unused Docker images..."
+            sudo docker image prune -f
+
+            echo "✅ Deployment to AWS EC2 completed successfully!"
+          EOF
