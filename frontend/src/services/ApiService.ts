@@ -4,18 +4,85 @@
  * Centralized API communication với backend
  */
 
-import { API_BASE_URL } from '@/config/api';
+/**
+ * Tự động xác định URL backend phù hợp:
+ * - Khi chạy trên browser: Nếu truy cập qua IP mạng LAN (ví dụ 192.168.x.x trên điện thoại),
+ *   tự động trỏ API về http://<IP_LAN>:3001 để điện thoại kết nối đúng backend local.
+ * - Khi chạy trên localhost hoặc production, dùng NEXT_PUBLIC_API_URL.
+ */
+const getApiBaseUrl = (): string => {
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+
+    // 1. Môi trường Production qua Reverse Proxy (Nginx port 80/443 hoặc domain chính thức)
+    if (
+      window.location.port === "" ||
+      window.location.port === "80" ||
+      window.location.port === "443"
+    ) {
+      return "";
+    }
+
+    // 2. Môi trường Vercel hoặc custom production domain có biến NEXT_PUBLIC_API_URL
+    const isProductionHost =
+      hostname.includes("vercel.app") ||
+      (process.env.NODE_ENV === "production" &&
+        !hostname.includes("loca.lt") &&
+        !hostname.includes("ngrok"));
+    if (
+      isProductionHost &&
+      !hostname.includes("loca.lt") &&
+      !hostname.includes("ngrok") &&
+      !hostname.includes("trycloudflare.com")
+    ) {
+      return process.env.NEXT_PUBLIC_API_URL || "";
+    }
+
+    // 2. Môi trường Test qua Tunnel (Localtunnel, Ngrok, Cloudflare)
+    if (
+      hostname.includes("loca.lt") ||
+      hostname.includes("ngrok") ||
+      hostname.includes("trycloudflare.com")
+    ) {
+      return "";
+    }
+
+    // 3. Môi trường LAN (Wi-Fi nội bộ)
+    const isLAN =
+      /^(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)$/.test(
+        hostname,
+      );
+    if (isLAN) {
+      if (protocol === "https:") {
+        return "";
+      }
+      return `http://${hostname}:3001`;
+    }
+
+    // 4. Localhost
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+    }
+  }
+  return (
+    process.env.NEXT_PUBLIC_API_URL ||
+    "https://student-management-system-udhy.onrender.com"
+  );
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 class ApiService {
   private static getHeaders(includeAuth: boolean = true): HeadersInit {
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
 
     if (includeAuth) {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        headers["Authorization"] = `Bearer ${token}`;
       }
     }
 
@@ -24,31 +91,36 @@ class ApiService {
 
   private static async makeRequest(url: string, options: RequestInit = {}) {
     try {
-      console.log('🌐 Making API request to:', url);
+      console.log("🌐 Making API request to:", url);
       const response = await fetch(url, {
         ...options,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           ...options.headers,
         },
       });
-      
-      console.log('📡 Response status:', response.status, response.statusText);
+
+      console.log("📡 Response status:", response.status, response.statusText);
       return await this.handleResponse(response);
     } catch (error) {
-      console.error('🚨 Network request failed:', error);
-      
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Network connection failed. Please check your internet connection and server status.');
+      console.error("🚨 Network request failed:", error);
+
+      if (error instanceof TypeError && error.message.includes("fetch")) {
+        throw new Error(
+          "Network connection failed. Please check your internet connection and server status.",
+        );
       }
-      
+
       throw error;
     }
   }
 
-  private static async handleResponse(response: Response, skipAuthRedirect: boolean = false) {
+  private static async handleResponse(
+    response: Response,
+    skipAuthRedirect: boolean = false,
+  ) {
     let errorData;
-    
+
     try {
       errorData = await response.json();
     } catch {
@@ -56,34 +128,38 @@ class ApiService {
       errorData = {
         success: false,
         message: `Network error: ${response.status} ${response.statusText}`,
-        details: 'Unable to parse server response'
+        details: "Unable to parse server response",
       };
     }
 
     if (!response.ok) {
       // Handle 401 Unauthorized - clear auth data and redirect (except during login)
       if (response.status === 401 && !skipAuthRedirect) {
-        console.warn('🔒 Authentication failed - clearing tokens');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        
+        console.warn("🔒 Authentication failed - clearing tokens");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+
         // Redirect to login if not already there
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('auth')) {
-          window.location.href = '/';
+        if (
+          typeof window !== "undefined" &&
+          !window.location.pathname.includes("auth")
+        ) {
+          window.location.href = "/";
         }
       }
-      
-      const errorMessage = errorData.message || 
-                          errorData.error || 
-                          `HTTP error! status: ${response.status} ${response.statusText}`;
-      
-      console.error('API Error:', {
+
+      const errorMessage =
+        errorData.message ||
+        errorData.error ||
+        `HTTP error! status: ${response.status} ${response.statusText}`;
+
+      console.error("API Error:", {
         status: response.status,
         statusText: response.statusText,
         url: response.url,
-        errorData
+        errorData,
       });
-      
+
       const error: any = new Error(errorMessage);
       error.data = errorData.data;
       error.code = errorData.code;
@@ -92,26 +168,26 @@ class ApiService {
       error.response = errorData;
       throw error;
     }
-    
+
     return errorData;
   }
 
   // Auth APIs
   static async login(email: string, password: string) {
     const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(false),
       body: JSON.stringify({ email, password }),
     });
-    
+
     const data = await this.handleResponse(response, true); // Skip auth redirect for login
-    
+
     // Store token
     if (data.success && data.data.token) {
-      localStorage.setItem('token', data.data.token);
-      localStorage.setItem('user', JSON.stringify(data.data.user));
+      localStorage.setItem("token", data.data.token);
+      localStorage.setItem("user", JSON.stringify(data.data.user));
     }
-    
+
     return data;
   }
 
@@ -119,40 +195,43 @@ class ApiService {
     email: string;
     password: string;
     name: string;
-    role: 'ADMIN' | 'TEACHER' | 'STUDENT';
+    role: "ADMIN" | "TEACHER" | "STUDENT";
   }) {
     const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(false),
       body: JSON.stringify(userData),
     });
-    
+
     return this.handleResponse(response, true); // Skip auth redirect for register
   }
 
   static async verifyEmail(email: string, code: string) {
     const response = await fetch(`${API_BASE_URL}/api/auth/verify-email`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(false),
       body: JSON.stringify({ email, code }),
     });
-    
+
     return this.handleResponse(response);
   }
 
   static async resendVerificationCode(email: string) {
-    const response = await fetch(`${API_BASE_URL}/api/auth/resend-verification`, {
-      method: 'POST',
-      headers: this.getHeaders(false),
-      body: JSON.stringify({ email }),
-    });
-    
+    const response = await fetch(
+      `${API_BASE_URL}/api/auth/resend-verification`,
+      {
+        method: "POST",
+        headers: this.getHeaders(false),
+        body: JSON.stringify({ email }),
+      },
+    );
+
     return this.handleResponse(response);
   }
 
   static logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
   }
 
   static async getProfile() {
@@ -169,120 +248,194 @@ class ApiService {
   // ── Teacher: Student Management ──
 
   /** Lấy tất cả SV trong hệ thống (kèm tìm kiếm) */
-  static async getTeacherAllStudents(params?: { search?: string; classId?: string }) {
+  static async getTeacherAllStudents(params?: {
+    search?: string;
+    classId?: string;
+  }) {
     const url = new URL(`${API_BASE_URL}/api/teacher/students`);
-    if (params?.search) url.searchParams.set('search', params.search);
-    if (params?.classId) url.searchParams.set('classId', params.classId);
-    const response = await fetch(url.toString(), { headers: this.getHeaders() });
+    if (params?.search) url.searchParams.set("search", params.search);
+    if (params?.classId) url.searchParams.set("classId", params.classId);
+    const response = await fetch(url.toString(), {
+      headers: this.getHeaders(),
+    });
     return this.handleResponse(response);
   }
 
   /** Lấy SV trong lớp (kèm thống kê điểm danh) */
   static async getClassStudents(classId: string) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/students`, {
-      headers: this.getHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/classes/${classId}/students`,
+      {
+        headers: this.getHeaders(),
+      },
+    );
     return this.handleResponse(response);
   }
 
   /** Thêm SV vào lớp (bằng email) */
   static async addStudentToClass(classId: string, studentEmail: string) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/students`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ studentEmail }),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/classes/${classId}/students`,
+      {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({ studentEmail }),
+      },
+    );
     return this.handleResponse(response);
   }
 
   /** Xóa SV khỏi lớp */
   static async removeStudentFromClass(classId: string, studentId: string) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/students/${studentId}`, {
-      method: 'DELETE',
-      headers: this.getHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/classes/${classId}/students/${studentId}`,
+      {
+        method: "DELETE",
+        headers: this.getHeaders(),
+      },
+    );
     return this.handleResponse(response);
   }
 
   // ── Teacher: Manual Attendance ──
-  static async markManualAttendance(sessionId: string, studentId: string, status: 'PRESENT' | 'LATE' | 'ABSENT') {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/sessions/${sessionId}/attendance`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ studentId, status }),
-    });
+  static async markManualAttendance(
+    sessionId: string,
+    studentId: string,
+    status: "PRESENT" | "LATE" | "ABSENT",
+  ) {
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/sessions/${sessionId}/attendance`,
+      {
+        method: "PUT",
+        headers: this.getHeaders(),
+        body: JSON.stringify({ studentId, status }),
+      },
+    );
     return this.handleResponse(response);
   }
 
   static async getSessionAttendanceStats(sessionId: string) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/sessions/${sessionId}/stats`, {
-      headers: this.getHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/sessions/${sessionId}/stats`,
+      {
+        headers: this.getHeaders(),
+      },
+    );
     return this.handleResponse(response);
   }
 
   // ── Teacher: Assignments & Grades ──
   static async getClassAssignments(classId: string) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/assignments`, {
-      headers: this.getHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/classes/${classId}/assignments`,
+      {
+        headers: this.getHeaders(),
+      },
+    );
     return this.handleResponse(response);
   }
 
-  static async createAssignment(classId: string, data: { title: string; description?: string | null; dueDate?: string | null; attachmentUrl?: string | null; materialId?: string | null }) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/assignments`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(data),
-    });
+  static async createAssignment(
+    classId: string,
+    data: {
+      title: string;
+      description?: string | null;
+      dueDate?: string | null;
+      attachmentUrl?: string | null;
+      materialId?: string | null;
+    },
+  ) {
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/classes/${classId}/assignments`,
+      {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      },
+    );
     return this.handleResponse(response);
   }
 
-  static async updateAssignment(assignmentId: string, data: { title?: string; description?: string | null; dueDate?: string | null; attachmentUrl?: string | null; materialId?: string | null }) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/assignments/${assignmentId}`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify(data),
-    });
+  static async updateAssignment(
+    assignmentId: string,
+    data: {
+      title?: string;
+      description?: string | null;
+      dueDate?: string | null;
+      attachmentUrl?: string | null;
+      materialId?: string | null;
+    },
+  ) {
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/assignments/${assignmentId}`,
+      {
+        method: "PUT",
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      },
+    );
     return this.handleResponse(response);
   }
 
   static async getClassMaterials(classId: string) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/materials`, {
-      headers: this.getHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/classes/${classId}/materials`,
+      {
+        headers: this.getHeaders(),
+      },
+    );
     return this.handleResponse(response);
   }
 
   static async deleteAssignment(assignmentId: string) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/assignments/${assignmentId}`, {
-      method: 'DELETE',
-      headers: this.getHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/assignments/${assignmentId}`,
+      {
+        method: "DELETE",
+        headers: this.getHeaders(),
+      },
+    );
     return this.handleResponse(response);
   }
 
   static async getClassGrades(classId: string) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/grades`, {
-      headers: this.getHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/classes/${classId}/grades`,
+      {
+        headers: this.getHeaders(),
+      },
+    );
     return this.handleResponse(response);
   }
 
-  static async updateGrades(classId: string, updates: { studentId: string; assignmentId: string; score?: number | null; feedback?: string | null }[]) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/grades`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ updates }),
-    });
+  static async updateGrades(
+    classId: string,
+    updates: {
+      studentId: string;
+      assignmentId: string;
+      score?: number | null;
+      feedback?: string | null;
+    }[],
+  ) {
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/classes/${classId}/grades`,
+      {
+        method: "PUT",
+        headers: this.getHeaders(),
+        body: JSON.stringify({ updates }),
+      },
+    );
     return this.handleResponse(response);
   }
 
   // Teacher: Student Management (Quản lý hồ sơ & thông tin học sinh)
-  static async getManagedStudents(params?: { search?: string; classId?: string }) {
+  static async getManagedStudents(params?: {
+    search?: string;
+    classId?: string;
+  }) {
     const url = new URL(`${API_BASE_URL}/api/teacher/managed-students`);
-    if (params?.search) url.searchParams.set('search', params.search);
-    if (params?.classId) url.searchParams.set('classId', params.classId);
+    if (params?.search) url.searchParams.set("search", params.search);
+    if (params?.classId) url.searchParams.set("classId", params.classId);
 
     const response = await fetch(url.toString(), {
       headers: this.getHeaders(),
@@ -291,18 +444,24 @@ class ApiService {
   }
 
   static async getStudentProfileDetail(studentId: string) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/managed-students/${studentId}`, {
-      headers: this.getHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/managed-students/${studentId}`,
+      {
+        headers: this.getHeaders(),
+      },
+    );
     return this.handleResponse(response);
   }
 
   static async updateStudentProfile(studentId: string, data: any) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/managed-students/${studentId}`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify(data),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/managed-students/${studentId}`,
+      {
+        method: "PUT",
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      },
+    );
     return this.handleResponse(response);
   }
 
@@ -315,21 +474,31 @@ class ApiService {
     studentCode?: string;
     gender?: string;
   }) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/managed-students`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(data),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/managed-students`,
+      {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      },
+    );
     return this.handleResponse(response);
   }
 
   // Teacher: Tuition & Fee Management (Quản lý học phí)
-  static async getTuitionFees(params?: { classId?: string; status?: string; search?: string; studentId?: string }) {
+  static async getTuitionFees(params?: {
+    classId?: string;
+    status?: string;
+    search?: string;
+    studentId?: string;
+  }) {
     const url = new URL(`${API_BASE_URL}/api/teacher/tuition-fees`);
-    if (params?.classId && params.classId !== 'ALL') url.searchParams.set('classId', params.classId);
-    if (params?.status && params.status !== 'ALL') url.searchParams.set('status', params.status);
-    if (params?.search) url.searchParams.set('search', params.search);
-    if (params?.studentId) url.searchParams.set('studentId', params.studentId);
+    if (params?.classId && params.classId !== "ALL")
+      url.searchParams.set("classId", params.classId);
+    if (params?.status && params.status !== "ALL")
+      url.searchParams.set("status", params.status);
+    if (params?.search) url.searchParams.set("search", params.search);
+    if (params?.studentId) url.searchParams.set("studentId", params.studentId);
 
     const response = await fetch(url.toString(), {
       headers: this.getHeaders(),
@@ -339,7 +508,7 @@ class ApiService {
 
   static async getTuitionStats(classId?: string) {
     const url = new URL(`${API_BASE_URL}/api/teacher/tuition-fees/stats`);
-    if (classId && classId !== 'ALL') url.searchParams.set('classId', classId);
+    if (classId && classId !== "ALL") url.searchParams.set("classId", classId);
 
     const response = await fetch(url.toString(), {
       headers: this.getHeaders(),
@@ -356,41 +525,53 @@ class ApiService {
     note?: string;
   }) {
     const response = await fetch(`${API_BASE_URL}/api/teacher/tuition-fees`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
     return this.handleResponse(response);
   }
 
-  static async recordTuitionPayment(feeId: string, data: {
-    amountPaid: number;
-    paymentMethod?: string;
-    paidAt?: string;
-    note?: string;
-  }) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/tuition-fees/${feeId}/payment`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify(data),
-    });
+  static async recordTuitionPayment(
+    feeId: string,
+    data: {
+      amountPaid: number;
+      paymentMethod?: string;
+      paidAt?: string;
+      note?: string;
+    },
+  ) {
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/tuition-fees/${feeId}/payment`,
+      {
+        method: "PUT",
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      },
+    );
     return this.handleResponse(response);
   }
 
   static async updateTuitionFee(feeId: string, data: any) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/tuition-fees/${feeId}`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify(data),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/tuition-fees/${feeId}`,
+      {
+        method: "PUT",
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      },
+    );
     return this.handleResponse(response);
   }
 
   static async deleteTuitionFee(feeId: string) {
-    const response = await fetch(`${API_BASE_URL}/api/teacher/tuition-fees/${feeId}`, {
-      method: 'DELETE',
-      headers: this.getHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/teacher/tuition-fees/${feeId}`,
+      {
+        method: "DELETE",
+        headers: this.getHeaders(),
+      },
+    );
     return this.handleResponse(response);
   }
 
@@ -399,34 +580,34 @@ class ApiService {
     name: string;
     email: string;
     password: string;
-    role: 'TEACHER';
+    role: "TEACHER";
   }) {
     const response = await fetch(`${API_BASE_URL}/api/admin/create-teacher`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(true),
       body: JSON.stringify(teacherData),
     });
-    
+
     return this.handleResponse(response);
   }
 
   static getCurrentUser() {
     try {
-      const userStr = localStorage.getItem('user');
+      const userStr = localStorage.getItem("user");
       if (!userStr) return null;
-      
+
       const user = JSON.parse(userStr);
-      
+
       // Validate user object has required properties
-      if (!user || typeof user !== 'object') return null;
+      if (!user || typeof user !== "object") return null;
       if (!user.id || !user.email) return null;
-      
+
       return user;
     } catch (error) {
-      console.error('Error parsing user from localStorage:', error);
+      console.error("Error parsing user from localStorage:", error);
       // Clear invalid user data
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
       return null;
     }
   }
@@ -445,12 +626,9 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  static async createClass(classData: {
-    name: string;
-    description: string;
-  }) {
+  static async createClass(classData: { name: string; description: string }) {
     const response = await fetch(`${API_BASE_URL}/api/classes`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(classData),
     });
@@ -459,7 +637,7 @@ class ApiService {
 
   static async enrollStudent(classId: string, studentId: string) {
     const response = await fetch(`${API_BASE_URL}/api/classes/enroll`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify({ classId, studentId }),
     });
@@ -476,7 +654,7 @@ class ApiService {
     radiusMeters: number;
   }) {
     const response = await fetch(`${API_BASE_URL}/api/attendance/sessions`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(sessionData),
     });
@@ -490,7 +668,7 @@ class ApiService {
     longitude: number;
   }) {
     const response = await fetch(`${API_BASE_URL}/api/attendance/checkin`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(checkInData),
     });
@@ -498,22 +676,31 @@ class ApiService {
   }
 
   static async getSessionReport(sessionId: string) {
-    const response = await fetch(`${API_BASE_URL}/api/attendance/sessions/${sessionId}/report`, {
-      headers: this.getHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/attendance/sessions/${sessionId}/report`,
+      {
+        headers: this.getHeaders(),
+      },
+    );
     return this.handleResponse(response);
   }
 
   static async getQRInfo(qrCode: string) {
-    const response = await fetch(`${API_BASE_URL}/api/attendance/qr/${qrCode}`, {
-      headers: this.getHeaders(),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/attendance/qr/${qrCode}`,
+      {
+        headers: this.getHeaders(),
+      },
+    );
     return this.handleResponse(response);
   }
 
-  static async submitAttendance(data: { sessionId: number; location: { latitude: number; longitude: number } }) {
+  static async submitAttendance(data: {
+    sessionId: number;
+    location: { latitude: number; longitude: number };
+  }) {
     const response = await fetch(`${API_BASE_URL}/api/attendance/submit`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
@@ -529,7 +716,11 @@ class ApiService {
   }
 
   // Student APIs
-  static async scanQRAndCheckIn(qrData: string, latitude?: number, longitude?: number) {
+  static async scanQRAndCheckIn(
+    qrData: string,
+    latitude?: number,
+    longitude?: number,
+  ) {
     const body: {
       qrData: string;
       latitude?: number;
@@ -539,7 +730,7 @@ class ApiService {
     if (longitude !== undefined) body.longitude = longitude;
 
     return this.makeRequest(`${API_BASE_URL}/api/student/scan-qr`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(body),
     });
@@ -548,7 +739,7 @@ class ApiService {
   static async getAttendanceHistory(classId?: string) {
     const url = new URL(`${API_BASE_URL}/api/student/attendance`);
     if (classId) {
-      url.searchParams.append('classId', classId);
+      url.searchParams.append("classId", classId);
     }
 
     return this.makeRequest(url.toString(), {
@@ -571,7 +762,7 @@ class ApiService {
   static async getStudentGrades(classId?: string) {
     const url = new URL(`${API_BASE_URL}/api/student/grades`);
     if (classId) {
-      url.searchParams.append('classId', classId);
+      url.searchParams.append("classId", classId);
     }
     return this.makeRequest(url.toString(), {
       headers: this.getHeaders(),
@@ -585,22 +776,31 @@ class ApiService {
   }
 
   /** Lấy danh sách bài tập & hạn nộp của sinh viên */
-  static async getStudentAssignments(params?: { classId?: string; status?: string }) {
+  static async getStudentAssignments(params?: {
+    classId?: string;
+    status?: string;
+  }) {
     const url = new URL(`${API_BASE_URL}/api/student/assignments`);
-    if (params?.classId) url.searchParams.set('classId', params.classId);
-    if (params?.status) url.searchParams.set('status', params.status);
+    if (params?.classId) url.searchParams.set("classId", params.classId);
+    if (params?.status) url.searchParams.set("status", params.status);
     return this.makeRequest(url.toString(), {
       headers: this.getHeaders(),
     });
   }
 
   /** Nộp bài tập dạng URL (Google Drive, GitHub, Figma, Docs...) */
-  static async submitAssignment(assignmentId: string, data: { submissionUrl: string; submissionNotes?: string }) {
-    return this.makeRequest(`${API_BASE_URL}/api/student/assignments/${assignmentId}/submit`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(data),
-    });
+  static async submitAssignment(
+    assignmentId: string,
+    data: { submissionUrl: string; submissionNotes?: string },
+  ) {
+    return this.makeRequest(
+      `${API_BASE_URL}/api/student/assignments/${assignmentId}/submit`,
+      {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify(data),
+      },
+    );
   }
 }
 
