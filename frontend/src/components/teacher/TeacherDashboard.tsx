@@ -41,6 +41,7 @@ import {
   Wifi,
   Globe,
   ShieldAlert,
+  Loader2,
 } from "lucide-react";
 
 interface Class {
@@ -122,6 +123,8 @@ export default function TeacherDashboard() {
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [editSessionTitle, setEditSessionTitle] = useState("");
   const [editSessionDate, setEditSessionDate] = useState("");
+  const [editNetworkProfileId, setEditNetworkProfileId] = useState("");
+  const [editNetworkEnforcementMode, setEditNetworkEnforcementMode] = useState<"OFF" | "REQUIRED" | "FLAG_ONLY">("OFF");
 
   // Management dropdown & modals
   const [isManagementMenuOpen, setIsManagementMenuOpen] = useState(false);
@@ -139,6 +142,28 @@ export default function TeacherDashboard() {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshSuccess, setRefreshSuccess] = useState(false);
+  const [currentTime, setCurrentTime] = useState<number>(Date.now());
+
+  // Action loading states
+  const [loadingQrSessionId, setLoadingQrSessionId] = useState<string | null>(null);
+  const [endingSessionId, setEndingSessionId] = useState<string | null>(null);
+  const [isCreatingClass, setIsCreatingClass] = useState(false);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [isUpdatingSession, setIsUpdatingSession] = useState(false);
+  const [isAddingStudent, setIsAddingStudent] = useState(false);
+  const [removingStudentKey, setRemovingStudentKey] = useState<string | null>(null);
+  const [isRegisteringNetwork, setIsRegisteringNetwork] = useState(false);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+  const [deletingClassId, setDeletingClassId] = useState<string | null>(null);
+  const [deletingNetworkProfileId, setDeletingNetworkProfileId] = useState<string | null>(null);
+
+  // Real-time ticker: Cập nhật mỗi giây để countdown và status nhảy realtime
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     fetchClasses();
@@ -359,9 +384,10 @@ export default function TeacherDashboard() {
   };
 
   const createClass = async () => {
-    if (!newClassName.trim()) return;
+    if (!newClassName.trim() || isCreatingClass) return;
 
     try {
+      setIsCreatingClass(true);
       const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_BASE_URL}/api/teacher/classes`,
@@ -386,13 +412,16 @@ export default function TeacherDashboard() {
       }
     } catch (error) {
       console.error("Error creating class:", error);
+    } finally {
+      setIsCreatingClass(false);
     }
   };
 
   const addStudent = async () => {
-    if (!selectedClassForStudent || !studentEmail.trim()) return;
+    if (!selectedClassForStudent || !studentEmail.trim() || isAddingStudent) return;
 
     try {
+      setIsAddingStudent(true);
       const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_BASE_URL}/api/teacher/classes/${selectedClassForStudent.id}/students`,
@@ -419,12 +448,16 @@ export default function TeacherDashboard() {
       }
     } catch (error) {
       console.error("Error adding student:", error);
+    } finally {
+      setIsAddingStudent(false);
     }
   };
 
   const removeStudent = async (classId: string, studentId: string) => {
     if (!confirm("Are you sure you want to remove this student?")) return;
 
+    const key = `${classId}_${studentId}`;
+    setRemovingStudentKey(key);
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
@@ -442,6 +475,8 @@ export default function TeacherDashboard() {
       }
     } catch (error) {
       console.error("Error removing student:", error);
+    } finally {
+      setRemovingStudentKey(null);
     }
   };
 
@@ -498,6 +533,7 @@ export default function TeacherDashboard() {
   const deleteNetworkProfile = async (profileId: string) => {
     if (!confirm("Bạn có chắc muốn xóa cấu hình mạng này khỏi danh sách?")) return;
     try {
+      setDeletingNetworkProfileId(profileId);
       const token = localStorage.getItem("token");
       const response = await fetch(`${API_BASE_URL}/api/teacher/network-profiles/${profileId}`, {
         method: "DELETE",
@@ -509,12 +545,18 @@ export default function TeacherDashboard() {
           setSelectedNetworkProfileId("");
           setNetworkEnforcementMode("OFF");
         }
+        if (editNetworkProfileId === profileId) {
+          setEditNetworkProfileId("");
+          setEditNetworkEnforcementMode("OFF");
+        }
       } else {
         const err = await response.json();
         alert(err.message || "Không thể xóa cấu hình mạng");
       }
     } catch (error) {
       console.error("Error deleting network profile:", error);
+    } finally {
+      setDeletingNetworkProfileId(null);
     }
   };
 
@@ -527,6 +569,7 @@ export default function TeacherDashboard() {
     const name = window.prompt(promptText, "Wi-Fi Giảng Đường");
     if (!name?.trim()) return;
     try {
+      setIsRegisteringNetwork(true);
       const token = localStorage.getItem("token");
       const response = await fetch(`${API_BASE_URL}/api/teacher/network-profiles`, {
         method: "POST",
@@ -542,17 +585,25 @@ export default function TeacherDashboard() {
         data.data,
         ...current.filter((profile) => profile.id !== data.data.id),
       ]);
-      setSelectedNetworkProfileId(data.data.id);
-      setNetworkEnforcementMode("REQUIRED");
+      if (isEditSessionModalOpen) {
+        setEditNetworkProfileId(data.data.id);
+        setEditNetworkEnforcementMode("REQUIRED");
+      } else {
+        setSelectedNetworkProfileId(data.data.id);
+        setNetworkEnforcementMode("REQUIRED");
+      }
       alert(`✅ Đã lưu mạng thành công:\n${data.data.name} (IP: ${data.data.publicIp})`);
     } catch (error) {
       alert(error instanceof Error ? error.message : "Không thể đăng ký mạng hiện tại");
+    } finally {
+      setIsRegisteringNetwork(false);
     }
   };
   const createSession = async () => {
-    if (!selectedClass) return;
+    if (!selectedClass || isCreatingSession) return;
 
     try {
+      setIsCreatingSession(true);
       const token = localStorage.getItem("token");
       const url = `${API_BASE_URL}/api/teacher/classes/${selectedClass.id}/sessions`;
 
@@ -588,11 +639,14 @@ export default function TeacherDashboard() {
     } catch (error) {
       console.error("Error creating session:", error);
       alert("Network error. Please check if backend is running.");
+    } finally {
+      setIsCreatingSession(false);
     }
   };
 
   const generateQR = async (sessionId: string) => {
     try {
+      setLoadingQrSessionId(sessionId);
       const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_BASE_URL}/api/teacher/sessions/${sessionId}/qr`,
@@ -626,6 +680,8 @@ export default function TeacherDashboard() {
     } catch (error) {
       console.error("❌ Error generating QR:", error);
       alert("Network error while creating QR code.");
+    } finally {
+      setLoadingQrSessionId(null);
     }
   };
 
@@ -633,6 +689,7 @@ export default function TeacherDashboard() {
     if (!confirm("Are you sure you want to stop this QR code?")) return;
 
     try {
+      setEndingSessionId(sessionId);
       const token = localStorage.getItem("token");
 
       const response = await fetch(
@@ -669,6 +726,8 @@ export default function TeacherDashboard() {
     } catch (error) {
       console.error("Error ending session:", error);
       alert("❌ Network error while stopping QR code.");
+    } finally {
+      setEndingSessionId(null);
     }
   };
 
@@ -681,6 +740,7 @@ export default function TeacherDashboard() {
       return;
 
     try {
+      setDeletingSessionId(sessionId);
       const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_BASE_URL}/api/teacher/sessions/${sessionId}`,
@@ -710,6 +770,8 @@ export default function TeacherDashboard() {
     } catch (error) {
       console.error("Error deleting session:", error);
       alert("❌ Network error while deleting session.");
+    } finally {
+      setDeletingSessionId(null);
     }
   };
 
@@ -789,18 +851,33 @@ export default function TeacherDashboard() {
     }
   };
 
+  const formatLocalDateTime = (date: Date = new Date()): string => {
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const openEditSession = (session: Session) => {
     setEditingSession(session);
     setEditSessionTitle(session.title || "");
-    setEditSessionDate(new Date(session.startTime).toISOString().slice(0, 16));
+    // Luôn khớp với thời gian hiện tại khi mở modal chỉnh sửa (theo giờ địa phương)
+    setEditSessionDate(formatLocalDateTime(new Date()));
+    setEditNetworkProfileId(session.networkProfileId || "");
+    setEditNetworkEnforcementMode(session.networkEnforcementMode || (session.networkProfileId ? "REQUIRED" : "OFF"));
+    detectCurrentIp();
     setIsEditSessionModalOpen(true);
   };
 
   const updateSession = async () => {
-    if (!editingSession || !editSessionTitle.trim()) return;
+    if (!editingSession || !editSessionTitle.trim() || isUpdatingSession) return;
 
     const selectedDateTime = new Date(editSessionDate);
-    const currentDateTime = new Date();
+    // Cho phép đệm 1 phút để tránh việc vừa mở modal bấm lưu bị báo lỗi do chênh lệch vài giây
+    const currentDateTime = new Date(Date.now() - 60 * 1000);
 
     if (selectedDateTime < currentDateTime) {
       alert("❌ Cannot set session time in the past. Please select a future date and time.");
@@ -808,10 +885,13 @@ export default function TeacherDashboard() {
     }
 
     try {
+      setIsUpdatingSession(true);
       const token = localStorage.getItem("token");
       const payload = {
         title: editSessionTitle,
         startTime: editSessionDate,
+        networkProfileId: editNetworkProfileId || null,
+        networkEnforcementMode: editNetworkProfileId ? editNetworkEnforcementMode : "OFF",
       };
 
       const response = await fetch(
@@ -831,6 +911,8 @@ export default function TeacherDashboard() {
         setEditingSession(null);
         setEditSessionTitle("");
         setEditSessionDate("");
+        setEditNetworkProfileId("");
+        setEditNetworkEnforcementMode("OFF");
         fetchClassSessions(selectedClass?.id || "");
         alert("✅ Session updated successfully!");
       } else {
@@ -841,6 +923,8 @@ export default function TeacherDashboard() {
     } catch (error) {
       console.error("❌ Network error:", error);
       alert("❌ Network error while updating session.");
+    } finally {
+      setIsUpdatingSession(false);
     }
   };
 
@@ -848,6 +932,7 @@ export default function TeacherDashboard() {
     if (!confirm("Are you sure you want to delete this class?")) return;
 
     try {
+      setDeletingClassId(classId);
       const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_BASE_URL}/api/teacher/classes/${classId}`,
@@ -861,9 +946,15 @@ export default function TeacherDashboard() {
 
       if (response.ok) {
         fetchClasses();
+        if (selectedClass?.id === classId) {
+          setSelectedClass(null);
+          setSessions([]);
+        }
       }
     } catch (error) {
       console.error("Error deleting class:", error);
+    } finally {
+      setDeletingClassId(null);
     }
   };
 
@@ -1155,8 +1246,11 @@ export default function TeacherDashboard() {
         {/* Active QR Sessions Display */}
         {qrDataCache.size > 0 && (
           <div
-            className="border-4 border-green-500 p-6 rounded-lg shadow-lg mb-8"
-            style={{ backgroundImage: "linear-gradient(to top, rgb(186, 255, 184) 0%, rgb(255, 255, 255) 100%)" }}
+            className="border-3 border-blue-500 p-6 rounded-lg shadow-lg mb-8"
+            style={{
+  backgroundImage:
+    "linear-gradient(to bottom, #EAF4FF 0%, #FFFFFF 100%)"
+}}
           >
             <div className="text-center mb-4">
               <h3 className="text-xl font-bold mb-2 text-green-700">
@@ -1179,10 +1273,10 @@ export default function TeacherDashboard() {
                   <div
                     key={sessionId}
                     className={`border-2 rounded-lg p-4 cursor-pointer transition-all shadow-md ${isExpired
-                      ? "border-red-300 bg-red-50 hover:border-red-500"
+                      ? "border-red-400 bg-red-50 hover:border-red-500"
                       : isExpiringSoon
-                        ? "border-yellow-300 bg-yellow-50 hover:border-yellow-500"
-                        : "border-green-300 bg-white hover:border-green-500 hover:shadow-lg"
+                        ? "border-yellow-400 bg-yellow-50 hover:border-yellow-500"
+                        : "border-green-400 bg-white hover:border-green-500 hover:shadow-lg"
                       }`}
                     onClick={() => {
                       if (isExpired) {
@@ -1226,13 +1320,21 @@ export default function TeacherDashboard() {
                           ⏰ {new Date(qrData.expiresAt).toLocaleTimeString()}
                         </p>
                         <button
+                          disabled={endingSessionId === sessionId}
                           onClick={(e) => {
                             e.stopPropagation();
                             endSession(sessionId);
                           }}
-                          className="mt-2 bg-red-500 text-white px-4 py-1 rounded text-xs hover:bg-red-600 transition-colors cursor-pointer"
+                          className="mt-2 bg-red-500 text-white px-4 py-1 rounded text-xs hover:bg-red-600 transition-colors cursor-pointer flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed mx-auto"
                         >
-                          Stop
+                          {endingSessionId === sessionId ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span>Đang dừng...</span>
+                            </>
+                          ) : (
+                            "Stop"
+                          )}
                         </button>
                       </div>
                     </div>
@@ -1337,12 +1439,17 @@ export default function TeacherDashboard() {
                     {/* Button 5: Delete Class */}
                     <div className="relative group flex justify-center">
                       <button
+                        disabled={deletingClassId === cls.id}
                         onClick={() => deleteClass(cls.id)}
-                        className="w-full sm:w-10 h-10 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200/80 hover:border-rose-600 rounded-xl flex items-center justify-center cursor-pointer transition-all duration-150 shadow-xs hover:shadow active:scale-95"
+                        className="w-full sm:w-10 h-10 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200/80 hover:border-rose-600 rounded-xl flex items-center justify-center cursor-pointer transition-all duration-150 shadow-xs hover:shadow active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Xóa lớp học"
                         aria-label="Xóa lớp học"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        {deletingClassId === cls.id ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-5 h-5" />
+                        )}
                       </button>
                       <div className="hidden sm:group-hover:flex absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-gray-900 text-white text-[11px] font-medium rounded shadow-md whitespace-nowrap z-20 pointer-events-none">
                         Xóa lớp học
@@ -1377,13 +1484,23 @@ export default function TeacherDashboard() {
                           </p>
                         </div>
                         <button
+                          disabled={removingStudentKey === `${cls.id}_${enrollment.student.id}`}
                           onClick={() =>
                             removeStudent(cls.id, enrollment.student.id)
                           }
-                          className="text-white hover:bg-red-600 px-3 py-1.5 bg-red-500 rounded-full shadow flex items-center gap-1.5 text-xs font-semibold cursor-pointer shrink-0"
+                          className="text-white hover:bg-red-600 px-3 py-1.5 bg-red-500 rounded-full shadow flex items-center gap-1.5 text-xs font-semibold cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <UserMinus className="w-4 h-4" />
-                          <span>Xoá</span>
+                          {removingStudentKey === `${cls.id}_${enrollment.student.id}` ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Đang xóa...</span>
+                            </>
+                          ) : (
+                            <>
+                              <UserMinus className="w-4 h-4" />
+                              <span>Xoá</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     ))}
@@ -1482,7 +1599,7 @@ export default function TeacherDashboard() {
                   </div>
                 ) : (
                   sessions.map((session) => {
-                    const now = new Date();
+                    const now = new Date(currentTime);
                     const qrData = qrDataCache.get(session.id);
                     const hasQR = session.qrCode && session.qrExpiresAt;
                     const isQRExpired = hasQR
@@ -1531,12 +1648,17 @@ export default function TeacherDashboard() {
                                   <ClipboardList className="w-3.5 h-3.5" />
                                 </button>
                                 <button
+                                  disabled={deletingSessionId === session.id}
                                   onClick={() => deleteSession(session.id)}
-                                  className="text-rose-600 hover:text-rose-800 p-1.5 hover:bg-white rounded cursor-pointer transition-colors"
+                                  className="text-rose-600 hover:text-rose-800 p-1.5 hover:bg-white rounded cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   title="Xóa buổi học"
                                   aria-label="Xóa buổi học"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  {deletingSessionId === session.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  )}
                                 </button>
                               </div>
                             </div>
@@ -1604,18 +1726,33 @@ export default function TeacherDashboard() {
                                   <button
                                     onClick={() => openStatsModal("session", session.id)}
                                     disabled={sessionStatsLoading.has(session.id)}
-                                    className="flex-1 sm:flex-initial bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-semibold hover:bg-emerald-700 flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                                    className="flex-1 sm:flex-initial bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-semibold hover:bg-emerald-700 flex items-center justify-center gap-1 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
-                                    <BarChart3 className="w-3.5 h-3.5" />
-                                    <span>Thống kê</span>
+                                    {sessionStatsLoading.has(session.id) ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <BarChart3 className="w-3.5 h-3.5" />
+                                    )}
+                                    <span>{sessionStatsLoading.has(session.id) ? "Đang tải..." : "Thống kê"}</span>
                                   </button>
                                 )}
                                 <button
+                                  disabled={loadingQrSessionId === session.id}
                                   onClick={() => generateQR(session.id)}
-                                  className="flex-1 sm:flex-initial bg-blue-600 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs hover:bg-blue-700 flex items-center justify-center gap-1 cursor-pointer shadow-xs active:scale-95 transition-all"
+                                  className="flex-1 sm:flex-initial bg-blue-600 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs hover:bg-blue-700 flex items-center justify-center gap-1 cursor-pointer shadow-xs active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  <Play className="w-3.5 h-3.5" />
-                                  <span>{isQRExpired ? "Tạo QR mới" : "Bật QR điểm danh"}</span>
+                                  {loadingQrSessionId === session.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Play className="w-3.5 h-3.5" />
+                                  )}
+                                  <span>
+                                    {loadingQrSessionId === session.id
+                                      ? "Đang tạo QR..."
+                                      : isQRExpired
+                                        ? "Tạo QR mới"
+                                        : "Bật QR điểm danh"}
+                                  </span>
                                 </button>
                               </div>
                             ) : effectiveIsActive ? (
@@ -1640,29 +1777,42 @@ export default function TeacherDashboard() {
                                   <span>Xem QR</span>
                                 </button>
                                 <button
+                                  disabled={endingSessionId === session.id}
                                   onClick={() => endSession(session.id)}
-                                  className="flex-1 sm:flex-initial bg-rose-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-rose-700 flex items-center justify-center gap-1 cursor-pointer shadow-xs transition-colors"
+                                  className="flex-1 sm:flex-initial bg-rose-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-rose-700 flex items-center justify-center gap-1 cursor-pointer shadow-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  <StopCircle className="w-3.5 h-3.5" />
-                                  <span>Dừng QR</span>
+                                  {endingSessionId === session.id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <StopCircle className="w-3.5 h-3.5" />
+                                  )}
+                                  <span>{endingSessionId === session.id ? "Đang dừng..." : "Dừng QR"}</span>
                                 </button>
                                 <button
                                   onClick={() => openStatsModal("session", session.id)}
                                   disabled={sessionStatsLoading.has(session.id)}
-                                  className="flex-1 sm:flex-initial bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-emerald-700 flex items-center justify-center gap-1 cursor-pointer shadow-xs transition-colors"
+                                  className="flex-1 sm:flex-initial bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-emerald-700 flex items-center justify-center gap-1 cursor-pointer shadow-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  <BarChart3 className="w-3.5 h-3.5" />
-                                  <span>Thống kê</span>
+                                  {sessionStatsLoading.has(session.id) ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <BarChart3 className="w-3.5 h-3.5" />
+                                  )}
+                                  <span>{sessionStatsLoading.has(session.id) ? "Đang tải..." : "Thống kê"}</span>
                                 </button>
                               </div>
                             ) : (
                               <button
                                 onClick={() => openStatsModal("session", session.id)}
                                 disabled={sessionStatsLoading.has(session.id)}
-                                className="w-full sm:w-auto bg-emerald-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-emerald-700 flex items-center justify-center gap-1 cursor-pointer shadow-xs transition-colors"
+                                className="w-full sm:w-auto bg-emerald-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-emerald-700 flex items-center justify-center gap-1 cursor-pointer shadow-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <BarChart3 className="w-3.5 h-3.5" />
-                                <span>Thống kê</span>
+                                {sessionStatsLoading.has(session.id) ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <BarChart3 className="w-3.5 h-3.5" />
+                                )}
+                                <span>{sessionStatsLoading.has(session.id) ? "Đang tải..." : "Thống kê"}</span>
                               </button>
                             )}
                           </div>
@@ -1741,11 +1891,20 @@ export default function TeacherDashboard() {
                 </button>
                 <button
                   onClick={createClass}
-                  disabled={!newClassName.trim()}
-                  className="flex-1 bg-blue-600 font-bold text-white py-2.5 px-4 rounded-xl shadow-md hover:bg-blue-700 disabled:opacity-50 transition-all text-xs sm:text-sm cursor-pointer flex items-center justify-center gap-1.5"
+                  disabled={!newClassName.trim() || isCreatingClass}
+                  className="flex-1 bg-blue-600 font-bold text-white py-2.5 px-4 rounded-xl shadow-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs sm:text-sm cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Tạo Lớp</span>
+                  {isCreatingClass ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Đang tạo...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      <span>Tạo Lớp</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -1832,21 +1991,36 @@ export default function TeacherDashboard() {
                       <button
                         type="button"
                         onClick={() => deleteNetworkProfile(selectedNetworkProfileId)}
-                        className="px-2.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs transition-colors cursor-pointer"
+                        disabled={deletingNetworkProfileId === selectedNetworkProfileId}
+                        className="px-2.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Xóa cấu hình mạng này"
                         aria-label="Xóa cấu hình mạng"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        {deletingNetworkProfileId === selectedNetworkProfileId ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
                       </button>
                     )}
 
                     <button
                       type="button"
                       onClick={registerCurrentNetwork}
-                      className="px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold hover:bg-blue-100 transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center w-full gap-1"
+                      disabled={isRegisteringNetwork}
+                      className="px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold hover:bg-blue-100 transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center w-full gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Lưu mạng này</span>
+                      {isRegisteringNetwork ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Đang lưu...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Lưu mạng này</span>
+                        </>
+                      )}
                     </button>
                   </div>
 
@@ -1888,11 +2062,20 @@ export default function TeacherDashboard() {
                 </button>
                 <button
                   onClick={createSession}
-                  disabled={!newSessionTitle.trim()}
-                  className="flex-1 bg-blue-600 font-bold text-white py-2.5 px-4 rounded-xl shadow-md hover:bg-blue-700 disabled:opacity-50 transition-all text-xs sm:text-sm cursor-pointer flex items-center justify-center gap-1.5"
+                  disabled={!newSessionTitle.trim() || isCreatingSession}
+                  className="flex-1 bg-blue-600 font-bold text-white py-2.5 px-4 rounded-xl shadow-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs sm:text-sm cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Tạo Buổi Học</span>
+                  {isCreatingSession ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Đang tạo...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      <span>Tạo Buổi Học</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -1950,11 +2133,20 @@ export default function TeacherDashboard() {
                   />
                   <button
                     onClick={addStudent}
-                    disabled={!studentEmail.trim()}
-                    className="bg-emerald-600 font-bold text-white px-5 py-2.5 rounded-xl hover:bg-emerald-700 cursor-pointer disabled:opacity-50 text-xs sm:text-sm shrink-0 flex items-center justify-center gap-1 shadow-xs active:scale-95 transition-all"
+                    disabled={!studentEmail.trim() || isAddingStudent}
+                    className="bg-emerald-600 font-bold text-white px-5 py-2.5 rounded-xl hover:bg-emerald-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm shrink-0 flex items-center justify-center gap-1 shadow-xs active:scale-95 transition-all"
                   >
-                    <UserPlus className="w-4 h-4" />
-                    <span> Thêm</span>
+                    {isAddingStudent ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Đang thêm...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4" />
+                        <span> Thêm</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -2007,68 +2199,137 @@ export default function TeacherDashboard() {
                 <p className="text-xs text-gray-500 mb-4">Sinh viên mở ứng dụng di động để quét mã này</p>
               </div>
             </div>
-            <div className="bg-emerald-50/50 p-4 rounded-2xl mb-4 border border-emerald-100">
-              <div className="bg-white p-3 rounded-xl border border-emerald-300 inline-block shadow-xs">
-                {currentQR.qrImageUrl ? (
-                  <img
-                    src={currentQR.qrImageUrl}
-                    alt="QR Code"
-                    className="w-48 h-48 sm:w-56 sm:h-56 object-contain"
-                    style={{ imageRendering: "pixelated" }}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <div className="w-48 h-48 sm:w-56 sm:h-56 bg-gray-200 flex items-center justify-center text-gray-500 rounded-lg">
-                    <div className="text-center">
-                      <div className="text-2xl mb-2">❌</div>
-                      <div className="text-xs font-bold">QR Code Đã Hết Hạn</div>
+            {(() => {
+              const qrExpiresTime = new Date(currentQR.expiresAt).getTime();
+              const diffMs = qrExpiresTime - currentTime;
+              const isExpired = diffMs <= 0;
+              const isExpiringSoon = !isExpired && diffMs < 60000;
+              const totalSec = Math.max(0, Math.floor(diffMs / 1000));
+              const remMin = Math.floor(totalSec / 60);
+              const remSec = totalSec % 60;
+              const countdownText = `${remMin.toString().padStart(2, "0")}:${remSec.toString().padStart(2, "0")}`;
+
+              return (
+                <>
+                  <div className="bg-emerald-50/50 p-4 rounded-2xl mb-4 border border-emerald-100 relative">
+                    <div className="bg-white p-3 rounded-xl border border-emerald-300 inline-block shadow-xs relative overflow-hidden">
+                      {currentQR.qrImageUrl ? (
+                        <>
+                          <img
+                            src={currentQR.qrImageUrl}
+                            alt="QR Code"
+                            className={`w-48 h-48 sm:w-56 sm:h-56 object-contain transition-all duration-300 ${isExpired ? "opacity-20 blur-xs grayscale" : ""
+                              }`}
+                            style={{ imageRendering: "pixelated" }}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                          {isExpired && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/60 backdrop-blur-2xs text-white rounded-xl p-3 animate__animated animate__fadeIn">
+                              <AlertCircle className="w-8 h-8 text-rose-400 mb-1" />
+                              <span className="text-xs sm:text-sm font-extrabold text-rose-200">MÃ QR ĐÃ HẾT HẠN</span>
+                              <span className="text-[11px] text-gray-300 mt-1">Vui lòng tạo mã QR mới</span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="w-48 h-48 sm:w-56 sm:h-56 bg-gray-200 flex items-center justify-center text-gray-500 rounded-lg">
+                          <div className="text-center">
+                            <div className="text-2xl mb-2">❌</div>
+                            <div className="text-xs font-bold">QR Code Đã Hết Hạn</div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
 
-            <div className="text-xs text-gray-700 font-semibold mb-5 space-y-1.5 bg-gray-50 p-3 rounded-xl border border-gray-200/80">
-              <p className="truncate">
-                <span className="text-gray-400 font-normal">Buổi học:</span> <span className="font-bold text-gray-900">{currentQR.sessionInfo.title}</span>
-              </p>
-              <p className="truncate">
-                <span className="text-gray-400 font-normal">Lớp:</span> <span className="font-bold text-gray-900">{currentQR.sessionInfo.className}</span>
-              </p>
-              <p
-                className={`font-bold ${new Date() > new Date(currentQR.expiresAt)
-                  ? "text-rose-600"
-                  : new Date(currentQR.expiresAt).getTime() - Date.now() < 60000
-                    ? "text-amber-600 animate-pulse"
-                    : "text-emerald-600"
-                  }`}
-              >
-                <span className="text-gray-400 font-normal">Hết hạn lúc:</span>{" "}
-                {new Date(currentQR.expiresAt).toLocaleTimeString("vi-VN")}
-                {new Date() > new Date(currentQR.expiresAt) && " (ĐÃ HẾT HẠN)"}
-                {new Date() <= new Date(currentQR.expiresAt) &&
-                  new Date(currentQR.expiresAt).getTime() - Date.now() < 60000 &&
-                  " (SẮP HẾT HẠN)"}
-              </p>
-            </div>
+                  <div className="text-xs text-gray-700 font-semibold mb-5 space-y-2 bg-gray-50 p-3.5 rounded-2xl border border-gray-200/80 text-left">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400 font-normal">Buổi học:</span>
+                      <span className="font-bold text-gray-900 truncate max-w-[200px]">{currentQR.sessionInfo.title}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400 font-normal">Lớp:</span>
+                      <span className="font-bold text-gray-900 truncate max-w-[200px]">{currentQR.sessionInfo.className}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs pt-1.5 border-t border-gray-200">
+                      <span className="text-gray-500 font-medium">Hết hạn lúc:</span>
+                      <span className="font-mono font-bold text-gray-800">
+                        {new Date(currentQR.expiresAt).toLocaleTimeString("vi-VN")}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs pt-1">
+                      <span className="text-gray-500 font-medium">Trạng thái:</span>
+                      {isExpired ? (
+                        <span className="inline-flex items-center gap-1.5 font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200 text-[11px]">
+                          <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                          <span>ĐÃ HẾT HẠN (00:00)</span>
+                        </span>
+                      ) : isExpiringSoon ? (
+                        <span className="inline-flex items-center gap-1.5 font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-300 text-[11px] animate-pulse">
+                          <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                          <span>SẮP HẾT HẠN ({countdownText})</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-300 text-[11px]">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                          <span>Đang mở ({countdownText})</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowQRModal(false)}
-                className="flex-1 bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-xl hover:bg-gray-100 cursor-pointer font-bold text-xs sm:text-sm transition-colors"
-              >
-                Đóng
-              </button>
-              <button
-                onClick={() => endSession(currentQR.sessionId)}
-                className="flex-1 bg-rose-600 text-white py-2.5 px-4 rounded-xl shadow-md hover:bg-rose-700 cursor-pointer font-bold text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5"
-              >
-                <StopCircle className="w-4 h-4" />
-                <span>Dừng QR</span>
-              </button>
-            </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowQRModal(false)}
+                      className="flex-1 bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-xl hover:bg-gray-100 cursor-pointer font-bold text-xs sm:text-sm transition-colors"
+                    >
+                      Đóng
+                    </button>
+                    {isExpired ? (
+                      <button
+                        disabled={loadingQrSessionId === currentQR.sessionId}
+                        onClick={() => {
+                          generateQR(currentQR.sessionId);
+                        }}
+                        className="flex-1 bg-emerald-600 text-white py-2.5 px-4 rounded-xl shadow-md hover:bg-emerald-700 cursor-pointer font-bold text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingQrSessionId === currentQR.sessionId ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Đang tạo QR...</span>
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4" />
+                            <span>Tạo lại QR (15p)</span>
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        disabled={endingSessionId === currentQR.sessionId}
+                        onClick={() => endSession(currentQR.sessionId)}
+                        className="flex-1 bg-rose-600 text-white py-2.5 px-4 rounded-xl shadow-md hover:bg-rose-700 cursor-pointer font-bold text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {endingSessionId === currentQR.sessionId ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Đang dừng...</span>
+                          </>
+                        ) : (
+                          <>
+                            <StopCircle className="w-4 h-4" />
+                            <span>Dừng QR</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -2084,7 +2345,7 @@ export default function TeacherDashboard() {
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-extrabold">Chỉnh Sửa Buổi Học</h3>
-                  <p className="text-xs text-emerald-100">Cập nhật tiêu đề hoặc thời gian bắt đầu</p>
+                  <p className="text-xs text-emerald-100">Cập nhật tiêu đề, thời gian hoặc giới hạn mạng</p>
                 </div>
               </div>
               <button
@@ -2093,6 +2354,8 @@ export default function TeacherDashboard() {
                   setEditingSession(null);
                   setEditSessionTitle("");
                   setEditSessionDate("");
+                  setEditNetworkProfileId("");
+                  setEditNetworkEnforcementMode("OFF");
                 }}
                 className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-full transition-colors cursor-pointer"
               >
@@ -2100,7 +2363,7 @@ export default function TeacherDashboard() {
               </button>
             </div>
 
-            <div className="p-4 sm:p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 max-h-[calc(90vh-80px)] overflow-y-auto">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
                   Tên Buổi Học *
@@ -2114,17 +2377,121 @@ export default function TeacherDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Thời Gian Bắt Đầu
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-gray-700">
+                    Thời Gian Bắt Đầu
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setEditSessionDate(formatLocalDateTime(new Date()))}
+                    className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 hover:underline cursor-pointer flex items-center gap-1"
+                    title="Đặt lại về thời gian hiện tại"
+                  >
+                    <span>Lấy giờ hiện tại</span>
+                  </button>
+                </div>
                 <input
                   type="datetime-local"
                   value={editSessionDate}
                   onChange={(e) => setEditSessionDate(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
+                  min={formatLocalDateTime(new Date())}
                   className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                 />
               </div>
+
+              {/* Giới Hạn Mạng Điểm Danh (IP) */}
+              <div className="space-y-2.5 p-3.5 rounded-2xl bg-gray-50 border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                    <Wifi className="w-4 h-4 text-emerald-600" />
+                    <span>Giới Hạn Mạng Điểm Danh (IP)</span>
+                  </label>
+                  {detectingIp ? (
+                    <span className="text-[11px] text-gray-400 animate-pulse">Đang dò IP...</span>
+                  ) : detectedIpInfo ? (
+                    <span className="text-[11px] font-mono text-gray-600 bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-2xs">
+                      IP: <strong>{detectedIpInfo.clientIp}</strong>
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <select
+                    value={editNetworkProfileId}
+                    onChange={(e) => {
+                      setEditNetworkProfileId(e.target.value);
+                      if (!e.target.value) setEditNetworkEnforcementMode("OFF");
+                      else if (editNetworkEnforcementMode === "OFF") setEditNetworkEnforcementMode("REQUIRED");
+                    }}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="">Không giới hạn (Cho phép mọi IP)</option>
+                    {networkProfiles.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.name} ({profile.publicIp})
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="flex items-center justify-center w-full gap-2">
+                    {editNetworkProfileId && (
+                      <button
+                        type="button"
+                        onClick={() => deleteNetworkProfile(editNetworkProfileId)}
+                        disabled={deletingNetworkProfileId === editNetworkProfileId}
+                        className="px-2.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Xóa cấu hình mạng này"
+                        aria-label="Xóa cấu hình mạng"
+                      >
+                        {deletingNetworkProfileId === editNetworkProfileId ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={registerCurrentNetwork}
+                      disabled={isRegisteringNetwork}
+                      className="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center w-full gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isRegisteringNetwork ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Đang lưu...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Lưu mạng này</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {editNetworkProfileId && (
+                  <div className="pt-1 space-y-1.5 border-t border-gray-200">
+                    <label className="text-[11px] font-bold text-gray-700">Chế độ kiểm tra:</label>
+                    <select
+                      value={editNetworkEnforcementMode}
+                      onChange={(e) => setEditNetworkEnforcementMode(e.target.value as "REQUIRED" | "FLAG_ONLY")}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="REQUIRED">🔒 Bắt buộc cùng mạng (Chặn sinh viên khác IP)</option>
+                      <option value="FLAG_ONLY">⚠️ Ghi nhận & Cảnh báo (Cho phép nhưng đánh dấu khác IP)</option>
+                    </select>
+                    <p className="text-[11px] text-gray-500 leading-normal">
+                      {editNetworkEnforcementMode === "REQUIRED"
+                        ? "• Sinh viên dùng 4G hoặc ở ngoài lớp sẽ bị chặn điểm danh."
+                        : "• Sinh viên vẫn được điểm danh, nhưng sẽ bị gắn cờ cảnh báo đỏ trong báo cáo thống kê."}
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-2 pt-2">
                 <button
                   onClick={() => {
@@ -2132,6 +2499,8 @@ export default function TeacherDashboard() {
                     setEditingSession(null);
                     setEditSessionTitle("");
                     setEditSessionDate("");
+                    setEditNetworkProfileId("");
+                    setEditNetworkEnforcementMode("OFF");
                   }}
                   className="flex-1 bg-white border border-gray-300 font-bold text-gray-700 py-2.5 px-4 rounded-xl hover:bg-gray-100 transition-colors text-xs sm:text-sm cursor-pointer"
                 >
@@ -2139,11 +2508,20 @@ export default function TeacherDashboard() {
                 </button>
                 <button
                   onClick={updateSession}
-                  disabled={!editSessionTitle.trim()}
-                  className="flex-1 bg-emerald-600 font-bold text-white py-2.5 px-4 rounded-xl shadow-md hover:bg-emerald-700 disabled:opacity-50 transition-all text-xs sm:text-sm cursor-pointer flex items-center justify-center gap-1.5"
+                  disabled={!editSessionTitle.trim() || isUpdatingSession}
+                  className="flex-1 bg-emerald-600 font-bold text-white py-2.5 px-4 rounded-xl shadow-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs sm:text-sm cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  <Check className="w-4 h-4" />
-                  <span>Lưu Thay Đổi</span>
+                  {isUpdatingSession ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Đang lưu...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Lưu Thay Đổi</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

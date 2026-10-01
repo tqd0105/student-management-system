@@ -352,7 +352,7 @@ export const generateQRCode = async (req: AuthenticatedRequest, res: Response): 
     // Tạo QR code mới
     const qrCode = uuidv4();
     const qrExpiresAt = new Date();
-    qrExpiresAt.setMinutes(qrExpiresAt.getMinutes() + 5); // 5 phút
+    qrExpiresAt.setMinutes(qrExpiresAt.getMinutes() + 15); // 15 phút
 
     console.log('Generated QR Code:', qrCode);
     console.log('QR Expires At:', qrExpiresAt);
@@ -538,7 +538,7 @@ export const resumeSession = async (req: AuthenticatedRequest, res: Response): P
       const base64Data = qrCodeBase64.replace(/^data:image\/png;base64,/, '');
       
       updateData.qrCode = base64Data;
-      updateData.qrExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 phút
+      updateData.qrExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
     }
 
     const updatedSession = await prisma.attendanceSession.update({
@@ -892,17 +892,17 @@ export const deleteSession = async (req: AuthenticatedRequest, res: Response): P
   }
 };
 
-// Cập nhật thông tin session (tên và thời gian)
+// Cập nhật thông tin session (tên, thời gian, giới hạn mạng)
 export const updateSession = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
   try {
     const teacherId = req.user?.userId;
     const { sessionId } = req.params;
-    const { title, startTime } = req.body;
+    const { title, startTime, networkProfileId, networkEnforcementMode } = req.body;
 
     console.log('🔄 UPDATE SESSION DEBUG:');
     console.log('Teacher ID:', teacherId);
     console.log('Session ID:', sessionId);
-    console.log('Request body:', { title, startTime });
+    console.log('Request body:', { title, startTime, networkProfileId, networkEnforcementMode });
 
     if (!teacherId) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -933,12 +933,37 @@ export const updateSession = async (req: AuthenticatedRequest, res: Response): P
       // Also update endTime to be 2 hours after startTime
       updateData.endTime = new Date(newStartTime.getTime() + 2 * 60 * 60 * 1000);
     }
+
+    if (networkEnforcementMode !== undefined && !['OFF', 'REQUIRED', 'FLAG_ONLY'].includes(networkEnforcementMode)) {
+      return res.status(400).json({ success: false, message: 'Invalid network enforcement mode' });
+    }
+
+    if (networkProfileId !== undefined) {
+      if (networkProfileId) {
+        const networkProfile = await prisma.networkProfile.findFirst({
+          where: { id: networkProfileId, ownerId: teacherId, isActive: true }
+        });
+        if (!networkProfile) {
+          return res.status(400).json({ success: false, message: 'Network profile not found or inactive' });
+        }
+        updateData.networkProfileId = networkProfile.id;
+        updateData.networkEnforcementMode = networkEnforcementMode || 'REQUIRED';
+      } else {
+        updateData.networkProfileId = null;
+        updateData.networkEnforcementMode = 'OFF';
+      }
+    } else if (networkEnforcementMode !== undefined) {
+      updateData.networkEnforcementMode = session.networkProfileId ? networkEnforcementMode : 'OFF';
+    }
     
     console.log('Update data:', updateData);
 
     const updatedSession = await prisma.attendanceSession.update({
       where: { id: sessionId },
-      data: updateData
+      data: updateData,
+      include: {
+        networkProfile: true
+      }
     });
 
     console.log('✅ Session updated successfully');

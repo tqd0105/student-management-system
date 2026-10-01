@@ -16,6 +16,7 @@ interface RateLimitResponse {
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
+  validate: { trustProxy: false },
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.',
@@ -39,6 +40,7 @@ export const generalLimiter = rateLimit({
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // limit each IP to 10 auth requests per windowMs
+  validate: { trustProxy: false },
   message: {
     success: false,
     message: 'Too many authentication attempts, please try again later.',
@@ -62,6 +64,7 @@ export const authLimiter = rateLimit({
 export const checkInLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 5, // limit each IP to 5 check-in attempts per minute
+  validate: { trustProxy: false },
   message: {
     success: false,
     message: 'Too many check-in attempts, please wait before trying again.',
@@ -85,6 +88,7 @@ export const checkInLimiter = rateLimit({
 export const adminLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
   max: 50, // limit admin operations
+  validate: { trustProxy: false },
   message: {
     success: false,
     message: 'Admin rate limit exceeded.',
