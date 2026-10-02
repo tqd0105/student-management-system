@@ -35,21 +35,28 @@ app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Security Middleware - bảo mật headers
-app.use(helmet());
-
-// CORS Configuration - Tự động cho phép mọi domain/IP hợp lệ (localhost, IP Public, sslip.io HTTPS, Vercel, v.v.)
+// 1. CORS Configuration - Đặt TRƯỚC mọi middleware khác và xử lý preflight OPTIONS
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Cho phép dynamic origin để hỗ trợ cả HTTP IP lẫn HTTPS domain (sslip.io)
+    // Cho phép dynamic origin để hỗ trợ cả HTTP IP lẫn HTTPS domain (Vercel, sslip.io, LAN, localhost)
     callback(null, true);
   },
   credentials: true,
   optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control', 'Pragma'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
 };
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+// 2. Security Middleware - bảo mật headers nhưng cho phép cross-origin resource sharing
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+  })
+);
 
 // Rate limiting - chống spam requests
 const limiter = rateLimit({
