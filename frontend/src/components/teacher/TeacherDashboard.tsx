@@ -969,7 +969,7 @@ export default function TeacherDashboard() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || API_BASE_URL}/api/users/delete-account`,
+        `${API_BASE_URL}/api/users/delete-account`,
         {
           method: "DELETE",
           headers: {
