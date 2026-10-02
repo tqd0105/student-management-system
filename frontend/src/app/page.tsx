@@ -63,6 +63,7 @@ export default function HomePage() {
     const params = new URLSearchParams(window.location.search);
     const err = params.get("error");
     if (err === "google_denied") setError("Bạn đã huỷ đăng nhập Google.");
+    else if (err === "oauth_missing_credentials") setError("Chưa cấu hình GOOGLE_CLIENT_ID / SECRET trên Render. Vui lòng cấu hình biến môi trường.");
     else if (err === "oauth_failed") setError("Đăng nhập Google thất bại. Thử lại.");
   }, []);
 
