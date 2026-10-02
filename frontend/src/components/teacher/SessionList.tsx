@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import ApiService from '@/services/ApiService';
+import { API_BASE_URL } from '@/config/api';
 import { Plus, QrCode, Play, Trash2, CheckCircle, Users } from 'lucide-react';
 import ManualAttendance from './ManualAttendance';
 
@@ -35,7 +36,7 @@ export default function SessionList({ classId }: SessionListProps) {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/teacher/classes/${classId}/sessions`, {
+      const res = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/sessions`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -53,7 +54,7 @@ export default function SessionList({ classId }: SessionListProps) {
     if (!newTitle.trim()) return;
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/teacher/classes/${classId}/sessions`, {
+      const res = await fetch(`${API_BASE_URL}/api/teacher/classes/${classId}/sessions`, {
         method: 'POST',
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -76,7 +77,7 @@ export default function SessionList({ classId }: SessionListProps) {
     if (!confirm('Bạn có chắc muốn xóa buổi học này?')) return;
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/teacher/sessions/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/teacher/sessions/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
