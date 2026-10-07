@@ -1,0 +1,136 @@
+name: Serverless File Management CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'aws-serverless-file-management/**'
+      - '.github/workflows/serverless-file-management-ci-cd.yml'
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'aws-serverless-file-management/**'
+      - '.github/workflows/serverless-file-management-ci-cd.yml'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: aws-serverless-file-management
+
+jobs:
+  # =========================================================================
+  # 1. CI JOB: Typecheck, Unit Tests, and Terraform Validation
+  # =========================================================================
+  ci:
+    name: Continuous Integration (Lint, Test, Validate)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.0
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: 'aws-serverless-file-management/pnpm-lock.yaml'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript Type Check
+        run: pnpm typecheck
+
+      - name: Run Unit Tests (Vitest)
+        env:
+          AWS_REGION: ap-southeast-1
+          S3_BUCKET_NAME: aws-serverless-file-management-tqd0105-2026
+          DYNAMODB_TABLE_NAME: file-metadata
+          SQS_QUEUE_URL: https://sqs.ap-southeast-1.amazonaws.com/002037730665/file-processing-queue
+          SQS_DLQ_URL: https://sqs.ap-southeast-1.amazonaws.com/002037730665/file-processing-dlq
+        run: pnpm test
+
+      - name: Setup Terraform CLI
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.4
+
+      - name: Terraform Format Check
+        working-directory: aws-serverless-file-management/terraform
+        run: terraform fmt -check
+
+      - name: Terraform Validate
+        working-directory: aws-serverless-file-management/terraform
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+  # =========================================================================
+  # 2. CD JOB: Build, Package, and Deploy to AWS Lambda
+  # =========================================================================
+  cd:
+    name: Continuous Deployment (Build & Deploy to AWS)
+    needs: ci
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.0
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: 'aws-serverless-file-management/pnpm-lock.yaml'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Lambda Bundle (esbuild)
+        run: pnpm build:lambda
+
+      - name: Package Lambda Artifact (Zip)
+        run: |
+          mkdir -p dist/lambda
+          cd dist/lambda
+          zip -9 function.zip index.js
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'ap-southeast-1' }}
+
+      - name: Deploy Updated Code to AWS Lambda
+        run: |
+          echo "🚀 Deploying function.zip to AWS Lambda: file-management-api..."
+          aws lambda update-function-code \
+            --function-name file-management-api \
+            --zip-file fileb://dist/lambda/function.zip \
+            --region ${{ secrets.AWS_REGION || 'ap-southeast-1' }}
+
+      - name: Wait for Lambda Function Update
+        run: |
+          echo "⏳ Waiting for Lambda function update to settle..."
+          aws lambda wait function-updated \
+            --function-name file-management-api \
+            --region ${{ secrets.AWS_REGION || 'ap-southeast-1' }}
+          echo "✅ Lambda deployment completed successfully!"
