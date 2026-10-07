@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mockClient } from "aws-sdk-client-mock";
 import {
   S3Client,
@@ -19,6 +19,14 @@ import {
   getPresignedDownloadUrl,
   getPresignedUploadUrl,
 } from "../src/services/s3.service.js";
+
+vi.mock("@aws-sdk/s3-request-presigner", () => ({
+  getSignedUrl: async (client: any, command: any) => {
+    const bucket = (command?.input?.Bucket ?? "aws-serverless-file-management-tqd0105-2026") as string;
+    const key = (command?.input?.Key ?? "test.txt") as string;
+    return `https://${bucket}.s3.ap-southeast-1.amazonaws.com/${key}?X-Amz-Signature=mocked`;
+  },
+}));
 
 const s3Mock = mockClient(s3Client);
 

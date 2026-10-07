@@ -54,6 +54,9 @@ jobs:
       - name: Run Unit Tests (Vitest)
         env:
           AWS_REGION: ap-southeast-1
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_SESSION_TOKEN: test
           S3_BUCKET_NAME: aws-serverless-file-management-tqd0105-2026
           DYNAMODB_TABLE_NAME: file-metadata
           SQS_QUEUE_URL: https://sqs.ap-southeast-1.amazonaws.com/002037730665/file-processing-queue
