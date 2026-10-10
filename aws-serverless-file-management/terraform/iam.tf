@@ -80,6 +80,16 @@ resource "aws_iam_role_policy" "lambda_services_access" {
           "cloudwatch:ListMetrics"
         ]
         Resource = "*"
+      },
+      {
+        Sid    = "CloudFrontInvalidationAccess"
+        Effect = "Allow"
+        Action = [
+          "cloudfront:CreateInvalidation",
+          "cloudfront:GetInvalidation",
+          "cloudfront:ListInvalidations"
+        ]
+        Resource = "*"
       }
     ]
   })

@@ -26,6 +26,11 @@ import { s3Client } from "../src/config/s3.js";
 import { dynamoDocClient } from "../src/config/dynamodb.js";
 import { sqsClient } from "../src/config/sqs.js";
 import { cloudwatchClient } from "../src/config/cloudwatch.js";
+import {
+  CloudFrontClient,
+  CreateInvalidationCommand,
+} from "@aws-sdk/client-cloudfront";
+import { cloudFrontClient } from "../src/config/cloudfront.js";
 import { handler } from "../src/lambda/handler.js";
 
 vi.mock("@aws-sdk/s3-request-presigner", () => ({
@@ -40,6 +45,7 @@ const s3Mock = mockClient(s3Client);
 const dynamoMock = mockClient(dynamoDocClient);
 const sqsMock = mockClient(sqsClient);
 const cwMock = mockClient(cloudwatchClient);
+const cfMock = mockClient(CloudFrontClient);
 
 function createMockEvent(options: {
   method: string;
@@ -84,6 +90,7 @@ describe("Lambda Handler", () => {
     dynamoMock.reset();
     sqsMock.reset();
     cwMock.reset();
+    cfMock.reset();
     cwMock.on(PutMetricDataCommand).resolves({});
 
     dynamoMock.on(PutCommand).resolves({});
@@ -147,6 +154,68 @@ describe("Lambda Handler", () => {
       expect(data.metrics.approximateMessages).toBe(3);
       expect(data.metrics.approximateMessagesNotVisible).toBe(1);
       expect(data.metrics.dlqMessages).toBe(0);
+    });
+  });
+
+  describe("POST /cdn/invalidate", () => {
+    it("should return 400 when CLOUDFRONT_DISTRIBUTION_ID is not configured", async () => {
+      const origDistId = process.env.CLOUDFRONT_DISTRIBUTION_ID;
+      delete process.env.CLOUDFRONT_DISTRIBUTION_ID;
+
+      const event = createMockEvent({
+        method: "POST",
+        path: "/cdn/invalidate",
+      });
+
+      const res = await handler(event);
+      expect(res.statusCode).toBe(400);
+
+      process.env.CLOUDFRONT_DISTRIBUTION_ID = origDistId;
+    });
+
+    it("should successfully trigger invalidation and return 200", async () => {
+      const origDistId = process.env.CLOUDFRONT_DISTRIBUTION_ID;
+      process.env.CLOUDFRONT_DISTRIBUTION_ID = "DIST_TEST_123";
+      cfMock.on(CreateInvalidationCommand).resolves({
+        Invalidation: { Id: "INVAL_TEST_999", Status: "InProgress" },
+      });
+
+      const event = createMockEvent({
+        method: "POST",
+        path: "/cdn/invalidate",
+        body: JSON.stringify({ paths: ["/avatar-*"] }),
+      });
+
+      const res = await handler(event);
+      expect(res.statusCode).toBe(200);
+      const data = JSON.parse(res.body as string);
+      expect(data.success).toBe(true);
+      expect(data.invalidationId).toBe("INVAL_TEST_999");
+      expect(data.paths).toEqual(["/avatar-*"]);
+
+      process.env.CLOUDFRONT_DISTRIBUTION_ID = origDistId;
+    });
+
+    it("should handle single fileKey in request body", async () => {
+      const origDistId = process.env.CLOUDFRONT_DISTRIBUTION_ID;
+      process.env.CLOUDFRONT_DISTRIBUTION_ID = "DIST_TEST_123";
+      cfMock.on(CreateInvalidationCommand).resolves({
+        Invalidation: { Id: "INVAL_FILE_111", Status: "InProgress" },
+      });
+
+      const event = createMockEvent({
+        method: "POST",
+        path: "/cdn/invalidate",
+        body: JSON.stringify({ fileKey: "avatar-user1.jpg" }),
+      });
+
+      const res = await handler(event);
+      expect(res.statusCode).toBe(200);
+      const data = JSON.parse(res.body as string);
+      expect(data.invalidationId).toBe("INVAL_FILE_111");
+      expect(data.paths).toEqual(["/avatar-user1.jpg"]);
+
+      process.env.CLOUDFRONT_DISTRIBUTION_ID = origDistId;
     });
   });
 

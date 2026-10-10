@@ -91,9 +91,41 @@ export async function uploadFileToAwsS3(
     ? `${AWS_CLOUDFRONT_BASE}/${uniqueFileName}`
     : `${AWS_FILE_API_BASE}/files/${fileId}/view`;
 
+  // 5. Tự động gửi lệnh xóa cache CloudFront Edge ngầm để đảm bảo client nhận ảnh mới nhất
+  invalidateCloudFrontCache([`/${uniqueFileName}`]).catch((err) =>
+    console.warn("CloudFront background invalidation skipped:", err),
+  );
+
   return {
     fileId,
     fileName: uniqueFileName,
     viewUrl,
   };
+}
+
+/**
+ * Tự động gửi yêu cầu xóa cache CloudFront Edge khi ảnh/tệp tin được thay thế
+ */
+export async function invalidateCloudFrontCache(
+  paths: string[] = ["/*"],
+): Promise<{ success: boolean; invalidationId?: string }> {
+  try {
+    const res = await fetch(`${AWS_FILE_API_BASE}/cdn/invalidate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ paths }),
+    });
+
+    if (!res.ok) {
+      return { success: false };
+    }
+
+    const data = await res.json();
+    return { success: true, invalidationId: data.invalidationId };
+  } catch (err: any) {
+    console.warn("Could not invalidate CloudFront cache:", err.message);
+    return { success: false };
+  }
 }

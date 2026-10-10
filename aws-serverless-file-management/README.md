@@ -258,6 +258,31 @@ Khi giáo viên tải lên file Excel 10.000 học sinh:
 }
 ```
 
+### 9. Xóa cache CloudFront CDN (Invalidation)
+- **Method**: `POST /cdn/invalidate`
+- **Request Body**:
+```json
+{
+  "paths": ["/avatar-*"]
+}
+```
+hoặc truyền theo từng file cụ thể:
+```json
+{
+  "fileKey": "avatar-cmuectman0002o6csomypdu2p-1791612067385-a2.jpg"
+}
+```
+- **Response** (`200 OK`):
+```json
+{
+  "success": true,
+  "invalidationId": "ICL8ARYIPDW192PJY9AIRQIJP7",
+  "distributionId": "EO1NOKIOH6E7G",
+  "paths": ["/avatar-*"],
+  "timestamp": "2026-10-10T06:24:30.881Z"
+}
+```
+
 ### 9. Kích hoạt xử lý hàng đợi SQS Worker
 - **Method**: `POST /queue/process`
 - **Response** (`200 OK`):
@@ -328,9 +353,9 @@ Quy trình tự động hóa CI/CD được cấu hình tại [`.github/workflow
 ## 🧪 Kiểm thử tự động
 
 ### Unit Tests (Vitest)
-Dự án có **68 bài kiểm thử đơn vị** sử dụng `aws-sdk-client-mock`, bao phủ 100% các tình huống biên và logic nghiệp vụ:
+Dự án có **71 bài kiểm thử đơn vị** sử dụng `aws-sdk-client-mock`, bao phủ 100% các tình huống biên và logic nghiệp vụ:
 - `tests/s3.service.test.ts`: Kiểm tra upload, download, presigned URL, xóa file trên S3.
-- `tests/lambda.handler.test.ts`: Kiểm tra 23 kịch bản định tuyến HTTP API Gateway và xử lý mã lỗi.
+- `tests/lambda.handler.test.ts`: Kiểm tra 26 kịch bản định tuyến HTTP API Gateway (gồm cả CloudFront Invalidation) và xử lý lỗi.
 - `tests/dynamodb.service.test.ts`: Kiểm tra thao tác CRUD metadata trên DynamoDB.
 - `tests/sqs.service.test.ts`: Kiểm tra gửi/nhận tin nhắn hàng đợi và định tuyến DLQ.
 - `tests/cloudwatch.service.test.ts`: Kiểm tra structured logging và ghi nhận metrics.
@@ -343,7 +368,7 @@ pnpm test
 ```
 
 ### Bộ Scripts kiểm định thực tế trên AWS (Live Verification Scripts)
-Hệ thống cung cấp sẵn 11 script kiểm thử trực tiếp:
+Hệ thống cung cấp sẵn 12 script kiểm thử trực tiếp:
 ```bash
 pnpm tsx scripts/verify-s3.ts           # Bước 1: Kiểm thử Amazon S3
 pnpm tsx scripts/verify-lambda.ts       # Bước 2: Kiểm thử AWS Lambda
@@ -356,6 +381,7 @@ pnpm tsx scripts/verify-ci-cd.ts        # Bước 8: Kiểm định CI/CD GitHub
 pnpm tsx scripts/verify-full-system.ts  # Bước 9: Kiểm thử tích hợp toàn bộ hệ thống (E2E)
 pnpm tsx scripts/verify-ssm.ts          # Nâng cao: Kiểm định AWS SSM & KMS Secrets
 pnpm tsx scripts/verify-cloudfront.ts   # Nâng cao: Kiểm định AWS CloudFront CDN & OAC
+pnpm tsx scripts/verify-invalidation.ts # Nâng cao: Kiểm định CloudFront Cache Invalidation
 ```
 
 ---

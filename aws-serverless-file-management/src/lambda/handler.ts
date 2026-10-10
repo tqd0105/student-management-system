@@ -36,6 +36,7 @@ import {
   recordFileDeletedMetric,
   recordErrorMetric,
 } from "../services/cloudwatch.service.js";
+import { createInvalidation } from "../services/cloudfront.service.js";
 
 const CORS_HEADERS = {
   "Content-Type": "application/json",
@@ -88,6 +89,62 @@ export const handler = async (
         statusCode: 200,
         headers: CORS_HEADERS,
         body: JSON.stringify({ metrics }),
+      };
+    }
+
+    // 1b. POST /cdn/invalidate - Invalidate CloudFront CDN cache
+    if (method === "POST" && path === "/cdn/invalidate") {
+      const distId = process.env.CLOUDFRONT_DISTRIBUTION_ID;
+      if (!distId) {
+        return {
+          statusCode: 400,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({
+            message: "CLOUDFRONT_DISTRIBUTION_ID is not configured",
+          }),
+        };
+      }
+
+      let paths: string[] = ["/*"];
+      if (event.body) {
+        try {
+          const body = JSON.parse(
+            event.isBase64Encoded
+              ? Buffer.from(event.body, "base64").toString("utf8")
+              : event.body,
+          );
+          if (Array.isArray(body.paths) && body.paths.length > 0) {
+            paths = body.paths.map((p: string) =>
+              p.startsWith("/") ? p : `/${p}`,
+            );
+          } else if (body.fileKey && typeof body.fileKey === "string") {
+            const cleanKey = body.fileKey.startsWith("/")
+              ? body.fileKey
+              : `/${body.fileKey}`;
+            paths = [cleanKey];
+          }
+        } catch {
+          // Fall back to default ["/*"]
+        }
+      }
+
+      const invalidationId = await createInvalidation(distId, paths);
+      logStructured("INFO", "CloudFront cache invalidation created", {
+        distributionId: distId,
+        invalidationId,
+        paths,
+      });
+
+      return {
+        statusCode: 200,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({
+          success: true,
+          invalidationId,
+          distributionId: distId,
+          paths,
+          timestamp: new Date().toISOString(),
+        }),
       };
     }
 
@@ -551,6 +608,19 @@ export const handler = async (
         fileId: recordId,
         key: resolvedKey,
       });
+
+      // Purge CloudFront cache for deleted file
+      const distId = process.env.CLOUDFRONT_DISTRIBUTION_ID;
+      if (distId) {
+        try {
+          await createInvalidation(distId, [`/${resolvedKey}`]);
+        } catch (err: any) {
+          logStructured("WARN", "Failed to invalidate CloudFront cache for deleted file", {
+            error: err.message,
+            key: resolvedKey,
+          });
+        }
+      }
 
       return {
         statusCode: 204,
