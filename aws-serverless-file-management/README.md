@@ -74,7 +74,8 @@ flowchart TD
 | **Amazon SQS** | `file-processing-queue` | Hàng đợi tin nhắn xử lý bất đồng bộ (Asynchronous background processing) các tác vụ nặng như trích xuất dữ liệu, kiểm tra virus, index tài liệu. |
 | **Amazon SQS DLQ** | `file-processing-dlq` | Dead Letter Queue cô lập các tin nhắn bị lỗi sau 3 lần retry (`maxReceiveCount: 3`) để kỹ sư kiểm tra nguyên nhân gốc rễ. |
 | **CloudWatch** | Log Group `/aws/lambda/file-management-api` | Ghi log có cấu trúc chuẩn JSON (`logStructured`), Custom Metrics (`FilesUploaded`, `UploadSizeBytes`, `Errors`), và 2 Alarms cảnh báo lỗi tự động. |
-| **AWS IAM** | `file-management-lambda-role` | Tuân thủ nguyên tắc đặc quyền tối thiểu (Least Privilege Principle), chỉ cấp quyền vừa đủ trên S3 bucket, DynamoDB table, SQS queue và CloudWatch logs. |
+| **AWS SSM Parameter Store** | Path prefix `/sms/config/` & `/sms/secrets/` | Quản lý cấu hình tập trung và mã hóa bí mật môi trường bằng **AWS KMS** (SecureString), loại bỏ hoàn toàn rủi ro lộ file `.env`. |
+| **Amazon CloudFront** | `d2qspmj0hh92qq.cloudfront.net` | Mạng phân phối nội dung toàn cầu (CDN) kết hợp **Origin Access Control (OAC)**. Cache file tại Edge Locations (Hà Nội, TP.HCM), giảm 90% độ trễ và đóng kín S3 hoàn toàn trước truy cập trực tiếp. |
 
 ---
 
@@ -327,12 +328,14 @@ Quy trình tự động hóa CI/CD được cấu hình tại [`.github/workflow
 ## 🧪 Kiểm thử tự động
 
 ### Unit Tests (Vitest)
-Dự án có **50 bài kiểm thử đơn vị** sử dụng `aws-sdk-client-mock`, bao phủ 100% các tình huống biên và logic nghiệp vụ:
+Dự án có **68 bài kiểm thử đơn vị** sử dụng `aws-sdk-client-mock`, bao phủ 100% các tình huống biên và logic nghiệp vụ:
 - `tests/s3.service.test.ts`: Kiểm tra upload, download, presigned URL, xóa file trên S3.
-- `tests/lambda.handler.test.ts`: Kiểm tra 21 kịch bản định tuyến HTTP API Gateway và xử lý mã lỗi.
+- `tests/lambda.handler.test.ts`: Kiểm tra 23 kịch bản định tuyến HTTP API Gateway và xử lý mã lỗi.
 - `tests/dynamodb.service.test.ts`: Kiểm tra thao tác CRUD metadata trên DynamoDB.
 - `tests/sqs.service.test.ts`: Kiểm tra gửi/nhận tin nhắn hàng đợi và định tuyến DLQ.
 - `tests/cloudwatch.service.test.ts`: Kiểm tra structured logging và ghi nhận metrics.
+- `tests/ssm.service.test.ts`: Kiểm tra lưu/đọc tham số mã hóa KMS và phân cấp thư mục.
+- `tests/cloudfront.service.test.ts`: Kiểm tra tạo URL CDN, OAC, Distribution và xóa cache.
 
 Chạy test cục bộ:
 ```bash
@@ -340,7 +343,7 @@ pnpm test
 ```
 
 ### Bộ Scripts kiểm định thực tế trên AWS (Live Verification Scripts)
-Hệ thống cung cấp sẵn 8 script kiểm thử trực tiếp:
+Hệ thống cung cấp sẵn 11 script kiểm thử trực tiếp:
 ```bash
 pnpm tsx scripts/verify-s3.ts           # Bước 1: Kiểm thử Amazon S3
 pnpm tsx scripts/verify-lambda.ts       # Bước 2: Kiểm thử AWS Lambda
@@ -351,6 +354,8 @@ pnpm tsx scripts/verify-cloudwatch.ts   # Bước 6: Kiểm thử CloudWatch
 pnpm tsx scripts/verify-terraform.ts    # Bước 7: Kiểm định Terraform
 pnpm tsx scripts/verify-ci-cd.ts        # Bước 8: Kiểm định CI/CD GitHub Actions
 pnpm tsx scripts/verify-full-system.ts  # Bước 9: Kiểm thử tích hợp toàn bộ hệ thống (E2E)
+pnpm tsx scripts/verify-ssm.ts          # Nâng cao: Kiểm định AWS SSM & KMS Secrets
+pnpm tsx scripts/verify-cloudfront.ts   # Nâng cao: Kiểm định AWS CloudFront CDN & OAC
 ```
 
 ---

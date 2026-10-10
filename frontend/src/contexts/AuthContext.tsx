@@ -14,6 +14,7 @@ interface User {
   email: string;
   name: string;
   role: 'ADMIN' | 'TEACHER' | 'STUDENT';
+  avatar?: string | null;
   studentProfile?: {
     studentCode: string;
     phone?: string;
@@ -40,6 +41,7 @@ interface AuthContextType {
   }) => Promise<void>;
   logout: () => void;
   clearError: () => void;
+  updateProfile: (data: { name?: string; avatar?: string }) => Promise<void>;
   isAuthenticated: boolean;
   isTeacher: boolean;
   isStudent: boolean;
@@ -132,6 +134,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
   };
 
+  const updateProfile = async (data: { name?: string; avatar?: string }) => {
+    try {
+      setError(null);
+      const res = await ApiService.updateProfile(data);
+      if (res.success && res.data?.user) {
+        setUser(res.data.user);
+        localStorage.setItem('user', JSON.stringify(res.data.user));
+      } else {
+        throw new Error(res.message || 'Cập nhật hồ sơ thất bại');
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Cập nhật hồ sơ thất bại';
+      setError(errorMessage);
+      throw err;
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -140,6 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     register,
     logout,
     clearError,
+    updateProfile,
     isAuthenticated: !!user,
     isTeacher: user?.role === 'TEACHER',
     isStudent: user?.role === 'STUDENT',

@@ -61,6 +61,7 @@ jobs:
           DYNAMODB_TABLE_NAME: file-metadata
           SQS_QUEUE_URL: https://sqs.ap-southeast-1.amazonaws.com/002037730665/file-processing-queue
           SQS_DLQ_URL: https://sqs.ap-southeast-1.amazonaws.com/002037730665/file-processing-dlq
+          CLOUDFRONT_DOMAIN: d2qspmj0hh92qq.cloudfront.net
         run: pnpm test
 
       - name: Setup Terraform CLI

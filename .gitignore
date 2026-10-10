@@ -56,3 +56,7 @@ exports/
 # SSH and AWS Keys
 *.pem
 *.key
+
+# Root temporary MCP packages
+/package.json
+/package-lock.json

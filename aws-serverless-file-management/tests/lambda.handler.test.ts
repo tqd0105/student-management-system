@@ -423,6 +423,37 @@ describe("Lambda Handler", () => {
     });
   });
 
+  describe("GET /files/{keyOrId}/view", () => {
+    it("should return 302 redirect with Location header when file exists", async () => {
+      s3Mock.on(HeadObjectCommand).resolves({ ContentLength: 256 });
+
+      const event = createMockEvent({
+        method: "GET",
+        path: "/files/avatar.png/view",
+      });
+
+      const response = await handler(event);
+      expect(response.statusCode).toBe(302);
+      expect(response.headers?.Location).toBeDefined();
+      expect(response.headers?.["Cache-Control"]).toBe("public, max-age=300");
+    });
+
+    it("should return 404 when file does not exist", async () => {
+      const notFoundError = new Error("Not Found");
+      notFoundError.name = "NotFound";
+      (notFoundError as any).$metadata = { httpStatusCode: 404 };
+      s3Mock.on(HeadObjectCommand).rejects(notFoundError);
+
+      const event = createMockEvent({
+        method: "GET",
+        path: "/files/notfound.png/view",
+      });
+
+      const response = await handler(event);
+      expect(response.statusCode).toBe(404);
+    });
+  });
+
   describe("GET /files/{key}", () => {
     it("should return raw file content with attachment header", async () => {
       s3Mock.on(GetObjectCommand).resolves({

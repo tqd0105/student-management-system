@@ -27,3 +27,13 @@ output "lambda_function_name" {
   description = "Name of the deployed Lambda function"
   value       = aws_lambda_function.api_handler.function_name
 }
+
+output "cloudfront_distribution_id" {
+  description = "ID of the CloudFront distribution"
+  value       = aws_cloudfront_distribution.file_cdn.id
+}
+
+output "cloudfront_domain_name" {
+  description = "Domain name of the CloudFront distribution for CDN file access"
+  value       = aws_cloudfront_distribution.file_cdn.domain_name
+}

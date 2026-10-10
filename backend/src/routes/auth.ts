@@ -60,6 +60,7 @@ router.post('/resend-verification', AuthController.resendVerification);
  * @access  Private
  */
 router.get('/profile', requireAuth(), AuthController.getProfile);
+router.put('/profile', requireAuth(), AuthController.updateProfile);
 
 /**
  * @route   POST /api/auth/logout

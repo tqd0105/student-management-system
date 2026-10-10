@@ -174,6 +174,15 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  static async updateProfile(data: { name?: string; avatar?: string }) {
+    const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+      method: "PUT",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse(response);
+  }
+
   static loginWithGoogle() {
     window.location.href = `${API_BASE_URL}/api/auth/google`;
   }

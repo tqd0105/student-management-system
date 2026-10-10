@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut, Trash2 } from 'lucide-react';
 import Footer from './Footer';
 import DTechContactModal from './DTechContactModal';
+import UserProfileModal from '@/components/profile/UserProfileModal';
 import { API_BASE_URL } from '@/config/api';
 
 interface DashboardLayoutProps {
@@ -22,6 +23,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { user, logout, isAuthenticated, loading } = useAuth();
   const router = useRouter();
   const [isDTechModalOpen, setIsDTechModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   React.useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -141,35 +143,53 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               </div>
             </div>
 
-            {/* User Menu */}
-            <div className="flex  items-center space-x-4">
-              {/* User Info */}
-              <div className="text-left hidden md:block">
-                <p className="text-sm font-bold text-center text-gray-900 mb-0.5">{user?.name || user?.email || 'User'}</p>
-                <div className="text-xs text-gray-500 text-center">
-                  {renderRoleWithIcon(user?.role)}
+            {/* User Menu & Profile */}
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              {/* Profile Button with Avatar (Opens Profile Modal) */}
+              <button
+                type="button"
+                onClick={() => setIsProfileModalOpen(true)}
+                className="flex items-center space-x-2.5 p-1.5 rounded-xl hover:bg-gray-100/90 active:bg-gray-200/80 transition-all cursor-pointer group text-left"
+                title="Hồ sơ cá nhân & Đổi avatar"
+              >
+                {/* Avatar with S3 Image or Gradient Initials */}
+                <div className="relative shrink-0">
+                  <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-indigo-500/20 group-hover:ring-indigo-600 transition-all shadow-xs bg-gray-100 flex items-center justify-center">
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt={user.name || "Avatar"}
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center text-sm font-bold">
+                        {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+
+                {/* User Info (Desktop) */}
+                <div className="text-left hidden md:block min-w-0 max-w-[150px]">
+                  <p className="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors truncate mb-0.5">
+                    {user?.name || user?.email || 'User'}
+                  </p>
+                  <div className="text-xs text-gray-500">
+                    {renderRoleWithIcon(user?.role)}
+                  </div>
+                </div>
+              </button>
 
               {/* Logout Button */}
-              {/* <button
-                onClick={handleDeleteAccount}
-                className="bg-red-600 text-white md:p-3 lg:px-4 lg:py-2 rounded-full shadow-md hover:bg-red-700 flex items-center space-x-0 lg:space-x-2 hidden md:flex cursor-pointer"
-                title="Delete Account"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span className='hidden lg:block'>Delete</span>
-              </button> */}
               <button
                 onClick={handleLogout}
-                className="bg-gray-600 text-white p-3 md:p-3 lg:px-4 lg:py-2 rounded-full shadow-md hover:bg-gray-700 flex items-center space-x-0 lg:space-x-2 cursor-pointer"
+                className="bg-gray-600 text-white p-2.5 md:p-3 lg:px-4 lg:py-2 rounded-full shadow-md hover:bg-gray-700 flex items-center space-x-0 lg:space-x-2 cursor-pointer transition-colors shrink-0"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4" />
-                <span className='hidden lg:block'>Logout</span>
+                <span className="hidden lg:block text-xs font-semibold">Logout</span>
               </button>
-              
-              
             </div>
           </div>
         </div>
@@ -184,6 +204,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
       {/* Footer */}
       <Footer onOpenContactModal={() => setIsDTechModalOpen(true)} />
+
+      {/* User Profile Modal with AWS S3 Avatar Integration */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
 
       {/* DTECH Contact Modal */}
       <DTechContactModal

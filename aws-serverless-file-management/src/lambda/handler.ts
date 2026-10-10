@@ -429,6 +429,48 @@ export const handler = async (
       };
     }
 
+    // 7b. GET /files/{keyOrId}/view - Redirect (302) to S3 presigned URL for inline viewing
+    const viewMatch = path.match(/^\/files\/(.+)\/view$/);
+    if (method === "GET" && viewMatch && viewMatch[1]) {
+      const keyOrId = decodeURIComponent(viewMatch[1]);
+      let resolvedKey = keyOrId;
+      try {
+        const record = await getFileMetadataById(keyOrId);
+        if (record) {
+          resolvedKey = record.s3Key;
+        }
+      } catch (err) {
+        // Fall back to keyOrId
+      }
+
+      const exists = await checkFileExists(resolvedKey);
+      if (!exists) {
+        return {
+          statusCode: 404,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ message: "File not found" }),
+        };
+      }
+
+      let viewUrl = "";
+      const cloudFrontDomain = process.env.CLOUDFRONT_DOMAIN;
+      if (cloudFrontDomain) {
+        viewUrl = `https://${cloudFrontDomain}/${resolvedKey}`;
+      } else {
+        viewUrl = await getPresignedDownloadUrl(resolvedKey, 604800);
+      }
+
+      return {
+        statusCode: 302,
+        headers: {
+          ...CORS_HEADERS,
+          Location: viewUrl,
+          "Cache-Control": "public, max-age=300",
+        },
+        body: "",
+      };
+    }
+
     // 8. GET /files/{key} - Download file content directly
     const fileMatch = path.match(/^\/files\/(.+)$/);
     const keyOrId =

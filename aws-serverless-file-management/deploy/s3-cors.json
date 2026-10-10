@@ -1,0 +1,17 @@
+{
+  "CORSRules": [
+    {
+      "AllowedHeaders": ["*"],
+      "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+      "AllowedOrigins": [
+        "*",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "https://sms-fe-lovat.vercel.app",
+        "https://47.129.226.97.sslip.io"
+      ],
+      "ExposeHeaders": ["ETag"],
+      "MaxAgeSeconds": 3600
+    }
+  ]
+}

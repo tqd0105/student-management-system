@@ -17,8 +17,15 @@ export const metadata: Metadata = {
   description: "A modern student management portal featuring QR code-based attendance, class management, and academic progress tracking.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/images/favicon.ico",
-    apple: "/images/apple-touch-icon.png",
+    icon: [
+      { url: "/images/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/images/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/images/favicon.ico" },
+      { url: "/images/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [
+      { url: "/images/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
   },
   
   // Simple Open Graph for link preview

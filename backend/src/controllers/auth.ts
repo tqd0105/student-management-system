@@ -225,6 +225,7 @@ class AuthController {
             email: user.email,
             name: user.name,
             role: user.role,
+            avatar: user.avatar,
             isVerified: user.isVerified,
             studentProfile,
           }
@@ -455,6 +456,7 @@ class AuthController {
           email: true,
           name: true,
           role: true,
+          avatar: true,
           isVerified: true,
           createdAt: true,
           updatedAt: true,
@@ -571,6 +573,61 @@ class AuthController {
       success: true,
       message: 'Logged out successfully'
     });
+  }
+
+  /**
+   * Cập nhật thông tin profile của user hiện tại (hỗ trợ đổi tên và avatar S3)
+   */
+  static async updateProfile(req: Request, res: Response) {
+    try {
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
+
+      const { name, avatar } = req.body;
+      const updateData: { name?: string; avatar?: string } = {};
+
+      if (typeof name === 'string' && name.trim()) {
+        updateData.name = name.trim();
+      }
+
+      if (typeof avatar === 'string') {
+        updateData.avatar = avatar.trim();
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: updateData,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          avatar: true,
+          isVerified: true,
+          createdAt: true,
+          updatedAt: true,
+          studentProfile: true,
+        }
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: { user: updatedUser }
+      });
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
   }
 }
 
