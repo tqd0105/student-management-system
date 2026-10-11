@@ -28,6 +28,8 @@ import {
   Play,
   Image as ImageIcon,
   Info,
+  Cloud,
+  Download,
 } from 'lucide-react';
 import { API_BASE_URL } from '@/config/api';
 
@@ -40,8 +42,21 @@ export interface Material {
   url: string;
   type: MaterialType;
   order: number;
+  fileKey?: string | null;
+  fileSize?: number | null;
   createdAt: string;
 }
+
+export const formatFileSize = (bytes?: number | null): string => {
+  if (!bytes || bytes <= 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+export const isOfficeDoc = (url: string): boolean => {
+  return /\.(docx|doc|xlsx|xls|pptx|ppt)(\?.*)?$/i.test(url);
+};
 
 const TYPE_META: Record<MaterialType, { label: string; icon: React.ElementType; pill: string; iconColor: string }> = {
   video:    { label: 'Video',    icon: Video,        pill: 'bg-red-50 text-red-700 border-red-200',       iconColor: 'text-red-600 bg-red-50' },
@@ -106,7 +121,7 @@ export const isPdfUrl = (url: string): boolean => {
   return /\.pdf(\?.*)?$/i.test(url);
 };
 
-type PreviewKind = 'youtube' | 'drive' | 'googledoc' | 'image' | 'pdf' | 'github' | 'web';
+type PreviewKind = 'youtube' | 'drive' | 'googledoc' | 'image' | 'pdf' | 'office' | 'github' | 'web';
 
 export const getPreviewInfo = (url: string, type: MaterialType): { kind: PreviewKind; embedUrl?: string; thumbnailUrl?: string } => {
   const destUrl = ensureUrl(url);
@@ -147,6 +162,13 @@ export const getPreviewInfo = (url: string, type: MaterialType): { kind: Preview
   if (isPdfUrl(destUrl)) {
     return {
       kind: 'pdf',
+      embedUrl: destUrl,
+    };
+  }
+
+  if (isOfficeDoc(destUrl)) {
+    return {
+      kind: 'office',
       embedUrl: `https://docs.google.com/viewer?url=${encodeURIComponent(destUrl)}&embedded=true`,
     };
   }
@@ -492,6 +514,42 @@ const StudentMaterialsModal: React.FC<StudentMaterialsModalProps> = ({ classId, 
                     className="w-full h-full"
                   />
                 </div>
+              ) : previewInfo.kind === 'office' ? (
+                <div className="w-full max-w-md my-auto p-6 sm:p-8 text-center bg-white rounded-2xl border border-gray-200 shadow-sm space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto shadow-xs border border-blue-100">
+                    <FileText className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-base">{activePreview.title}</h4>
+                    {activePreview.fileSize && (
+                      <p className="text-xs text-blue-600 font-semibold mt-1">Dung lượng: {formatFileSize(activePreview.fileSize)}</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    Tài liệu Office (Word / Excel / PowerPoint) được lưu trữ an toàn trên AWS S3 và phát qua CloudFront CDN. Bạn có thể tải trực tiếp về máy tính hoặc xem trực tuyến.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                    <a
+                      href={activeDestinationUrl}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Tải về máy tính</span>
+                    </a>
+                    <a
+                      href={previewInfo.embedUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>Xem online</span>
+                    </a>
+                  </div>
+                </div>
               ) : previewInfo.kind === 'github' ? (
                 <div className="w-full max-w-md my-auto p-6 sm:p-8 text-center bg-white rounded-2xl border border-gray-200 shadow-sm space-y-4">
                   <div className="w-16 h-16 rounded-2xl bg-gray-900 text-white flex items-center justify-center mx-auto shadow-md">
@@ -703,6 +761,17 @@ const StudentMaterialsModal: React.FC<StudentMaterialsModalProps> = ({ classId, 
                                 <Icon className="w-2.5 h-2.5" />
                                 {meta.label}
                               </span>
+                              {mat.fileSize && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-lg text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  {formatFileSize(mat.fileSize)}
+                                </span>
+                              )}
+                              {mat.fileKey && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200" title="Lưu trữ S3 & Phát qua CloudFront CDN">
+                                  <Cloud className="w-2.5 h-2.5" />
+                                  <span>CloudFront CDN</span>
+                                </span>
+                              )}
                               <span className="text-[11px] text-gray-400 font-mono truncate max-w-[200px]">
                                 {domain}
                               </span>
@@ -720,6 +789,19 @@ const StudentMaterialsModal: React.FC<StudentMaterialsModalProps> = ({ classId, 
                             <Eye className="w-3.5 h-3.5" />
                             <span>Xem trước</span>
                           </button>
+                          {mat.fileKey && (
+                            <a
+                              href={destinationUrl}
+                              download
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-colors cursor-pointer border border-emerald-200"
+                              title="Tải tệp về máy tính"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Tải về</span>
+                            </a>
+                          )}
                           <a
                             href={destinationUrl}
                             target="_blank"
