@@ -643,7 +643,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
         {/* Khung tổng kết chỉ số thành tích (Academic Summary KPI) */}
         <div className="grid grid-cols-3 gap-2 mb-3 text-center text-xs">
           <div className="border border-gray-400 rounded p-1.5 bg-gray-50/60">
-            <span className="text-[10px] text-gray-600 uppercase block font-semibold">ĐTB Tích Lũy (Hệ 10)</span>
+            <span className="text-[10px] text-gray-600 uppercase block font-semibold">Điểm trung bình</span>
             <span className="text-sm font-black text-gray-950">{overallAvg !== null ? `${overallAvg} / 10` : '—'}</span>
           </div>
           <div className="border border-gray-400 rounded p-1.5 bg-gray-50/60">
@@ -665,7 +665,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
                 <th className="p-1.5">Học Phần / Môn Học</th>
                 <th className="p-1.5">Giảng Viên Phụ Trách</th>
                 <th className="p-1.5 text-center w-24">Tiến Độ Bài</th>
-                <th className="p-1.5 text-center w-24">ĐTB (Hệ 10)</th>
+                <th className="p-1.5 text-center w-24">ĐTB</th>
                 <th className="p-1.5 text-center w-24">Xếp Loại</th>
                 <th className="p-1.5 text-center w-24">Kết Quả</th>
               </tr>
