@@ -2554,30 +2554,30 @@ export default function Gradebook({ classId, className: initialClassName }: Grad
             {/* 2. Tiêu đề Bảng Điểm */}
             <div className="text-center my-2">
               <h1 className="text-base font-black uppercase tracking-wide text-gray-950">
-                BẢNG TỔNG HỢP ĐIỂM ĐÁNH GIÁ & KẾT QUẢ HỌC TẬP LỚP HỌC PHẦN
+                BẢNG ĐIỂM TỔNG HỢP CỦA SINH VIÊN - LỚP HỌC PHẦN {currentClassName.toUpperCase()}
               </h1>
               <p className="text-[10px] font-medium text-gray-600 italic">
-                OFFICIAL CLASS ACADEMIC GRADEBOOK & EVALUATION RECORD
+                DANH SÁCH ĐIỂM ĐÁNH GIÁ & KẾT QUẢ HỌC TẬP CỦA TẬP THỂ SINH VIÊN
               </p>
             </div>
 
-            {/* 3. Thông tin lớp học phần */}
+            {/* 3. Thông tin lớp học phần & Giảng viên chấm điểm */}
             <div className="border border-gray-400 rounded p-2 bg-gray-50/30 mb-2 text-xs grid grid-cols-4 gap-x-3 gap-y-1">
               <div>
                 <span className="text-gray-600 font-medium">Lớp học phần:</span>{' '}
                 <strong className="text-gray-950 font-bold uppercase">{currentClassName}</strong>
               </div>
               <div>
-                <span className="text-gray-600 font-medium">Giảng viên:</span>{' '}
+                <span className="text-gray-600 font-medium">Sĩ số sinh viên:</span>{' '}
+                <strong className="text-gray-950 font-bold">{students.length} sinh viên</strong>
+              </div>
+              <div>
+                <span className="text-gray-600 font-medium">Giảng viên chấm điểm:</span>{' '}
                 <strong className="text-gray-950 font-bold">{currentUser?.name || 'Giảng viên phụ trách'}</strong>
               </div>
               <div>
                 <span className="text-gray-600 font-medium">Niên khóa:</span>{' '}
                 <span className="text-gray-900 font-semibold">Năm học 2026 - 2027</span>
-              </div>
-              <div>
-                <span className="text-gray-600 font-medium">Hệ đào tạo:</span>{' '}
-                <span className="text-gray-900 font-semibold">Chính thức</span>
               </div>
             </div>
 
