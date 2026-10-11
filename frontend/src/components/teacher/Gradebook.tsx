@@ -8,7 +8,7 @@ import {
   Calendar, Search, Download, Users, Award, BookOpen, AlertCircle,
   ExternalLink, FileCheck, Link2, Clock, ChevronLeft, ChevronRight,
   AlertTriangle, FileText, Sparkles, CheckCircle2, Pencil, RefreshCw,
-  Maximize2, Minimize2, Filter, LayoutList, Table as TableIcon
+  Maximize2, Minimize2, Filter, LayoutList, Table as TableIcon, Printer
 } from 'lucide-react';
 
 interface GradebookProps {
@@ -792,8 +792,22 @@ export default function Gradebook({ classId }: GradebookProps) {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+      {/* ── CSS PRINT RULES (ĐẢM BẢO BẢNG ĐIỂM GIÁO VIÊN IN KHỔ NGANG LANDSCAPE KHÔNG BỊ TRÀN) ── */}
+      <style>{`
+        @media print {
+          @page {
+            size: A4 landscape;
+            margin: 8mm 10mm;
+          }
+          /* Ẩn các thanh công cụ, nút thao tác khi in */
+          .gradebook-toolbar-print-hide {
+            display: none !important;
+          }
+        }
+      `}</style>
+
       {/* Primary Toolbar with Mode Switcher */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap justify-between items-center gap-3">
+      <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap justify-between items-center gap-3 print:hidden gradebook-toolbar-print-hide">
         
         {/* Left: Mode Segmented Switch */}
         <div className="flex items-center gap-3">
@@ -879,7 +893,16 @@ export default function Gradebook({ classId }: GradebookProps) {
                 title="Xuất bảng điểm ra file CSV Excel"
               >
                 <Download size={14} /> 
-              <span className='hidden sm:block'>Xuất CSV</span>
+                <span className='hidden sm:block'>Xuất CSV</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-100 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+                title="In bảng điểm toàn lớp khổ ngang A4 (Landscape)"
+              >
+                <Printer size={14} /> 
+                <span className='hidden sm:block'>In bảng điểm</span>
               </button>
               <button 
                 onClick={() => setIsAddingAssignment(true)}
@@ -894,7 +917,7 @@ export default function Gradebook({ classId }: GradebookProps) {
 
       {/* Edit Mode Notice Banner */}
       {isEditMode && (
-        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800 flex items-center justify-between gap-2">
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800 flex items-center justify-between gap-2 print:hidden">
           <div className="flex items-center gap-2">
             <AlertCircle size={15} className="text-amber-600 shrink-0" />
             <span>
@@ -934,7 +957,7 @@ export default function Gradebook({ classId }: GradebookProps) {
           </div>
 
           {/* Search box */}
-          <div className="relative min-w-[220px]">
+          <div className="relative min-w-[220px] print:hidden">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input 
               type="text"
@@ -1279,7 +1302,7 @@ export default function Gradebook({ classId }: GradebookProps) {
       )}
 
       {/* ─── Column Management Toolbar for Large Gradebooks ─── */}
-      <div className="px-3 py-2 bg-slate-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2 text-xs select-none">
+      <div className="px-3 py-2 bg-slate-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2 text-xs select-none print:hidden">
         {/* Left: Quick Filter Chips & Column Search */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-gray-500 font-semibold flex items-center gap-1 mr-1 text-[11px]">
