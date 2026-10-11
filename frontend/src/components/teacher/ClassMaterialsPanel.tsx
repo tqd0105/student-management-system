@@ -7,6 +7,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import {
   BookOpen,
   Plus,
@@ -83,6 +84,11 @@ interface MaterialFormProps {
 }
 
 function MaterialForm({ classId, token, initialData, onSuccess, onClose }: MaterialFormProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const isEdit = !!initialData;
   const [formMode, setFormMode] = useState<'upload' | 'link'>(
     isEdit ? (initialData.fileKey ? 'upload' : 'link') : 'upload'
@@ -206,24 +212,32 @@ function MaterialForm({ classId, token, initialData, onSuccess, onClose }: Mater
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-lg bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4">
+      {/* Backdrop */}
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
+      
+      {/* Modal Dialog Card */}
+      <div className="relative z-10 w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/50">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/70 shrink-0">
           <div className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-blue-600" />
             <h3 className="font-semibold text-gray-900 text-sm">
               {isEdit ? 'Chỉnh sửa tài liệu' : 'Thêm tài liệu học tập'}
             </h3>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-200/60 text-gray-500 cursor-pointer transition-colors">
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-gray-200/60 text-gray-500 cursor-pointer transition-colors"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        {/* Form Body - scrollable */}
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
           {error && (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -418,7 +432,7 @@ function MaterialForm({ classId, token, initialData, onSuccess, onClose }: Mater
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 pt-2 border-t border-gray-100">
+          <div className="flex gap-2 pt-2 border-t border-gray-100 shrink-0 sticky bottom-0 bg-white">
             <button
               type="button"
               onClick={onClose}
@@ -449,6 +463,9 @@ function MaterialForm({ classId, token, initialData, onSuccess, onClose }: Mater
       </div>
     </div>
   );
+
+  if (!mounted || typeof document === 'undefined') return null;
+  return ReactDOM.createPortal(modalContent, document.body);
 }
 
 // ── Main Panel ──────────────────────────────────────────────────────────────
