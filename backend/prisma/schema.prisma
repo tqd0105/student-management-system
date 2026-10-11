@@ -214,6 +214,8 @@ model Material {
   url         String
   type        String       @default("link")
   order       Int          @default(0)
+  fileKey     String?
+  fileSize    Int?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   assignments Assignment[]
