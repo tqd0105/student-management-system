@@ -1,100 +1,117 @@
 /**
  * Rate Limiting Configuration (TypeScript)
- * Student Management System - LightBrave Team
+ * Student Management System - LightBrave / DTECH Team
+ * 
+ * Tối ưu hóa giới hạn request:
+ * - Phân tách rõ ràng giữa endpoint nhạy cảm (Auth) và API nghiệp vụ thông thường.
+ * - Môi trường development có ngưỡng rất cao (10,000 req) để dev/test không bị nghẽn.
+ * - Môi trường production hỗ trợ SPA với giới hạn hào phóng (mặc định 2,000 req/15 phút).
+ * - Tự động bỏ qua request CORS preflight (OPTIONS) và Health check.
  */
 
 import rateLimit from 'express-rate-limit';
+import { Request, Response } from 'express';
 
 interface RateLimitResponse {
   success: boolean;
   message: string;
   error: string;
   retryAfter?: string;
+  timestamp?: string;
 }
 
-// General API rate limiting
+const isDev = process.env.NODE_ENV === 'development';
+
+// 1. General API rate limiting (Áp dụng cho các route /api thông thường)
+const generalWindowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10); // 15 phút
+const generalMaxRequests = parseInt(
+  process.env.RATE_LIMIT_MAX_REQUESTS || (isDev ? '10000' : '2000'),
+  10
+);
+
 export const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: generalWindowMs,
+  max: generalMaxRequests,
   validate: { trustProxy: false },
-  message: {
-    success: false,
-    message: 'Too many requests from this IP, please try again later.',
-    error: 'RATE_LIMIT_EXCEEDED',
-    timestamp: new Date().toISOString()
-  } as RateLimitResponse,
-  standardHeaders: true,
+  standardHeaders: true, // Trả về headers RateLimit-*
   legacyHeaders: false,
-  handler: (req, res) => {
+  skip: (req: Request) => {
+    // Bỏ qua preflight CORS và health check
+    if (req.method === 'OPTIONS') return true;
+    if (req.path === '/health' || req.path === '/health/quick') return true;
+    return false;
+  },
+  handler: (req: Request, res: Response) => {
     const response: RateLimitResponse = {
       success: false,
-      message: 'Rate limit exceeded. Please slow down your requests.',
-      error: 'GENERAL_RATE_LIMIT_EXCEEDED',
-      retryAfter: '15 minutes'
+      message: 'Hệ thống nhận quá nhiều yêu cầu từ IP của bạn. Vui lòng đợi trong giây lát rồi thử lại.',
+      error: 'Too many requests from this IP, please try again later.',
+      retryAfter: `${Math.ceil(generalWindowMs / 60000)} phút`,
+      timestamp: new Date().toISOString()
     };
     res.status(429).json(response);
   }
 });
 
-// Auth endpoints rate limiting (stricter)
+// 2. Auth endpoints rate limiting (Chống brute-force login/register nhưng không khóa nhầm người dùng)
+const authWindowMs = 15 * 60 * 1000; // 15 phút
+const authMaxRequests = isDev ? 100 : 30; // 30 lần thử trong 15 phút ở production
+
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // limit each IP to 10 auth requests per windowMs
+  windowMs: authWindowMs,
+  max: authMaxRequests,
   validate: { trustProxy: false },
-  message: {
-    success: false,
-    message: 'Too many authentication attempts, please try again later.',
-    error: 'AUTH_RATE_LIMIT_EXCEEDED',
-    timestamp: new Date().toISOString()
-  } as RateLimitResponse,
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req, res) => {
+  skip: (req: Request) => req.method === 'OPTIONS',
+  handler: (req: Request, res: Response) => {
     const response: RateLimitResponse = {
       success: false,
-      message: 'Too many login attempts. Account temporarily locked for security.',
-      error: 'AUTH_RATE_LIMIT_EXCEEDED',
-      retryAfter: '15 minutes'
+      message: 'Quá nhiều lần thử xác thực. Vui lòng thử lại sau 15 phút vì lý do bảo mật.',
+      error: 'Too many authentication attempts, please try again later.',
+      retryAfter: '15 phút',
+      timestamp: new Date().toISOString()
     };
     res.status(429).json(response);
   }
 });
 
-// QR Check-in rate limiting
+// 3. QR Check-in rate limiting (Chống spam quét mã dồn dập)
 export const checkInLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 5, // limit each IP to 5 check-in attempts per minute
+  windowMs: 1 * 60 * 1000, // 1 phút
+  max: isDev ? 50 : 15, // 15 lần/phút ở prod
   validate: { trustProxy: false },
-  message: {
-    success: false,
-    message: 'Too many check-in attempts, please wait before trying again.',
-    error: 'CHECKIN_RATE_LIMIT_EXCEEDED',
-    timestamp: new Date().toISOString()
-  } as RateLimitResponse,
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req, res) => {
+  skip: (req: Request) => req.method === 'OPTIONS',
+  handler: (req: Request, res: Response) => {
     const response: RateLimitResponse = {
       success: false,
-      message: 'Check-in rate limit exceeded. Please wait before scanning again.',
+      message: 'Thao tác điểm danh quá nhanh. Vui lòng đợi 1 phút trước khi quét lại.',
       error: 'CHECKIN_RATE_LIMIT_EXCEEDED',
-      retryAfter: '1 minute'
+      retryAfter: '1 phút',
+      timestamp: new Date().toISOString()
     };
     res.status(429).json(response);
   }
 });
 
-// Admin panel rate limiting (moderate)
+// 4. Admin panel rate limiting
 export const adminLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 50, // limit admin operations
+  windowMs: 5 * 60 * 1000, // 5 phút
+  max: isDev ? 2000 : 500, // 500 requests/5 phút ở prod
   validate: { trustProxy: false },
-  message: {
-    success: false,
-    message: 'Admin rate limit exceeded.',
-    error: 'ADMIN_RATE_LIMIT_EXCEEDED',
-    timestamp: new Date().toISOString()
-  } as RateLimitResponse,
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: (req: Request) => req.method === 'OPTIONS',
+  handler: (req: Request, res: Response) => {
+    const response: RateLimitResponse = {
+      success: false,
+      message: 'Quá nhiều yêu cầu trong trang quản trị. Vui lòng thử lại sau ít phút.',
+      error: 'ADMIN_RATE_LIMIT_EXCEEDED',
+      retryAfter: '5 phút',
+      timestamp: new Date().toISOString()
+    };
+    res.status(429).json(response);
+  }
 });

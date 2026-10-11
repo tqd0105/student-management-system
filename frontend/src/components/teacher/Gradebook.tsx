@@ -251,15 +251,28 @@ export default function Gradebook({ classId }: GradebookProps) {
     fetchData();
   }, [fetchData]);
 
-  // Tự động đồng bộ khi quay lại tab hoặc khi có sự kiện nộp bài/chấm điểm
+  // Ref lưu mốc thời gian lần cuối tự động làm mới khi focus tab
+  const lastFocusFetchRef = React.useRef<number>(0);
+
+  // Tự động đồng bộ khi quay lại tab (throttled 30s) hoặc khi có sự kiện nộp bài/chấm điểm từ bên ngoài
   useEffect(() => {
-    const handleSync = () => {
+    const handleSync = (e: Event) => {
+      const customEv = e as CustomEvent;
+      // Bỏ qua nếu sự kiện do chính Gradebook phát ra để tránh vòng lặp fetch thừa thãi
+      if (customEv?.detail?.source === 'gradebook') {
+        return;
+      }
       if (!isEditMode || unsavedCount === 0) {
         fetchData(true);
       }
     };
+
     const handleFocus = () => {
-      if (!isEditMode || unsavedCount === 0) {
+      if (isEditMode && unsavedCount > 0) return;
+      const now = Date.now();
+      const THROTTLE_FOCUS_MS = 30_000; // Throttle 30 giây giữa các lần chuyển tab
+      if (now - lastFocusFetchRef.current >= THROTTLE_FOCUS_MS) {
+        lastFocusFetchRef.current = now;
         fetchData(true);
       }
     };
@@ -302,7 +315,7 @@ export default function Gradebook({ classId }: GradebookProps) {
         setIsAddingAssignment(false);
         setNewAssignment({ title: '', description: '', dueDate: '', materialId: '', attachmentUrl: '' });
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('sms:refresh-assignments'));
+          window.dispatchEvent(new CustomEvent('sms:refresh-assignments', { detail: { source: 'gradebook' } }));
         }
       }
     } catch (e) {
@@ -345,7 +358,7 @@ export default function Gradebook({ classId }: GradebookProps) {
           data: { title: '', description: '', dueDate: '', materialId: '', attachmentUrl: '' }
         });
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('sms:refresh-assignments'));
+          window.dispatchEvent(new CustomEvent('sms:refresh-assignments', { detail: { source: 'gradebook' } }));
         }
       }
     } catch (e) {
@@ -361,7 +374,7 @@ export default function Gradebook({ classId }: GradebookProps) {
       if (res.success) {
         setAssignments(assignments.filter(a => a.id !== id));
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('sms:refresh-assignments'));
+          window.dispatchEvent(new CustomEvent('sms:refresh-assignments', { detail: { source: 'gradebook' } }));
         }
       }
     } catch (e) {
@@ -450,7 +463,7 @@ export default function Gradebook({ classId }: GradebookProps) {
         setIsEditMode(false);
         fetchData();
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('sms:refresh-grades'));
+          window.dispatchEvent(new CustomEvent('sms:refresh-grades', { detail: { source: 'gradebook' } }));
         }
         alert('Đã lưu điểm và nhận xét thành công!');
       }
@@ -594,7 +607,7 @@ export default function Gradebook({ classId }: GradebookProps) {
         });
 
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('sms:refresh-grades'));
+          window.dispatchEvent(new CustomEvent('sms:refresh-grades', { detail: { source: 'gradebook' } }));
         }
 
         if (advanceNext) {

@@ -504,13 +504,20 @@ const ClassMaterialsPanel: React.FC<ClassMaterialsPanelProps> = ({ classId, clas
 
   useEffect(() => { fetchMaterials(); }, [fetchMaterials]);
 
-  // Tự động đồng bộ khi quay lại tab hoặc khi có sự kiện tài liệu
+  // Tự động đồng bộ khi quay lại tab (throttle 30s) hoặc khi có sự kiện tài liệu
   useEffect(() => {
+    let lastFocusFetch = 0;
+    const THROTTLE_MS = 30_000;
+
     const handleSync = () => {
       fetchMaterials(true);
     };
     const handleFocus = () => {
-      fetchMaterials(true);
+      const now = Date.now();
+      if (now - lastFocusFetch >= THROTTLE_MS) {
+        lastFocusFetch = now;
+        fetchMaterials(true);
+      }
     };
 
     window.addEventListener('sms:refresh-materials', handleSync);

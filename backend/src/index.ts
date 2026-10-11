@@ -8,7 +8,6 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
 import os from 'os';
 import prisma from './prisma';
 
@@ -58,23 +57,16 @@ app.use(
   })
 );
 
-// Rate limiting - chống spam requests
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 phút
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // tối đa 100 requests
-  message: {
-    error: 'Too many requests from this IP, please try again later.'
-  }
-});
-app.use(limiter);
-
-// Body parsing middleware
-  app.use(express.json({ limit: process.env.MAX_FILE_SIZE || '5mb' }));
-  app.use(express.urlencoded({ extended: true, limit: process.env.MAX_FILE_SIZE || '5mb' }));
-
-// Health check endpoints
+// Health check endpoints (Không bị ảnh hưởng bởi rate limiter hay body parsing)
 app.get('/health', HealthController.healthCheck);
 app.get('/health/quick', HealthController.quickStatus);
+
+// Rate limiting cho API routes - chống spam nhưng hỗ trợ SPA và phân biệt môi trường
+app.use('/api', generalLimiter);
+
+// Body parsing middleware
+app.use(express.json({ limit: process.env.MAX_FILE_SIZE || '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: process.env.MAX_FILE_SIZE || '5mb' }));
 
 // API Routes
 app.use('/api/auth', authRoutes);

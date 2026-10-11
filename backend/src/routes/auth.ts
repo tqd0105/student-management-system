@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { AuthController } from '../controllers/auth';
 import { GoogleAuthController } from '../controllers/googleAuth';
 import { requireAuth } from '../middleware/auth';
+import { authLimiter } from '../middleware/rateLimiter';
 import { 
   registerValidation, 
   loginValidation, 
@@ -17,14 +18,14 @@ const router = Router();
  * @desc    Register a new user
  * @access  Public
  */
-router.post('/register', registerValidation, AuthController.register);
+router.post('/register', authLimiter, registerValidation, AuthController.register);
 
 /**
  * @route   POST /api/auth/login
  * @desc    Login user
  * @access  Public
  */
-router.post('/login', loginValidation, AuthController.login);
+router.post('/login', authLimiter, loginValidation, AuthController.login);
 
 /**
  * @route   GET /api/auth/verify-email/:token
@@ -38,7 +39,7 @@ router.get('/verify-email/:token', verifyEmailValidation, AuthController.verifyE
  * @desc    Verify email with verification code
  * @access  Public
  */
-router.post('/verify-code', AuthController.verifyEmailCode);
+router.post('/verify-code', authLimiter, AuthController.verifyEmailCode);
 
 /**
  * @route   GET /api/auth/check-token/:token
@@ -52,7 +53,7 @@ router.get('/check-token/:token', AuthController.checkVerificationToken);
  * @desc    Resend email verification
  * @access  Public
  */
-router.post('/resend-verification', AuthController.resendVerification);
+router.post('/resend-verification', authLimiter, AuthController.resendVerification);
 
 /**
  * @route   GET /api/auth/profile
