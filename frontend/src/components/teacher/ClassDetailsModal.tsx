@@ -75,7 +75,7 @@ export default function ClassDetailsModal({ classId, className, onClose, onRefre
             <SessionList classId={classId} />
           )}
           {activeTab === 'grades' && (
-            <Gradebook classId={classId} />
+            <Gradebook classId={classId} className={className} />
           )}
           {activeTab === 'materials' && (
             <ClassMaterialsPanel 

@@ -2786,7 +2786,7 @@ export default function TeacherDashboard() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-1 sm:p-3 md:p-4 bg-gray-50/50">
-              <Gradebook classId={selectedClassForGrades.id} />
+              <Gradebook classId={selectedClassForGrades.id} className={selectedClassForGrades.name} />
             </div>
           </div>
         </div>

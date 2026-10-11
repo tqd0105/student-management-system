@@ -13,6 +13,7 @@ import {
 
 interface GradebookProps {
   classId: string;
+  className?: string;
 }
 
 interface Student {
@@ -133,7 +134,8 @@ const getDeadlineStatus = (dueDateStr?: string | null) => {
   };
 };
 
-export default function Gradebook({ classId }: GradebookProps) {
+export default function Gradebook({ classId, className: initialClassName }: GradebookProps) {
+  const [classDetails, setClassDetails] = useState<{ id: string; name: string; description?: string } | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [materials, setMaterials] = useState<ClassMaterial[]>([]);
@@ -239,6 +241,17 @@ export default function Gradebook({ classId }: GradebookProps) {
           gradeMap[`${g.studentId}_${g.assignmentId}`] = g;
         });
         setGrades(gradeMap);
+      }
+
+      // Fetch class details if not provided
+      try {
+        const classRes = await ApiService.getClasses();
+        if (classRes.success && Array.isArray(classRes.data)) {
+          const found = classRes.data.find((c: any) => c.id === classId);
+          if (found) setClassDetails(found);
+        }
+      } catch (err) {
+        console.warn('Could not load class info', err);
       }
     } catch (error) {
       console.error("Failed to load gradebook", error);
@@ -775,6 +788,49 @@ export default function Gradebook({ classId }: GradebookProps) {
   const classOverallAvg = countAllScores > 0 ? (totalAllScores / countAllScores).toFixed(1) : '—';
   const passRate = students.length > 0 ? Math.round((studentsPassCount / students.length) * 100) : 0;
 
+  const currentClassName = initialClassName || classDetails?.name || 'Lớp học phần';
+  const currentUser = typeof window !== 'undefined' ? ApiService.getCurrentUser() : null;
+
+  const getAcademicRank = (avg: number | null) => {
+    if (avg === null) return { text: 'Chưa có' };
+    if (avg >= 9.0) return { text: 'Xuất sắc' };
+    if (avg >= 8.0) return { text: 'Giỏi' };
+    if (avg >= 6.5) return { text: 'Khá' };
+    if (avg >= 5.0) return { text: 'Trung bình' };
+    return { text: 'Cần cố gắng' };
+  };
+
+  const getStudentStats = (studentId: string) => {
+    let total = 0;
+    let count = 0;
+    assignments.forEach(a => {
+      const g = grades[`${studentId}_${a.id}`];
+      if (g && g.score !== null && !isNaN(g.score)) {
+        total += g.score;
+        count++;
+      }
+    });
+    const avg = count > 0 ? parseFloat((total / count).toFixed(1)) : null;
+    return {
+      avg,
+      rank: getAcademicRank(avg),
+      isPass: avg !== null ? avg >= 5.0 : null,
+    };
+  };
+
+  const getAssignmentAvg = (assignmentId: string) => {
+    let total = 0;
+    let count = 0;
+    students.forEach(s => {
+      const g = grades[`${s.id}_${assignmentId}`];
+      if (g && g.score !== null && !isNaN(g.score)) {
+        total += g.score;
+        count++;
+      }
+    });
+    return count > 0 ? (total / count).toFixed(1) : '—';
+  };
+
   if (loading) return <div className="p-8 text-center text-gray-500">Đang tải bảng điểm...</div>;
 
   // Active SpeedGrader entities
@@ -791,17 +847,55 @@ export default function Gradebook({ classId }: GradebookProps) {
   );
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-      {/* ── CSS PRINT RULES (ĐẢM BẢO BẢNG ĐIỂM GIÁO VIÊN IN KHỔ NGANG LANDSCAPE KHÔNG BỊ TRÀN) ── */}
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col print:hidden">
+      {/* ── CSS PRINT RULES (ĐẢM BẢO BẢNG ĐIỂM GIÁO VIÊN IN KHỔ NGANG LANDSCAPE CHUẨN HỌC THUẬT) ── */}
       <style>{`
         @media print {
           @page {
             size: A4 landscape;
             margin: 8mm 10mm;
           }
-          /* Ẩn các thanh công cụ, nút thao tác khi in */
-          .gradebook-toolbar-print-hide {
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+          }
+          /* Ẩn toàn bộ giao diện dashboard, sidebar, modal bao bọc bên ngoài khi in */
+          body > *:not(#teacher-gradebook-portal-root) {
             display: none !important;
+          }
+          #teacher-gradebook-portal-root {
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+          }
+          #teacher-gradebook-print-doc {
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            page-break-after: avoid;
+          }
+          .break-inside-avoid {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          table {
+            border-collapse: collapse !important;
+            width: 100% !important;
+          }
+          th, td {
+            border: 1px solid #9ca3af !important;
           }
         }
       `}</style>
@@ -2432,6 +2526,194 @@ export default function Gradebook({ classId }: GradebookProps) {
               </div>
             </div>
 
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── BẢN IN HỌC VỤ CHÍNH THỨC DÀNH CHO GIẢNG VIÊN (KHỔ NGANG A4) ── */}
+      {mounted && createPortal(
+        <div id="teacher-gradebook-portal-root" className="hidden print:block text-black bg-white w-full">
+          <div id="teacher-gradebook-print-doc" className="w-full text-black bg-white">
+            {/* 1. Header Quốc hiệu & Đơn vị đào tạo */}
+            <div className="flex justify-between items-start border-b-2 border-black pb-2 mb-2.5">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-900">BỘ GIÁO DỤC VÀ ĐÀO TẠO</p>
+                <p className="text-xs font-black uppercase text-gray-950">HỆ THỐNG QUẢN TRỊ ĐÀO TẠO & HỌC VỤ SMS</p>
+                <p className="text-[10px] text-gray-600">Đơn vị phát triển: DTECH TEAM</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-900">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+                <p className="text-xs font-bold text-gray-950 underline underline-offset-4 decoration-1">Độc lập - Tự do - Hạnh phúc</p>
+                <p className="text-[9px] text-gray-500 italic mt-1">
+                  Thời gian in: {new Date().toLocaleDateString('vi-VN')} {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            </div>
+
+            {/* 2. Tiêu đề Bảng Điểm */}
+            <div className="text-center my-2">
+              <h1 className="text-base font-black uppercase tracking-wide text-gray-950">
+                BẢNG TỔNG HỢP ĐIỂM ĐÁNH GIÁ & KẾT QUẢ HỌC TẬP LỚP HỌC PHẦN
+              </h1>
+              <p className="text-[10px] font-medium text-gray-600 italic">
+                OFFICIAL CLASS ACADEMIC GRADEBOOK & EVALUATION RECORD
+              </p>
+            </div>
+
+            {/* 3. Thông tin lớp học phần */}
+            <div className="border border-gray-400 rounded p-2 bg-gray-50/30 mb-2 text-xs grid grid-cols-4 gap-x-3 gap-y-1">
+              <div>
+                <span className="text-gray-600 font-medium">Lớp học phần:</span>{' '}
+                <strong className="text-gray-950 font-bold uppercase">{currentClassName}</strong>
+              </div>
+              <div>
+                <span className="text-gray-600 font-medium">Giảng viên:</span>{' '}
+                <strong className="text-gray-950 font-bold">{currentUser?.name || 'Giảng viên phụ trách'}</strong>
+              </div>
+              <div>
+                <span className="text-gray-600 font-medium">Niên khóa:</span>{' '}
+                <span className="text-gray-900 font-semibold">Năm học 2026 - 2027</span>
+              </div>
+              <div>
+                <span className="text-gray-600 font-medium">Hệ đào tạo:</span>{' '}
+                <span className="text-gray-900 font-semibold">Chính thức</span>
+              </div>
+            </div>
+
+            {/* 4. Khung chỉ số thành tích lớp học (KPI) */}
+            <div className="grid grid-cols-3 gap-2 mb-2.5 text-center text-xs">
+              <div className="border border-gray-400 rounded p-1.5 bg-gray-50/60">
+                <span className="text-[10px] text-gray-600 uppercase block font-semibold">Điểm Trung Bình Cả Lớp</span>
+                <span className="text-sm font-black text-gray-950">{classOverallAvg !== '—' ? `${classOverallAvg} / 10` : '—'}</span>
+              </div>
+              <div className="border border-gray-400 rounded p-1.5 bg-gray-50/60">
+                <span className="text-[10px] text-gray-600 uppercase block font-semibold">Tỷ Lệ Đạt (≥ 5.0)</span>
+                <span className="text-sm font-black text-gray-950">{passRate}% ({studentsPassCount}/{students.length} SV)</span>
+              </div>
+              <div className="border border-gray-400 rounded p-1.5 bg-gray-50/60">
+                <span className="text-[10px] text-gray-600 uppercase block font-semibold">Quy Mô Lớp Học</span>
+                <span className="text-sm font-black text-gray-950">{students.length} sinh viên · {assignments.length} cột điểm</span>
+              </div>
+            </div>
+
+            {/* 5. Bảng ma trận điểm chi tiết toàn bộ sinh viên */}
+            <div className="mb-3">
+              <table className="w-full text-[10px] text-left border border-gray-400">
+                <thead className="bg-gray-100 font-bold uppercase text-[9px] text-gray-900">
+                  <tr>
+                    <th className="p-1 text-center w-7">STT</th>
+                    <th className="p-1 min-w-[120px]">Họ và Tên Sinh Viên</th>
+                    <th className="p-1 min-w-[130px]">Email</th>
+                    {assignments.map((assn) => (
+                      <th key={assn.id} className="p-1 text-center font-bold max-w-[85px] truncate" title={assn.title}>
+                        {assn.title}
+                      </th>
+                    ))}
+                    <th className="p-1 text-center w-14 font-black">ĐTB</th>
+                    <th className="p-1 text-center w-20">Xếp Loại</th>
+                    <th className="p-1 text-center w-20">Kết Quả</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students.length === 0 ? (
+                    <tr>
+                      <td colSpan={assignments.length + 6} className="p-3 text-center text-gray-500 italic">
+                        Lớp học chưa có danh sách sinh viên
+                      </td>
+                    </tr>
+                  ) : (
+                    students.map((student, idx) => {
+                      const stats = getStudentStats(student.id);
+                      return (
+                        <tr key={student.id} className="border-t border-gray-300">
+                          <td className="p-1 text-center font-medium">{idx + 1}</td>
+                          <td className="p-1 font-semibold text-gray-950 whitespace-nowrap">{student.name}</td>
+                          <td className="p-1 text-gray-600 truncate max-w-[130px]">{student.email}</td>
+                          {assignments.map((assn) => {
+                            const g = grades[`${student.id}_${assn.id}`];
+                            const s = g?.score !== null && g?.score !== undefined ? g.score.toFixed(1) : '—';
+                            return (
+                              <td key={assn.id} className="p-1 text-center font-medium">
+                                {s}
+                              </td>
+                            );
+                          })}
+                          <td className="p-1 text-center font-black">
+                            {stats.avg !== null ? stats.avg.toFixed(1) : '—'}
+                          </td>
+                          <td className="p-1 text-center font-semibold">
+                            {stats.rank.text}
+                          </td>
+                          <td className="p-1 text-center font-bold">
+                            {stats.isPass === null ? (
+                              <span className="text-gray-400">Đang học</span>
+                            ) : stats.isPass ? (
+                              <span className="text-emerald-800">ĐẠT</span>
+                            ) : (
+                              <span className="text-rose-800">CẦN THI LẠI</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+                {students.length > 0 && assignments.length > 0 && (
+                  <tfoot className="bg-gray-100 font-bold border-t-2 border-gray-400 text-gray-900">
+                    <tr>
+                      <td colSpan={3} className="p-1 text-right uppercase text-[9px]">
+                        Điểm TB Từng Cột:
+                      </td>
+                      {assignments.map((assn) => (
+                        <td key={assn.id} className="p-1 text-center font-black">
+                          {getAssignmentAvg(assn.id)}
+                        </td>
+                      ))}
+                      <td className="p-1 text-center font-black text-indigo-900">
+                        {classOverallAvg}
+                      </td>
+                      <td colSpan={2} className="p-1 text-center text-[9px] text-gray-700">
+                        Đạt {passRate}%
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+
+            {/* 6. Chữ ký xác nhận 3 bên */}
+            <div className="mt-3 pt-1 break-inside-avoid">
+              <div className="text-right text-[10px] italic text-gray-700 mb-1.5">
+                Hà Nội, ngày {new Date().getDate()} tháng {new Date().getMonth() + 1} năm {new Date().getFullYear()}
+              </div>
+              <div className="grid grid-cols-3 text-center text-xs">
+                <div>
+                  <p className="font-bold uppercase text-gray-900">ĐẠI DIỆN SINH VIÊN / LỚP TRƯỞNG</p>
+                  <p className="text-[9px] text-gray-500 italic">(Ký và ghi rõ họ tên)</p>
+                  <div className="h-12"></div>
+                  <p className="font-semibold text-gray-900 italic text-[11px]">(Đã xác nhận)</p>
+                </div>
+                <div>
+                  <p className="font-bold uppercase text-gray-900">GIẢNG VIÊN PHỤ TRÁCH</p>
+                  <p className="text-[9px] text-gray-500 italic">(Ký và ghi rõ họ tên)</p>
+                  <div className="h-12"></div>
+                  <p className="font-semibold text-gray-900 uppercase">
+                    {currentUser?.name || 'Giảng viên phụ trách'}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-bold uppercase text-gray-900">XÁC NHẬN CỦA NHÀ TRƯỜNG</p>
+                  <p className="text-[9px] text-gray-500 italic">(Ký tên và đóng dấu)</p>
+                  <div className="h-12"></div>
+                  <p className="font-semibold text-gray-900">PHÒNG ĐÀO TẠO & HỌC VỤ</p>
+                </div>
+              </div>
+              <div className="border-t border-gray-400 mt-3 pt-1 flex justify-between text-[9px] text-gray-500">
+                <span>* Bảng điểm được kết xuất tự động từ Hệ thống Quản trị Học vụ SMS. Mọi chỉnh sửa thủ công đều không hợp lệ.</span>
+                <span>Mã bảo thực: SMS-TEACHER-{new Date().getFullYear()}-{classId.slice(0, 8).toUpperCase()}</span>
+              </div>
+            </div>
           </div>
         </div>,
         document.body
