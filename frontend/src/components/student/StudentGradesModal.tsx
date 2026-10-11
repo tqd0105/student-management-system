@@ -133,11 +133,6 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
       ? parseFloat((allGradedScores.reduce((acc, s) => acc + s, 0) / allGradedScores.length).toFixed(2))
       : null;
 
-  // Quy đổi điểm GPA thang 4.0
-  const gpa4Scale =
-    overallAvg !== null
-      ? (overallAvg * 0.4).toFixed(2)
-      : null;
 
   // Xếp loại học lực học thuật
   const getAcademicRank = (avg: number | null) => {
@@ -307,7 +302,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
                 title="In bảng điểm khổ ngang A4 (Landscape)"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>In bảng điểm (Khổ ngang A4)</span>
+                <span>In bảng điểm</span>
               </button>
 
               <button
@@ -332,7 +327,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
                 <p className="text-xl font-extrabold text-amber-900 mt-1">
                   {overallAvg !== null ? `${overallAvg} / 10` : '—'}
                 </p>
-                <p className="text-[10px] text-amber-700 mt-0.5">Quy đổi thang 4: {gpa4Scale || '—'}</p>
+                <p className="text-[10px] text-amber-700 mt-0.5">Thang điểm chuẩn 10</p>
               </div>
 
               {/* Xếp Loại */}
@@ -594,7 +589,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-gray-900">BỘ GIÁO DỤC VÀ ĐÀO TẠO</p>
             <p className="text-xs font-black uppercase text-gray-950">HỆ THỐNG QUẢN TRỊ ĐÀO TẠO & HỌC VỤ SMS</p>
-            <p className="text-[10px] text-gray-600">Đơn vị phát triển: LightBrave / DTECH TEAM</p>
+            <p className="text-[10px] text-gray-600">Đơn vị phát triển: DTECH TEAM</p>
           </div>
           <div className="text-center">
             <p className="text-[11px] font-bold uppercase tracking-wider text-gray-900">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
@@ -611,7 +606,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
             BẢNG ĐIỂM HỌC TẬP VÀ ĐÁNH GIÁ KẾT QUẢ ĐÀO TẠO
           </h1>
           <p className="text-[11px] font-medium text-gray-600 italic">
-            (OFFICIAL ACADEMIC TRANSCRIPT & PERFORMANCE RECORD)
+            OFFICIAL ACADEMIC TRANSCRIPT & PERFORMANCE RECORD
           </p>
         </div>
 
@@ -635,7 +630,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
           </div>
           <div>
             <span className="text-gray-600 font-medium">Hệ đào tạo:</span>{' '}
-            <span className="text-gray-900 font-semibold">Chính quy</span>
+            <span className="text-gray-900 font-semibold">Chính thức</span>
           </div>
           <div>
             <span className="text-gray-600 font-medium">Phạm vi bảng điểm:</span>{' '}
@@ -646,14 +641,10 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
         </div>
 
         {/* Khung tổng kết chỉ số thành tích (Academic Summary KPI) */}
-        <div className="grid grid-cols-4 gap-2 mb-3 text-center text-xs">
+        <div className="grid grid-cols-3 gap-2 mb-3 text-center text-xs">
           <div className="border border-gray-400 rounded p-1.5 bg-gray-50/60">
             <span className="text-[10px] text-gray-600 uppercase block font-semibold">ĐTB Tích Lũy (Hệ 10)</span>
             <span className="text-sm font-black text-gray-950">{overallAvg !== null ? `${overallAvg} / 10` : '—'}</span>
-          </div>
-          <div className="border border-gray-400 rounded p-1.5 bg-gray-50/60">
-            <span className="text-[10px] text-gray-600 uppercase block font-semibold">Quy Đổi Thang 4 (GPA)</span>
-            <span className="text-sm font-black text-gray-950">{gpa4Scale || '—'} / 4.0</span>
           </div>
           <div className="border border-gray-400 rounded p-1.5 bg-gray-50/60">
             <span className="text-[10px] text-gray-600 uppercase block font-semibold">Xếp Loại Học Lực</span>
@@ -674,8 +665,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
                 <th className="p-1.5">Học Phần / Môn Học</th>
                 <th className="p-1.5">Giảng Viên Phụ Trách</th>
                 <th className="p-1.5 text-center w-24">Tiến Độ Bài</th>
-                <th className="p-1.5 text-center w-20">ĐTB (Hệ 10)</th>
-                <th className="p-1.5 text-center w-16">Hệ 4</th>
+                <th className="p-1.5 text-center w-24">ĐTB (Hệ 10)</th>
                 <th className="p-1.5 text-center w-24">Xếp Loại</th>
                 <th className="p-1.5 text-center w-24">Kết Quả</th>
               </tr>
@@ -683,14 +673,13 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
             <tbody>
               {filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-4 text-center text-gray-500 italic">
+                  <td colSpan={7} className="p-4 text-center text-gray-500 italic">
                     Chưa có dữ liệu môn học hoặc điểm số
                   </td>
                 </tr>
               ) : (
                 filteredData.map((cls, idx) => {
                   const classAvg = cls.averageScore;
-                  const classAvg4 = classAvg !== null ? (classAvg * 0.4).toFixed(2) : '—';
                   const classRank = getAcademicRank(classAvg).text;
                   const isPass = classAvg !== null ? classAvg >= 5.0 : null;
 
@@ -703,7 +692,6 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
                       <td className="p-1.5 text-center font-black">
                         {classAvg !== null ? classAvg.toFixed(1) : '—'}
                       </td>
-                      <td className="p-1.5 text-center font-semibold">{classAvg4}</td>
                       <td className="p-1.5 text-center font-medium">{classRank}</td>
                       <td className="p-1.5 text-center font-bold">
                         {isPass === null ? (
@@ -791,7 +779,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
               <p className="font-semibold text-gray-900 uppercase">{user?.name || ''}</p>
             </div>
             <div>
-              <p className="font-bold uppercase text-gray-900">CỐ VẤN HỌC TẬP / GIẢNG VIÊN</p>
+              <p className="font-bold uppercase text-gray-900">GIẢNG VIÊN</p>
               <p className="text-[10px] text-gray-500 italic">(Ký và ghi rõ họ tên)</p>
               <div className="h-14"></div>
               <p className="font-semibold text-gray-900">
