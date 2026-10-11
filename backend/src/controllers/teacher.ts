@@ -2233,7 +2233,7 @@ export const createMaterial = async (req: AuthenticatedRequest, res: Response): 
     if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
     const { classId } = req.params;
-    const { title, url, type, description, order } = req.body;
+    const { title, url, type, description, order, fileKey, fileSize } = req.body;
 
     if (!title?.trim()) return res.status(400).json({ success: false, message: 'Tiêu đề tài liệu không được để trống' });
     if (!url?.trim()) return res.status(400).json({ success: false, message: 'URL tài liệu không được để trống' });
@@ -2250,6 +2250,8 @@ export const createMaterial = async (req: AuthenticatedRequest, res: Response): 
         type: type || 'link',
         description: description?.trim() || null,
         order: order ?? 0,
+        fileKey: fileKey ? String(fileKey).trim() : null,
+        fileSize: fileSize !== undefined && fileSize !== null ? Number(fileSize) : null,
       },
     });
 
@@ -2267,7 +2269,7 @@ export const updateMaterial = async (req: AuthenticatedRequest, res: Response): 
     if (!teacherId) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
     const { materialId } = req.params;
-    const { title, url, type, description, order } = req.body;
+    const { title, url, type, description, order, fileKey, fileSize } = req.body;
 
     const existing = await prisma.material.findUnique({
       where: { id: materialId },
@@ -2285,6 +2287,8 @@ export const updateMaterial = async (req: AuthenticatedRequest, res: Response): 
         ...(type && { type }),
         ...(description !== undefined && { description: description?.trim() || null }),
         ...(order !== undefined && { order }),
+        ...(fileKey !== undefined && { fileKey: fileKey ? String(fileKey).trim() : null }),
+        ...(fileSize !== undefined && { fileSize: fileSize !== null ? Number(fileSize) : null }),
       },
     });
 
@@ -2310,6 +2314,27 @@ export const deleteMaterial = async (req: AuthenticatedRequest, res: Response): 
 
     if (!existing) return res.status(404).json({ success: false, message: 'Tài liệu không tồn tại' });
     if (existing.class.teacherId !== teacherId) return res.status(403).json({ success: false, message: 'Không có quyền' });
+
+    // Dọn dẹp file trên S3 và xóa cache CloudFront nếu đây là tệp tin tải lên S3
+    if (existing.fileKey) {
+      try {
+        const awsApiBase = process.env.AWS_FILE_API_URL || 'https://83cxxukww4.execute-api.ap-southeast-1.amazonaws.com';
+
+        // 1. Xóa file trên S3
+        await fetch(`${awsApiBase}/files/${encodeURIComponent(existing.fileKey)}`, {
+          method: 'DELETE',
+        }).catch((err) => console.error('Lỗi khi gọi API xóa tệp S3:', err));
+
+        // 2. Xóa cache CloudFront
+        await fetch(`${awsApiBase}/cdn/invalidate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileKey: existing.fileKey }),
+        }).catch((err) => console.error('Lỗi khi gọi API xóa cache CloudFront:', err));
+      } catch (cleanupErr) {
+        console.error('Lỗi dọn dẹp tài nguyên S3/CDN:', cleanupErr);
+      }
+    }
 
     await prisma.material.delete({ where: { id: materialId } });
 
