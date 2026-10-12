@@ -262,3 +262,138 @@ export async function uploadClassMaterialFile(
     materialType,
   };
 }
+
+export const MAX_ASSIGNMENT_FILE_SIZE = 10 * 1024 * 1024; // 10 MB (Bảo vệ ngân sách Free Tier $0.00)
+
+export const ALLOWED_ASSIGNMENT_EXTENSIONS = [
+  "pdf",
+  "docx",
+  "doc",
+  "xlsx",
+  "xls",
+  "pptx",
+  "ppt",
+  "zip",
+  "rar",
+  "7z",
+  "tar",
+  "gz",
+  "png",
+  "jpg",
+  "jpeg",
+  "webp",
+  "txt",
+];
+
+export interface AssignmentSubmissionUploadResult {
+  fileId: string;
+  fileName: string;
+  viewUrl: string;
+  fileKey: string;
+  fileSize: number;
+}
+
+/**
+ * Upload tệp bài làm của học sinh trực tiếp lên Amazon S3 & CloudFront CDN
+ * - Kiểm soát dung lượng nghiêm ngặt <= 10MB (Bảo vệ ngân sách $0 Free Tier)
+ * - Hỗ trợ các định dạng: PDF, Word, Excel, Slide, Nén (ZIP, RAR, 7Z), Hình ảnh
+ * - Đường dẫn lưu trữ: assignments/{assignmentId}/{timestamp}-{cleanName}
+ */
+export async function uploadAssignmentSubmissionFile(
+  file: File,
+  assignmentId: string,
+  onProgress?: UploadProgressCallback,
+): Promise<AssignmentSubmissionUploadResult> {
+  // 1. Kiểm tra kích thước tệp (Tối đa 10 MB)
+  if (file.size > MAX_ASSIGNMENT_FILE_SIZE) {
+    const sizeInMB = (file.size / (1024 * 1024)).toFixed(1);
+    throw new Error(
+      `Tệp vượt quá giới hạn 10 MB (${sizeInMB} MB). Vui lòng nén lại hoặc sử dụng hình thức nộp bằng link ngoài (Google Drive, GitHub) nếu tệp quá lớn.`,
+    );
+  }
+
+  // 2. Kiểm tra định dạng phần mở rộng
+  const extension = file.name.split(".").pop()?.toLowerCase() || "";
+  if (!ALLOWED_ASSIGNMENT_EXTENSIONS.includes(extension)) {
+    throw new Error(
+      `Định dạng .${extension} không được hỗ trợ tải lên trực tiếp. Hệ thống cho phép: PDF, Word, Excel, PowerPoint, tệp nén (ZIP, RAR, 7Z) và Hình ảnh. Với dự án dung lượng lớn, bạn có thể chọn tab 'Nhập link ngoài' (Drive, GitHub).`,
+    );
+  }
+
+  // 3. Chuẩn hóa tên tệp và khóa S3 (assignments/{assignmentId}/{timestamp}-{cleanName})
+  const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+  const uniqueKey = `assignments/${assignmentId}/${Date.now()}-${cleanName}`;
+  const contentType = file.type || "application/octet-stream";
+
+  onProgress?.(10);
+
+  // 4. Lấy Presigned URL từ AWS Lambda Microservice
+  const presignedRes = await fetch(
+    `${AWS_FILE_API_BASE}/files/presigned-upload`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fileName: uniqueKey,
+        contentType,
+        expiresIn: 900, // 15 phút
+      }),
+    },
+  );
+
+  if (!presignedRes.ok) {
+    const errorText = await presignedRes.text();
+    throw new Error(`Không thể khởi tạo phiên tải lên S3: ${errorText}`);
+  }
+
+  const { uploadUrl, fileId, fileName } = await presignedRes.json();
+  onProgress?.(30);
+
+  // 5. Trực tiếp đẩy file nhị phân lên Amazon S3 qua PUT request
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", uploadUrl, true);
+    xhr.setRequestHeader("Content-Type", contentType);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percentComplete = 30 + Math.round((event.loaded / event.total) * 60);
+        onProgress?.(percentComplete);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`Tải lên S3 thất bại với mã lỗi HTTP ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () =>
+      reject(new Error("Lỗi kết nối mạng khi tải dữ liệu bài làm lên Amazon S3"));
+    xhr.send(file);
+  });
+
+  onProgress?.(95);
+
+  // 6. Địa chỉ truy cập qua CloudFront CDN toàn cầu
+  const viewUrl = `${AWS_CLOUDFRONT_BASE}/${fileName}`;
+
+  // 7. Invalidate cache CloudFront trong background
+  invalidateCloudFrontCache([`/${fileName}`]).catch((err) =>
+    console.warn("CloudFront background invalidation skipped:", err),
+  );
+
+  onProgress?.(100);
+
+  return {
+    fileId,
+    fileName: file.name,
+    viewUrl,
+    fileKey: fileName,
+    fileSize: file.size,
+  };
+}

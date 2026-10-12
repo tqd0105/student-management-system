@@ -31,7 +31,57 @@ import {
   ChevronDown,
   ChevronUp,
   BookOpen,
+  UploadCloud,
+  Download,
+  Trash2,
+  Archive,
+  Paperclip,
+  FileCode,
+  FileCheck,
 } from 'lucide-react';
+import {
+  uploadAssignmentSubmissionFile,
+  MAX_ASSIGNMENT_FILE_SIZE,
+  ALLOWED_ASSIGNMENT_EXTENSIONS,
+} from '@/services/fileUpload.service';
+
+const isDirectFileUrl = (url: string | null | undefined): boolean => {
+  if (!url) return false;
+  if (url.includes('cloudfront.net') || url.includes('s3.amazonaws.com')) return true;
+  const cleanUrl = url.split('?')[0].toLowerCase();
+  return /\.(pdf|docx?|xlsx?|pptx?|zip|rar|7z|tar|gz|png|jpe?g|webp|txt)$/i.test(cleanUrl);
+};
+
+const isZipOrArchive = (urlOrName: string | null | undefined): boolean => {
+  if (!urlOrName) return false;
+  const clean = urlOrName.split('?')[0].toLowerCase();
+  return /\.(zip|rar|7z|tar|gz)$/i.test(clean);
+};
+
+const getFileNameDisplay = (url: string | null | undefined): string => {
+  if (!url) return '';
+  try {
+    const cleanUrl = url.split('?')[0];
+    const rawName = cleanUrl.split('/').pop() || '';
+    const stripped = rawName.replace(/^\d+-/, '');
+    return decodeURIComponent(stripped) || rawName;
+  } catch {
+    return url;
+  }
+};
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
+
+const getFileExtensionBadge = (url: string | null | undefined): string => {
+  if (!url) return 'TỆP';
+  const cleanUrl = url.split('?')[0].toLowerCase();
+  const ext = cleanUrl.split('.').pop() || '';
+  return ext.toUpperCase();
+};
 
 export type AssignmentStatus = 'pending' | 'submitted' | 'graded' | 'overdue';
 
@@ -104,8 +154,13 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
 
   // Submission Form Modal state
   const [activeSubmission, setActiveSubmission] = useState<StudentAssignment | null>(null);
+  const [submissionMode, setSubmissionMode] = useState<'upload' | 'link'>('upload');
   const [submissionUrl, setSubmissionUrl] = useState('');
   const [submissionNotes, setSubmissionNotes] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
@@ -226,10 +281,70 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
   // Open submission dialog
   const openSubmitDialog = (item: StudentAssignment) => {
     setActiveSubmission(item);
-    setSubmissionUrl(item.submission.url || '');
+    const existingUrl = item.submission.url || '';
+    setSubmissionUrl(existingUrl);
     setSubmissionNotes(item.submission.notes || '');
+    setSelectedFile(null);
+    setUploadProgress(0);
+    setIsUploading(false);
+    setIsDragging(false);
     setSubmitError('');
     setSubmitSuccess('');
+
+    // Nếu đã có bài nộp dạng link ngoài (Drive, GitHub) thì mở tab 'link'
+    // Nếu chưa nộp hoặc nộp dạng tệp CloudFront/S3 thì mặc định mở tab 'upload'
+    if (existingUrl && !isDirectFileUrl(existingUrl)) {
+      setSubmissionMode('link');
+    } else {
+      setSubmissionMode('upload');
+    }
+  };
+
+  const handleFileSelect = (file: File | null) => {
+    if (!file) return;
+    setSubmitError('');
+
+    // 1. Kiểm tra kích thước <= 10MB
+    if (file.size > MAX_ASSIGNMENT_FILE_SIZE) {
+      const sizeInMB = (file.size / (1024 * 1024)).toFixed(1);
+      setSubmitError(
+        `Tệp vượt quá giới hạn 10 MB (${sizeInMB} MB). Vui lòng nén lại hoặc chuyển sang tab "Nhập link ngoài" để nộp qua Google Drive.`
+      );
+      return;
+    }
+
+    // 2. Kiểm tra định dạng
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!ALLOWED_ASSIGNMENT_EXTENSIONS.includes(ext)) {
+      setSubmitError(
+        `Định dạng .${ext} không được hỗ trợ tải lên trực tiếp. Vui lòng chọn tệp PDF, Word, Excel, Slide, tệp nén (ZIP, RAR, 7Z) hoặc Hình ảnh.`
+      );
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileSelect(e.dataTransfer.files[0]);
+    }
   };
 
   // Handle submit action
@@ -237,37 +352,68 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
     e.preventDefault();
     if (!activeSubmission) return;
 
-    if (!submissionUrl.trim()) {
-      setSubmitError('Vui lòng nhập đường link bài làm của bạn.');
-      return;
-    }
-
-    // Basic URL check
-    if (!/^https?:\/\//i.test(submissionUrl.trim())) {
-      setSubmitError('Đường link cần bắt đầu bằng http:// hoặc https://');
-      return;
-    }
-
-    setSubmitting(true);
     setSubmitError('');
     setSubmitSuccess('');
 
+    let finalSubmissionUrl = submissionUrl.trim();
+
+    // 1. Chế độ TẢI TỆP LÊN
+    if (submissionMode === 'upload') {
+      if (selectedFile) {
+        setIsUploading(true);
+        setSubmitting(true);
+        try {
+          const uploadRes = await uploadAssignmentSubmissionFile(
+            selectedFile,
+            activeSubmission.id,
+            (percent) => setUploadProgress(percent)
+          );
+          finalSubmissionUrl = uploadRes.viewUrl;
+        } catch (uploadErr: any) {
+          setIsUploading(false);
+          setSubmitting(false);
+          setSubmitError(uploadErr.message || 'Lỗi khi tải tệp bài làm lên Amazon S3.');
+          return;
+        }
+      } else if (!finalSubmissionUrl) {
+        setSubmitError('Vui lòng chọn tệp bài làm (.pdf, .docx, .zip, .rar, ảnh...) để tải lên.');
+        return;
+      }
+    } else {
+      // 2. Chế độ NHẬP LINK NGOÀI
+      if (!finalSubmissionUrl) {
+        setSubmitError('Vui lòng nhập đường link bài làm của bạn.');
+        return;
+      }
+      if (!/^https?:\/\//i.test(finalSubmissionUrl)) {
+        setSubmitError('Đường link cần bắt đầu bằng http:// hoặc https://');
+        return;
+      }
+    }
+
+    setSubmitting(true);
     try {
       const res = await ApiService.submitAssignment(activeSubmission.id, {
-        submissionUrl: submissionUrl.trim(),
+        submissionUrl: finalSubmissionUrl,
         submissionNotes: submissionNotes.trim() || undefined,
       });
 
       if (res && res.success) {
-        setSubmitSuccess('Nộp bài thành công!');
+        setSubmitSuccess(
+          submissionMode === 'upload' && selectedFile
+            ? 'Đã tải tệp lên AWS S3 và nộp bài thành công!'
+            : 'Nộp bài tập thành công!'
+        );
         await fetchAssignments(true);
-        // Thông báo đồng bộ dữ liệu toàn hệ thống
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('sms:refresh-assignments'));
         }
         setTimeout(() => {
           setActiveSubmission(null);
           setSubmitSuccess('');
+          setSelectedFile(null);
+          setUploadProgress(0);
+          setIsUploading(false);
         }, 1200);
       } else {
         setSubmitError(res?.message || 'Không thể nộp bài tập.');
@@ -277,6 +423,7 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
       setSubmitError(err?.message || 'Lỗi kết nối máy chủ.');
     } finally {
       setSubmitting(false);
+      setIsUploading(false);
     }
   };
 
@@ -582,43 +729,78 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
                     </div>
 
                     {/* Submitted Work Preview Box (if submitted) */}
-                    {item.isSubmitted && item.submission.url && (
-                      <div className="p-3 rounded-xl bg-gray-50 border border-gray-200/80 text-xs space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 truncate">
-                            <Link2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                            <span className="font-semibold text-gray-700">Bài làm đã nộp:</span>
+                    {item.isSubmitted && item.submission.url && (() => {
+                      const isDirect = isDirectFileUrl(item.submission.url);
+                      const isArchive = isZipOrArchive(item.submission.url);
+                      const fileName = getFileNameDisplay(item.submission.url);
+                      const extBadge = getFileExtensionBadge(item.submission.url);
+
+                      return (
+                        <div className="p-3 rounded-xl bg-gray-50 border border-gray-200/80 text-xs space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 truncate">
+                              {isArchive ? (
+                                <Archive className="w-4 h-4 text-amber-600 shrink-0" />
+                              ) : isDirect ? (
+                                <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
+                              ) : (
+                                <Link2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                              )}
+
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="font-semibold text-gray-700 shrink-0">
+                                  {isDirect ? 'Tệp bài làm đã nộp:' : 'Bài làm đã nộp:'}
+                                </span>
+                                {isDirect && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+                                    {extBadge}
+                                  </span>
+                                )}
+                                <a
+                                  href={item.submission.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-indigo-600 hover:underline font-mono truncate max-w-xs cursor-pointer font-medium"
+                                  title={item.submission.url}
+                                >
+                                  {isDirect ? fileName : item.submission.url}
+                                </a>
+                              </div>
+                            </div>
+
                             <a
                               href={item.submission.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-indigo-600 hover:underline font-mono truncate max-w-xs cursor-pointer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-semibold transition-colors cursor-pointer shrink-0 shadow-2xs"
+                              title={isDirect ? 'Tải về hoặc mở xem tệp' : 'Mở link bài làm'}
                             >
-                              {item.submission.url}
+                              {isDirect ? (
+                                <>
+                                  <Download className="w-3.5 h-3.5" />
+                                  <span className="hidden sm:inline">Tải / Xem</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  <span className="hidden sm:inline">Mở link</span>
+                                </>
+                              )}
                             </a>
                           </div>
-                          <a
-                            href={item.submission.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-gray-400 hover:text-indigo-600 p-1 cursor-pointer shrink-0"
-                            title="Mở link bài làm"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
+                          {item.submission.notes && (
+                            <p className="text-[11px] text-gray-500 italic pl-6">
+                              Ghi chú: {item.submission.notes}
+                            </p>
+                          )}
+                          {item.submission.submittedAt && (
+                            <p className="text-[10px] text-gray-400 pl-6">
+                              Nộp lúc: {new Date(item.submission.submittedAt).toLocaleString('vi-VN')}
+                            </p>
+                          )}
                         </div>
-                        {item.submission.notes && (
-                          <p className="text-[11px] text-gray-500 italic pl-5">
-                            Ghi chú: {item.submission.notes}
-                          </p>
-                        )}
-                        {item.submission.submittedAt && (
-                          <p className="text-[10px] text-gray-400 pl-5">
-                            Nộp lúc: {new Date(item.submission.submittedAt).toLocaleString('vi-VN')}
-                          </p>
-                        )}
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Teacher Feedback (if graded) */}
                     {item.isGraded && item.grade.feedback && (
@@ -721,31 +903,200 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
             </div>
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              {/* Submission URL */}
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Đường dẫn bài làm (URL) <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="url"
-                  value={submissionUrl}
-                  onChange={(e) => setSubmissionUrl(e.target.value)}
-                  placeholder="https://drive.google.com/... hoặc github.com/..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-gray-50/50"
-                  required
-                />
+              {/* Mode Selector Tabs */}
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-gray-100 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubmissionMode('upload');
+                    setSubmitError('');
+                  }}
+                  className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    submissionMode === 'upload'
+                      ? 'bg-white text-indigo-700 shadow-2xs'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <UploadCloud className="w-4 h-4 text-indigo-600" />
+                  <span>Tải tệp lên S3 (Khuyên dùng)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubmissionMode('link');
+                    setSubmitError('');
+                  }}
+                  className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    submissionMode === 'link'
+                      ? 'bg-white text-indigo-700 shadow-2xs'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Link2 className="w-4 h-4 text-gray-500" />
+                  <span>Nhập link ngoài</span>
+                </button>
               </div>
 
-              {/* Helper Notice for Cloud Links */}
-              <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 text-xs text-indigo-900 flex items-start gap-2">
-                <Info className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-                <div className="text-[11px] leading-relaxed">
-                  <p className="font-semibold">Lưu ý quyền truy cập:</p>
-                  <p className="text-indigo-700 mt-0.5">
-                    Đối với Google Drive, hãy chọn <b>Chia sẻ → Bất kỳ ai có đường liên kết đều có thể xem</b> để giảng viên có thể chấm bài của bạn.
-                  </p>
+              {/* Tab 1: UPLOAD FILE DIRECTLY TO AWS S3 */}
+              {submissionMode === 'upload' ? (
+                <div className="space-y-3">
+                  {/* If previously submitted a direct file and no new file selected */}
+                  {activeSubmission.isSubmitted && isDirectFileUrl(submissionUrl) && !selectedFile && (
+                    <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-200 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 truncate">
+                          {isZipOrArchive(submissionUrl) ? (
+                            <Archive className="w-4 h-4 text-amber-600 shrink-0" />
+                          ) : (
+                            <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
+                          )}
+                          <div className="truncate">
+                            <p className="font-semibold text-gray-800">Tệp đã nộp hiện tại:</p>
+                            <p className="font-mono text-indigo-700 truncate max-w-xs">{getFileNameDisplay(submissionUrl)}</p>
+                          </div>
+                        </div>
+                        <a
+                          href={submissionUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-gray-50 text-indigo-700 border border-indigo-200 text-[11px] font-semibold transition-colors cursor-pointer shrink-0 shadow-2xs"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Xem lại</span>
+                        </a>
+                      </div>
+                      <p className="text-[11px] text-gray-500 italic">
+                        Chọn tệp mới bên dưới nếu bạn muốn thay thế bài nộp này.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Selected File Card (if user picked a file) */}
+                  {selectedFile ? (
+                    <div className="p-3.5 rounded-xl border border-indigo-200 bg-indigo-50/40 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="p-2 rounded-lg bg-indigo-100 text-indigo-700 shrink-0">
+                          {isZipOrArchive(selectedFile.name) ? (
+                            <Archive className="w-5 h-5 text-amber-600" />
+                          ) : (
+                            <FileText className="w-5 h-5 text-indigo-600" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-gray-900 truncate">{selectedFile.name}</p>
+                          <div className="flex items-center gap-2 text-[11px] text-gray-500 mt-0.5">
+                            <span>{formatFileSize(selectedFile.size)}</span>
+                            <span>·</span>
+                            <span className="text-emerald-600 font-semibold flex items-center gap-0.5">
+                              <CheckCircle2 className="w-3 h-3" /> Sẵn sàng tải lên S3
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      {!submitting && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedFile(null)}
+                          className="p-1.5 rounded-lg hover:bg-rose-50 text-gray-400 hover:text-rose-600 transition-colors cursor-pointer shrink-0"
+                          title="Bỏ chọn tệp này"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    /* Drag & Drop File Picker Zone */
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`relative border-2 border-dashed rounded-xl p-5 text-center transition-all cursor-pointer ${
+                        isDragging
+                          ? 'border-indigo-500 bg-indigo-50/80 scale-[1.01]'
+                          : 'border-gray-300 hover:border-indigo-400 hover:bg-gray-50/80 bg-white'
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        id="assignment-file-input"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleFileSelect(e.target.files[0]);
+                          }
+                        }}
+                        accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.zip,.rar,.7z,.tar,.gz,.png,.jpg,.jpeg,.webp,.txt"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <div className="flex flex-col items-center justify-center gap-2 pointer-events-none">
+                        <div className="p-2.5 rounded-full bg-indigo-50 text-indigo-600 shadow-2xs">
+                          <UploadCloud className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-800">
+                            Kéo thả tệp vào đây hoặc <span className="text-indigo-600 underline">bấm để chọn</span>
+                          </p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">
+                            PDF, Word, Excel, PowerPoint, tệp nén (ZIP, RAR, 7Z) hoặc ảnh
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap justify-center mt-1">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                            Tối đa 10 MB / tệp
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            AWS S3 & CloudFront $0
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Progress bar during upload */}
+                  {isUploading && (
+                    <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 space-y-1.5 animate__animated animate__fadeIn">
+                      <div className="flex items-center justify-between text-xs font-semibold text-indigo-900">
+                        <span className="flex items-center gap-1.5">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                          <span>Đang tải tệp lên Amazon S3 & CloudFront CDN...</span>
+                        </span>
+                        <span className="font-mono text-indigo-700 font-bold">{uploadProgress}%</span>
+                      </div>
+                      <div className="w-full h-2 bg-indigo-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-indigo-600 rounded-full transition-all duration-200"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              ) : (
+                /* Tab 2: SUBMIT VIA EXTERNAL URL */
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Đường dẫn bài làm (URL) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={submissionUrl}
+                      onChange={(e) => setSubmissionUrl(e.target.value)}
+                      placeholder="https://drive.google.com/... hoặc https://github.com/..."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-gray-50/50 font-mono"
+                    />
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 text-xs text-indigo-900 flex items-start gap-2">
+                    <Info className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                    <div className="text-[11px] leading-relaxed">
+                      <p className="font-semibold">Lưu ý quyền truy cập:</p>
+                      <p className="text-indigo-700 mt-0.5">
+                        Đối với Google Drive, hãy chọn <b>Chia sẻ → Bất kỳ ai có đường liên kết đều có thể xem</b> để giảng viên có thể chấm bài của bạn.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Notes */}
               <div>
@@ -753,7 +1104,7 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
                   Ghi chú cho giảng viên (không bắt buộc)
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={submissionNotes}
                   onChange={(e) => setSubmissionNotes(e.target.value)}
                   placeholder="Nhắn nhủ thêm cho giảng viên (ví dụ: tài khoản demo, link figma frame 2...)"
@@ -781,7 +1132,8 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
                 <button
                   type="button"
                   onClick={() => setActiveSubmission(null)}
-                  className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-100 transition-colors cursor-pointer"
+                  disabled={submitting}
+                  className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   Hủy
                 </button>
@@ -793,7 +1145,7 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
                   {submitting ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Đang lưu...</span>
+                      <span>{isUploading ? 'Đang tải lên S3...' : 'Đang lưu...'}</span>
                     </>
                   ) : (
                     <>
