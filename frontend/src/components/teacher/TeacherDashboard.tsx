@@ -2773,7 +2773,7 @@ export default function TeacherDashboard() {
                     Bảng Điểm Lớp: {selectedClassForGrades.name}
                   </h2>
                   <p className="text-xs text-purple-100 truncate">
-                    Quản lý điểm số, bài tập & SpeedGrader trực tuyến
+                    Quản lý điểm số, bài tập trực tuyến
                   </p>
                 </div>
               </div>

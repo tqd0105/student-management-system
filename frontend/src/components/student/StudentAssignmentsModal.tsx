@@ -918,7 +918,7 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
                   }`}
                 >
                   <UploadCloud className="w-4 h-4 text-indigo-600" />
-                  <span>Tải tệp lên S3 (Khuyên dùng)</span>
+                  <span>Tải tệp lên</span>
                 </button>
                 <button
                   type="button"
@@ -1041,10 +1041,10 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
                         </div>
                         <div className="flex items-center gap-1.5 flex-wrap justify-center mt-1">
                           <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200">
-                            Tối đa 10 MB / tệp
+                            Tối đa 10 MB
                           </span>
                           <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            AWS S3 & CloudFront $0
+                            Lưu trữ đám mây
                           </span>
                         </div>
                       </div>
