@@ -58,18 +58,60 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Execute Remote SSH Commands on EC2
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'ap-southeast-1' }}
+
+      - name: Check EC2 Status & Deploy via SSH
         env:
+          EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID || 'i-0bae231b829aba87d' }}
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
-          EC2_HOST: ${{ secrets.EC2_HOST || '47.129.226.97' }}
+          EC2_DEFAULT_HOST: ${{ secrets.EC2_HOST || '47.129.226.97' }}
           EC2_USER: ${{ secrets.EC2_USER || 'ubuntu' }}
           AWS_REGION: ${{ secrets.AWS_REGION || 'ap-southeast-1' }}
         run: |
+          echo "🔍 Kiểm tra trạng thái máy chủ EC2 ($EC2_INSTANCE_ID)..."
+          INSTANCE_STATE=$(aws ec2 describe-instances \
+            --instance-ids "$EC2_INSTANCE_ID" \
+            --region "$AWS_REGION" \
+            --query "Reservations[0].Instances[0].State.Name" \
+            --output text 2>/dev/null || echo "unknown")
+
+          echo "Trạng thái hiện tại: '$INSTANCE_STATE'"
+
+          if [ "$INSTANCE_STATE" != "running" ]; then
+            echo "===================================================================="
+            echo "💡 THÔNG BÁO TỐI ƯU CHI PHÍ ($0.00):"
+            echo "Máy chủ EC2 hiện đang ở trạng thái '$INSTANCE_STATE' (đã dừng để không phát sinh chi phí)."
+            echo "Bỏ qua bước SSH Deploy an toàn. Quá trình CI/CD hoàn thành thành công!"
+            echo "Khi nào bạn cần mở web thật, hãy Bật (Start) EC2 và chạy lại workflow này."
+            echo "===================================================================="
+            exit 0
+          fi
+
+          # Khi EC2 đang chạy, tự động lấy Public IP hiện tại (phòng trường hợp IP đổi sau khi khởi động lại)
+          PUBLIC_IP=$(aws ec2 describe-instances \
+            --instance-ids "$EC2_INSTANCE_ID" \
+            --region "$AWS_REGION" \
+            --query "Reservations[0].Instances[0].PublicIpAddress" \
+            --output text 2>/dev/null || echo "")
+
+          TARGET_HOST="${PUBLIC_IP:-$EC2_DEFAULT_HOST}"
+          echo "🚀 EC2 đang hoạt động tại địa chỉ IP: $TARGET_HOST"
+
+          if [ -z "$EC2_SSH_KEY" ]; then
+            echo "⚠️ Không tìm thấy secret EC2_SSH_KEY trong repository secrets. Bỏ qua SSH."
+            exit 0
+          fi
+
           mkdir -p ~/.ssh
           echo "$EC2_SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          ssh -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_HOST}" bash << 'EOF'
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=20 "${EC2_USER}@${TARGET_HOST}" bash << 'EOF'
             set -e
             echo "🚀 [1/4] Logging into Amazon ECR on EC2..."
             aws ecr get-login-password --region ap-southeast-1 | sudo docker login --username AWS --password-stdin 002037730665.dkr.ecr.ap-southeast-1.amazonaws.com
