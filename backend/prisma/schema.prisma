@@ -30,6 +30,7 @@ model User {
   studentProfile     StudentProfile?
   tuitionFees        TuitionFee[]
   networkProfiles    NetworkProfile[]         @relation("OwnerNetworkProfiles")
+  createdSchedules   ScheduleEvent[]          @relation("ScheduleCreator")
 
   @@map("users")
 }
@@ -48,6 +49,7 @@ model Class {
   teacher            User                @relation("TeacherClasses", fields: [teacherId], references: [id])
   materials          Material[]
   tuitionFees        TuitionFee[]
+  schedules          ScheduleEvent[]
 
   @@map("classes")
 }
@@ -265,4 +267,38 @@ enum NetworkEnforcementMode {
   OFF
   REQUIRED
   FLAG_ONLY
+}
+
+enum ScheduleType {
+  CLASS
+  EXAM
+  EVENT
+  OTHER
+}
+
+model ScheduleEvent {
+  id           String        @id @default(cuid())
+  classId      String?
+  title        String
+  type         ScheduleType  @default(CLASS)
+  isRecurring  Boolean       @default(true)
+  dayOfWeek    Int?          // 1 = Thứ 2, 2 = Thứ 3, ..., 7 = Chủ Nhật
+  startTime    String        // HH:mm (ví dụ: "07:30")
+  endTime      String        // HH:mm (ví dụ: "09:30")
+  room         String?       // Ví dụ: "Phòng A203"
+  specificDate DateTime?     // Cho lịch thi hoặc sự kiện ngày cụ thể
+  description  String?
+  color        String?       @default("blue")
+  createdById  String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  class        Class?        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  createdBy    User          @relation("ScheduleCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([classId])
+  @@index([createdById])
+  @@index([dayOfWeek])
+  @@index([specificDate])
+  @@map("schedule_events")
 }

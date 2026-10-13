@@ -141,10 +141,10 @@ pnpm --filter frontend dev
 ### 5.3. Danh sách tài khoản thử nghiệm
 | Vai trò | Email đăng nhập | Mật khẩu mẫu | Ghi chú |
 | :--- | :--- | :--- | :--- |
-| **Quản trị viên (Admin)** | `admin@lightbrave.edu.vn` | `Admin@123` | Quản trị tài khoản, lớp học, học phí |
-| **Giảng viên (Teacher)** | `tqd0105@gmail.com` | `Teacher@123` | Quản lý điểm, SpeedGrader, in bảng điểm lớp |
-| **Sinh viên (Student 1)** | `dtq287@gmail.com` | `Student@123` | Nộp bài tập tệp S3, xem bảng điểm cá nhân |
-| **Sinh viên (Student 2)** | `tranquangdung.tech@gmail.com` | `Student@123` | Nộp bài tập tệp S3, điểm danh |
+| **Quản trị viên (Admin)** | `admin@lightbrave.edu.vn` | `Dungabc123@` | Quản trị tài khoản, lớp học, học phí |
+| **Giảng viên (Teacher)** | `tqd0105@gmail.com` | `Dungabc123@` | Quản lý điểm, SpeedGrader, in bảng điểm lớp |
+| **Sinh viên (Student 1)** | `dtq287@gmail.com` | `Dungabc123@` | Nộp bài tập tệp S3, xem bảng điểm cá nhân |
+| **Sinh viên (Student 2)** | `tranquangdung.tech@gmail.com` | `Dungabc123@` | Nộp bài tập tệp S3, điểm danh |
 
 ---
 

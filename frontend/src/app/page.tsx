@@ -11,6 +11,15 @@ import { useEffect, useState } from "react";
 import { API_BASE_URL } from "@/config/api";
 
 const DEMO_ACCOUNTS = [
+  // {
+  //   role: "Admin",
+  //   name: "System Administrator",
+  //   email: "admin@lightbrave.edu.vn",
+  //   password: "Dungabc123@",
+  //   icon: "/icons/admin.png",
+  //   color: "bg-gradient-to-r from-red-500 to-rose-600",
+  //   hoverColor: "hover:from-red-600 hover:to-rose-700",
+  // },
   {
     role: "Teacher",
     name: "TRAN QUANG DUNG",
@@ -39,6 +48,7 @@ const DEMO_ACCOUNTS = [
     hoverColor: "hover:from-purple-600 hover:to-indigo-600",
   },
 ];
+
 
 export default function HomePage() {
   const { user, isAuthenticated, isAdmin, login, loading } = useAuth();
