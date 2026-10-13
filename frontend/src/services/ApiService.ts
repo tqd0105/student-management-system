@@ -744,6 +744,45 @@ class ApiService {
       },
     );
   }
+
+  // --- Schedule (Thời khóa biểu) API ---
+  static async getMySchedule(params?: { type?: string; classId?: string }) {
+    const url = new URL(`${API_BASE_URL}/api/schedule/my-schedule`);
+    if (params?.type && params.type !== 'ALL') url.searchParams.set('type', params.type);
+    if (params?.classId) url.searchParams.set('classId', params.classId);
+    return this.makeRequest(url.toString(), {
+      headers: this.getHeaders(),
+    });
+  }
+
+  static async getScheduleClasses() {
+    return this.makeRequest(`${API_BASE_URL}/api/schedule/classes`, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  static async createScheduleEvent(data: any) {
+    return this.makeRequest(`${API_BASE_URL}/api/schedule/events`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+  }
+
+  static async updateScheduleEvent(id: string, data: any) {
+    return this.makeRequest(`${API_BASE_URL}/api/schedule/events/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+  }
+
+  static async deleteScheduleEvent(id: string) {
+    return this.makeRequest(`${API_BASE_URL}/api/schedule/events/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+  }
 }
 
 export default ApiService;

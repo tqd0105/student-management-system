@@ -432,6 +432,16 @@ export default function StudentDashboard() {
             <div className="flex flex-row flex-wrap items-center justify-end gap-2">
               <button
                 onClick={() => {
+                  window.location.href = '/schedule';
+                }}
+                className="bg-indigo-600 text-white p-3 md:px-4 md:py-2 rounded-full shadow-md hover:bg-indigo-700 flex items-center space-x-0 md:space-x-2 cursor-pointer transition-colors"
+                title="Thời Khóa Biểu & Lịch Học"
+              >
+                <Calendar className="w-4 h-4" />
+                <span className="hidden md:block font-medium">Thời Khóa Biểu</span>
+              </button>
+              <button
+                onClick={() => {
                   setSelectedClassForAssignments(undefined);
                   setIsAssignmentsOpen(true);
                 }}

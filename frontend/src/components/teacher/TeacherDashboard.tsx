@@ -1163,12 +1163,53 @@ export default function TeacherDashboard() {
                           </div>
                           <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all shrink-0" />
                         </button>
+
+                        {/* Item 3: Schedule Management */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsManagementMenuOpen(false);
+                            window.location.href = '/schedule';
+                          }}
+                          className="w-full p-2.5 rounded-xl text-left flex items-center gap-3 group transition-all duration-150 hover:bg-indigo-50/80 hover:shadow-xs border border-transparent hover:border-indigo-200/60 cursor-pointer"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-gray-100 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-200 shadow-xs">
+                            <Calendar className="w-5 h-5 transition-transform group-hover:scale-110" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <p className="font-bold text-xs sm:text-sm text-gray-800 group-hover:text-indigo-700 transition-colors">
+                                Thời khóa biểu
+                              </p>
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-indigo-100/60 text-indigo-700 group-hover:bg-indigo-200 transition-colors">
+                                Lịch học
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                              Lịch học định kỳ, ca thi & sự kiện học vụ
+                            </p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                        </button>
                       </div>
 
                     </div>
                   </>
                 )}
               </div>
+
+              {/* Schedule Quick Link */}
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = '/schedule';
+                }}
+                className="bg-indigo-600 text-white px-3.5 py-2 rounded-full shadow-md hover:bg-indigo-700 flex items-center space-x-1.5 cursor-pointer font-bold text-sm transition-all active:scale-95"
+                title="Xem & Xếp thời khóa biểu"
+              >
+                <Calendar className="w-4 h-4" />
+                <span className="hidden lg:inline">Thời khóa biểu</span>
+              </button>
 
               {/* Create Class Button */}
               <button
