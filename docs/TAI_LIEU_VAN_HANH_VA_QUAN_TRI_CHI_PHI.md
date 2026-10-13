@@ -173,4 +173,35 @@ git push origin dev
 ```
 
 ---
+
+## 7. HƯỚNG DẪN TÍNH NĂNG THỜI KHÓA BIỂU & LỊCH HỌC / THI / SỰ KIỆN
+
+### 7.1. Tổng quan & Đường dẫn truy cập
+- **URL trực tiếp**: `http://localhost:3000/schedule`
+- **Truy cập nhanh từ Dashboard**:
+  - **Giảng viên**: Bấm nút tím **"Thời khóa biểu"** trên thanh tiêu đề hoặc mở menu **"Quản lý"** -> chọn **"Thời khóa biểu"**.
+  - **Sinh viên**: Bấm nút **"Thời khóa biểu"** trong thanh hành động trên trang Dashboard.
+  - **Admin**: Đăng nhập và truy cập linh hoạt để giám sát lịch học toàn trường.
+
+### 7.2. Các phân hệ trên giao diện Thời khóa biểu
+1. **Thanh điều hướng trên cùng (Header)**:
+   - Bộ tab phân loại: `Tất cả`, `Lịch học`, `Lịch thi`, `Sự kiện`.
+   - Bộ điều hướng tuần: `<` (Tuần trước), `Hôm nay`, `>` (Tuần sau) và chế độ xem `Tuần`.
+   - Nút `+ Thêm ca học` (Dành riêng cho Giảng viên).
+2. **Cột thông tin bên trái (Sidebar)**:
+   - **Lịch mini tháng**: Xem và chọn nhanh ngày/tuần bất kỳ trong năm.
+   - **Bộ lọc checkbox**: Bật/tắt hiển thị từng loại lịch (`Lịch học`, `Lịch thi`, `Sự kiện`, `Hoạt động khác`).
+   - **Bảng màu môn học (Subject Legend)**: Hiển thị chấm tròn màu sắc nhận diện từng môn học kèm thanh tìm kiếm 🔍.
+3. **Lưới Thời khóa biểu chính (Calendar Grid)**:
+   - Khung giờ từ **07:00 đến 18:00**.
+   - 7 cột Thứ Hai đến Chủ Nhật kèm ngày thực tế. Cột ngày hôm nay có màu tím làm nổi bật.
+   - **Vạch chỉ giờ thực tế (Current Time Line)**: Hiển thị nhãn giờ dạng pill tím và vạch ngang cập nhật theo thời gian thực tế.
+   - **Thẻ ca học**: Hiển thị tên môn, giờ học, phòng học, giảng viên phụ trách, dải màu viền trái theo từng môn.
+   - Bấm vào thẻ để xem chi tiết đầy đủ hoặc Giảng viên có thể Chỉnh sửa / Xóa lịch.
+
+### 7.3. Tính năng chống xung đột phòng học (Conflict Detection)
+- Khi Giảng viên tạo hoặc đổi phòng học sang phòng đã có lớp khác học cùng ngày và cùng khung giờ, hệ thống sẽ tự động phát hiện và cảnh báo HTTP 409:
+  > *"Trùng phòng học! Phòng [Tên phòng] đã có lịch [Tên môn] từ [Giờ bắt đầu] đến [Giờ kết thúc]."*
+
+---
 *Tài liệu được biên soạn và bảo chứng bởi trợ lý AI Antigravity dành riêng cho dự án Student Management System.*
