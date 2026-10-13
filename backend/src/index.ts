@@ -19,6 +19,7 @@ import attendanceRoutes from './routes/attendance';
 import adminRoutes from './routes/admin';
 import teacherRoutes from './routes/teacher';
 import studentRoutes from './routes/student';
+import scheduleRoutes from './routes/schedule';
 
 // Import controllers
 import { HealthController } from './controllers/health';
@@ -76,6 +77,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/teacher', teacherRoutes);
 app.use('/api/student', studentRoutes);
+app.use('/api/schedule', scheduleRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
