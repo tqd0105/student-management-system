@@ -39,6 +39,13 @@ router.post('/events', requireTeacher, ScheduleController.createScheduleEvent);
 router.put('/events/:id', requireTeacher, ScheduleController.updateScheduleEvent);
 
 /**
+ * @route   PATCH /api/schedule/events/:id/pause
+ * @desc    Tạm ngưng hoặc khôi phục hoạt động cho ca học
+ * @access  Teacher / Admin
+ */
+router.patch('/events/:id/pause', requireTeacher, ScheduleController.togglePauseScheduleEvent);
+
+/**
  * @route   DELETE /api/schedule/events/:id
  * @desc    Xóa ca học / lịch thi / sự kiện
  * @access  Teacher / Admin

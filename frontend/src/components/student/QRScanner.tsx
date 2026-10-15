@@ -448,7 +448,7 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
                 <div className="flex flex-col items-center">
                   <AlertCircle className="w-12 h-12 text-red-500 mb-3" />
                   <h3 className="text-lg font-bold text-red-600 mb-2">
-                    Không hỗ trợ trên máy tính 
+                    Thiết bị không hỗ trợ 
                   </h3>
                   <p className="text-gray-600 mb-4  text-sm">
                     <strong>Vui lòng:</strong> Truy cập trang web này bằng điện thoại hoặc tablet để sử dụng tính năng điểm danh QR.

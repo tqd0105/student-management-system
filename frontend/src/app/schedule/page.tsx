@@ -49,7 +49,7 @@ export default function SchedulePage() {
             className="flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-indigo-600 transition-colors py-1 px-2.5 rounded-lg hover:bg-slate-50 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Quay lại {isAdmin ? 'Trang quản trị' : 'Dashboard'}</span>
+            <span className='hidden sm:block'>Quay lại {isAdmin ? 'Trang quản trị' : 'Dashboard'}</span>
           </button>
 
           <div className="text-xs font-semibold text-slate-500">

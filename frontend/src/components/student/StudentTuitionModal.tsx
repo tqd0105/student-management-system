@@ -205,7 +205,7 @@ export default function StudentTuitionModal({ isOpen, onClose }: StudentTuitionM
             </div>
             <div>
               <h2 className="text-xl font-bold tracking-wide flex items-center gap-2">
-                Học Phí & Công Nợ Cá Nhân
+                Học Phí
                 {studentCode && (
                   <span className="text-xs font-mono bg-white/25 px-2.5 py-0.5 rounded-full border border-white/40">
                     MSSV: {studentCode}
@@ -709,7 +709,7 @@ export default function StudentTuitionModal({ isOpen, onClose }: StudentTuitionM
                     </p>
                   )}
                   <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
-                    Hệ thống sẽ tự động đối soát và cập nhật trạng thái học phí khi nhận được khoản thanh toán.
+                    Hệ thống sẽ tự động đối soát và cập nhật trạng thái học phí khi nhận được khoản thanh toán. <br /> Nếu sau 2-3 ngày chưa nhận được khoản xác nhận vui lòng liên hệ <strong>ADMIN</strong> ở cuối trang.
                   </p>
                 </div>
               </div>

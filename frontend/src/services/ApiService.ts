@@ -777,6 +777,22 @@ class ApiService {
     });
   }
 
+  static async togglePauseScheduleEvent(
+    id: string,
+    data: {
+      isPaused: boolean;
+      pauseReason?: string | null;
+      pauseStartDate?: string | null;
+      pauseEndDate?: string | null;
+    }
+  ) {
+    return this.makeRequest(`${API_BASE_URL}/api/schedule/events/${id}/pause`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+  }
+
   static async deleteScheduleEvent(id: string) {
     return this.makeRequest(`${API_BASE_URL}/api/schedule/events/${id}`, {
       method: 'DELETE',

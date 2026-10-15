@@ -1941,7 +1941,7 @@ export default function Gradebook({ classId, className: initialClassName }: Grad
                                 title={`Hạn nộp: ${deadlineText} (${deadlineStatus?.detail || ''})`}
                               >
                                 <Clock size={10} />
-                                <span>{deadlineText?.split(' ')[0]} {deadlineStatus?.label}</span>
+                                <span> {deadlineStatus?.label}</span>
                               </span>
                             ) : (
                               <span className="text-[10px] text-gray-400">Không thời hạn</span>

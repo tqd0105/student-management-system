@@ -183,8 +183,14 @@ export class ScheduleController {
         endTime,
         room,
         specificDate,
+        startDate,
+        endDate,
         description,
         color = 'blue',
+        isPaused = false,
+        pauseReason,
+        pauseStartDate,
+        pauseEndDate,
       } = req.body;
 
       // 1. Validation cơ bản
@@ -214,6 +220,14 @@ export class ScheduleController {
           res.status(400).json({
             success: false,
             message: 'Lịch định kỳ yêu cầu chọn Thứ trong tuần (1 = Thứ 2 ... 7 = Chủ Nhật)',
+          });
+          return;
+        }
+
+        if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+          res.status(400).json({
+            success: false,
+            message: 'Ngày kết thúc áp dụng lặp phải sau ngày bắt đầu',
           });
           return;
         }
@@ -293,8 +307,14 @@ export class ScheduleController {
           endTime,
           room: room ? room.trim() : null,
           specificDate: !isRecurring && specificDate ? new Date(specificDate) : null,
+          startDate: isRecurring && startDate ? new Date(startDate) : null,
+          endDate: isRecurring && endDate ? new Date(endDate) : null,
           description: description ? description.trim() : null,
           color: color || 'blue',
+          isPaused: Boolean(isPaused),
+          pauseReason: isPaused && pauseReason ? pauseReason.trim() : null,
+          pauseStartDate: isPaused && pauseStartDate ? new Date(pauseStartDate) : null,
+          pauseEndDate: isPaused && pauseEndDate ? new Date(pauseEndDate) : null,
           createdById: user.userId,
         },
         include: {
@@ -366,8 +386,14 @@ export class ScheduleController {
         endTime,
         room,
         specificDate,
+        startDate,
+        endDate,
         description,
         color,
+        isPaused,
+        pauseReason,
+        pauseStartDate,
+        pauseEndDate,
       } = req.body;
 
       const updateData: any = {};
@@ -381,9 +407,23 @@ export class ScheduleController {
       if (specificDate !== undefined) {
         updateData.specificDate = specificDate ? new Date(specificDate) : null;
       }
+      if (startDate !== undefined) {
+        updateData.startDate = startDate ? new Date(startDate) : null;
+      }
+      if (endDate !== undefined) {
+        updateData.endDate = endDate ? new Date(endDate) : null;
+      }
       if (description !== undefined) updateData.description = description ? description.trim() : null;
       if (color !== undefined) updateData.color = color;
       if (classId !== undefined) updateData.classId = classId || null;
+      if (isPaused !== undefined) updateData.isPaused = Boolean(isPaused);
+      if (pauseReason !== undefined) updateData.pauseReason = pauseReason ? pauseReason.trim() : null;
+      if (pauseStartDate !== undefined) {
+        updateData.pauseStartDate = pauseStartDate ? new Date(pauseStartDate) : null;
+      }
+      if (pauseEndDate !== undefined) {
+        updateData.pauseEndDate = pauseEndDate ? new Date(pauseEndDate) : null;
+      }
 
       const updated = await prisma.scheduleEvent.update({
         where: { id },
@@ -404,6 +444,85 @@ export class ScheduleController {
       res.status(500).json({
         success: false,
         message: 'Lỗi máy chủ khi cập nhật lịch',
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * @route   PATCH /api/schedule/events/:id/pause
+   * @desc    Tạm ngưng hoặc khôi phục hoạt động của một mục lịch học / sự kiện với tùy chỉnh lý do và ngày
+   * @access  Teacher (người tạo / phụ trách lớp) / Admin
+   */
+  static async togglePauseScheduleEvent(req: Request, res: Response): Promise<void> {
+    try {
+      const user = req.user;
+      const { id } = req.params;
+
+      if (!user) {
+        res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
+        return;
+      }
+
+      const existingEvent = await prisma.scheduleEvent.findUnique({
+        where: { id },
+        include: { class: true },
+      });
+
+      if (!existingEvent) {
+        res.status(404).json({ success: false, message: 'Không tìm thấy lịch học' });
+        return;
+      }
+
+      // Kiểm tra quyền
+      const isOwner = existingEvent.createdById === user.userId;
+      const isClassTeacher = existingEvent.class?.teacherId === user.userId;
+      const isAdmin = user.role === 'ADMIN';
+
+      if (!isOwner && !isClassTeacher && !isAdmin) {
+        res.status(403).json({
+          success: false,
+          message: 'Bạn không có quyền thay đổi trạng thái tạm ngưng mục thời khóa biểu này',
+        });
+        return;
+      }
+
+      const { isPaused, pauseReason, pauseStartDate, pauseEndDate } = req.body;
+
+      const updateData: any = {
+        isPaused: Boolean(isPaused),
+      };
+
+      if (isPaused) {
+        updateData.pauseReason = pauseReason ? String(pauseReason).trim() : null;
+        updateData.pauseStartDate = pauseStartDate ? new Date(pauseStartDate) : null;
+        updateData.pauseEndDate = pauseEndDate ? new Date(pauseEndDate) : null;
+      } else {
+        // Khi khôi phục lịch
+        updateData.pauseReason = null;
+        updateData.pauseStartDate = null;
+        updateData.pauseEndDate = null;
+      }
+
+      const updated = await prisma.scheduleEvent.update({
+        where: { id },
+        data: updateData,
+        include: {
+          class: { select: { id: true, name: true } },
+          createdBy: { select: { id: true, name: true, email: true } },
+        },
+      });
+
+      res.json({
+        success: true,
+        message: isPaused ? 'Đã tạm ngưng lịch thành công' : 'Đã khôi phục hoạt động cho lịch thành công',
+        data: updated,
+      });
+    } catch (error: any) {
+      console.error('Lỗi khi cập nhật trạng thái tạm ngưng lịch:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Lỗi máy chủ khi thay đổi trạng thái tạm ngưng lịch',
         error: error.message,
       });
     }

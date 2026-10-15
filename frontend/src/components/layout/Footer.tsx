@@ -64,12 +64,21 @@ const DTECH_HIGHLIGHTS = [
 
 export const Footer: React.FC<FooterProps> = ({ onOpenContactModal }) => {
   const [copiedEmail, setCopiedEmail] = useState(false);
+  const [copiedPhone, setCopiedPhone] = useState(false);
 
   const handleCopyEmail = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText('tranquangdung.tech@gmail.com');
     setCopiedEmail(true);
     setTimeout(() => setCopiedEmail(false), 2500);
+  };
+
+  const handleCopyPhone = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigator.clipboard.writeText('0779461536');
+    setCopiedPhone(true);
+    setTimeout(() => setCopiedPhone(false), 2500);
   };
 
   return (
@@ -143,11 +152,11 @@ export const Footer: React.FC<FooterProps> = ({ onOpenContactModal }) => {
 
       {/* ── LIGHTBRAVE SYSTEM BAR ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3.5 text-xs text-gray-500">
 
           {/* Brand & Copyright */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center sm:text-left">
-            <div className="flex items-center gap-2.5">
+          <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-2.5 sm:gap-3 text-center sm:text-left">
+            <div className="flex items-center gap-2">
               <div className="h-6 w-6 flex items-center justify-center overflow-hidden shrink-0">
                 <img
                   src="/images/logo.png"
@@ -156,7 +165,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenContactModal }) => {
                 />
               </div>
 
-              <span className="font-bold text-gray-800 text-sm">
+              <span className="font-bold text-gray-800 text-sm tracking-tight">
                 LIGHTBRAVE.EDU
               </span>
             </div>
@@ -166,7 +175,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenContactModal }) => {
             <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-xs sm:text-sm text-gray-500">
               <span>© 2026. Developed by</span>
 
-              <strong className="text-gray-700">
+              <strong className="text-gray-700 font-semibold">
                 DTECH TEAM
               </strong>
 
@@ -176,19 +185,45 @@ export const Footer: React.FC<FooterProps> = ({ onOpenContactModal }) => {
             </div>
           </div>
 
-          {/* System Status */}
-          <div className="flex items-center gap-4">
+          {/* Support & Admin Contact (Responsive across Mobile, Tablet, Desktop) */}
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-2">
+            {/* Phone Hotline / Admin với Call 1 chạm + Nút Copy nhanh */}
+            <div className="inline-flex items-center rounded-lg bg-emerald-50 border border-emerald-200/80 shadow-2xs overflow-hidden">
+              <a
+                href="tel:0779461536"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-100/60 font-semibold text-xs transition-colors"
+                title="Bấm để gọi hotline Admin: 0779 461 536"
+              >
+                <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>
+                  <span className="font-normal text-emerald-600/80">Hotline:</span> 0779 461 536
+                </span>
+              </a>
 
-          </div>
+              <button
+                type="button"
+                onClick={handleCopyPhone}
+                className="p-1 px-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100/80 border-l border-emerald-200/60 transition-colors cursor-pointer"
+                title="Sao chép số điện thoại"
+              >
+                {copiedPhone ? (
+                  <Check className="w-3 h-3 text-emerald-700" />
+                ) : (
+                  <Copy className="w-3 h-3" />
+                )}
+              </button>
+            </div>
 
-          {/* Support */}
-          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline text-gray-200">|</span>
+
+            {/* Email Support */}
             <a
-              href="mailto:support@lightbrave.edu.vn"
-              className="flex items-center gap-1 hover:text-gray-800 hover:underline transition-colors"
+              href="mailto:dtech.webdevteam@gmail.com"
+              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors text-xs"
+              title="Gửi email hỗ trợ kỹ thuật"
             >
-              <Mail className="w-4 h-4" />
-              dtech.webdevteam@gmail.com
+              <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <span>dtech.webdevteam@gmail.com</span>
             </a>
           </div>
 

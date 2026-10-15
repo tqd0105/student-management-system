@@ -1165,7 +1165,7 @@ export default function TeacherDashboard() {
                         </button>
 
                         {/* Item 3: Schedule Management */}
-                        <button
+                        {/* <button
                           type="button"
                           onClick={() => {
                             setIsManagementMenuOpen(false);
@@ -1190,7 +1190,7 @@ export default function TeacherDashboard() {
                             </p>
                           </div>
                           <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all shrink-0" />
-                        </button>
+                        </button> */}
                       </div>
 
                     </div>
@@ -1204,17 +1204,17 @@ export default function TeacherDashboard() {
                 onClick={() => {
                   window.location.href = '/schedule';
                 }}
-                className="bg-indigo-600 text-white px-3.5 py-2 rounded-full shadow-md hover:bg-indigo-700 flex items-center space-x-1.5 cursor-pointer font-bold text-sm transition-all active:scale-95"
+                className="bg-indigo-600 text-white sm:px-4 py-2 px-2 rounded-full shadow-md hover:bg-indigo-700 flex items-center gap-2 space-x-1.5 cursor-pointer font-bold text-sm transition-all active:scale-95"
                 title="Xem & Xếp thời khóa biểu"
               >
-                <Calendar className="w-4 h-4" />
+                <Calendar className="w-4 h-4 m-0" />
                 <span className="hidden lg:inline">Thời khóa biểu</span>
               </button>
 
               {/* Create Class Button */}
               <button
                 onClick={() => setIsCreateClassModalOpen(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-blue-700 flex items-center sm:space-x-1.5 cursor-pointer font-bold text-sm"
+                className="bg-blue-600 text-white sm:px-4 py-2 px-2 rounded-full shadow-lg hover:bg-blue-700 flex items-center sm:space-x-1.5 cursor-pointer font-bold text-sm"
               >
                 <Plus className="w-4 h-4" />
                 <span className="hidden md:inline">New Class</span>

@@ -287,11 +287,17 @@ model ScheduleEvent {
   endTime      String        // HH:mm (ví dụ: "09:30")
   room         String?       // Ví dụ: "Phòng A203"
   specificDate DateTime?     // Cho lịch thi hoặc sự kiện ngày cụ thể
-  description  String?
-  color        String?       @default("blue")
-  createdById  String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  startDate    DateTime?     // Ngày bắt đầu áp dụng lịch lặp
+  endDate      DateTime?     // Ngày kết thúc lịch lặp
+  description    String?
+  color          String?       @default("blue")
+  isPaused       Boolean       @default(false) // Trạng thái tạm ngưng lịch
+  pauseReason    String?       // Lý do tạm ngưng (Nghỉ lễ, Giảng viên công tác, Bảo trì phòng...)
+  pauseStartDate DateTime?     // Ngày bắt đầu tạm ngưng (tùy chọn)
+  pauseEndDate   DateTime?     // Ngày kết thúc tạm ngưng (tùy chọn)
+  createdById    String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   class        Class?        @relation(fields: [classId], references: [id], onDelete: Cascade)
   createdBy    User          @relation("ScheduleCreator", fields: [createdById], references: [id], onDelete: Cascade)
@@ -300,5 +306,10 @@ model ScheduleEvent {
   @@index([createdById])
   @@index([dayOfWeek])
   @@index([specificDate])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([isPaused])
+  @@index([pauseStartDate])
+  @@index([pauseEndDate])
   @@map("schedule_events")
 }
