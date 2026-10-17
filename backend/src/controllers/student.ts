@@ -9,6 +9,7 @@ import prisma from '../prisma';
 import { UserPayload } from '../types';
 import { ensureStudentProfileAndCode } from '../utils/studentCode';
 import { getClientIp, getPublicWanIp, isNetworkMatch } from '../utils/clientIp';
+import { calculateDistance } from '../utils/geo';
 
 interface AuthenticatedRequest extends Request {
   user?: UserPayload;
@@ -79,7 +80,7 @@ export const getStudentClasses = async (req: AuthenticatedRequest, res: Response
 export const scanQRAndCheckIn = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
   try {
     const studentId = req.user?.userId;
-    const { qrData, latitude, longitude } = req.body;
+    const { qrData, latitude, longitude, deviceId } = req.body;
 
     if (!studentId) {
       return res.status(401).json({ 
@@ -246,6 +247,85 @@ export const scanQRAndCheckIn = async (req: AuthenticatedRequest, res: Response)
       });
     }
 
+    // 1. Kiểm tra thiết bị trùng lặp trong cùng buổi học (Anti Device-Sharing Fraud)
+    const effectiveDeviceId = (deviceId && typeof deviceId === 'string' && deviceId.trim() !== '') 
+      ? deviceId.trim() 
+      : (req.get('x-device-id') || req.get('User-Agent') || 'unknown');
+
+    if (effectiveDeviceId && effectiveDeviceId !== 'unknown') {
+      const existingDeviceLog = await prisma.attendanceLog.findFirst({
+        where: {
+          sessionId: session.id,
+          deviceId: effectiveDeviceId,
+          studentId: { not: studentId }
+        },
+        include: {
+          student: {
+            select: {
+              name: true
+            }
+          }
+        }
+      });
+
+      if (existingDeviceLog) {
+        console.warn(`🚨 [Anti-Fraud] Trùng thiết bị điểm danh! Session: ${session.id}, Device: ${effectiveDeviceId}, Đã quét cho: ${existingDeviceLog.student?.name}, Đang quét cho: ${studentId}`);
+        return res.status(403).json({
+          success: false,
+          code: 'DEVICE_SHARING_DETECTED',
+          message: `Phát hiện gian lận: Thiết bị này đã được sử dụng để điểm danh cho sinh viên "${existingDeviceLog.student?.name || 'khác'}" trong buổi học này! Mỗi thiết bị chỉ được điểm danh cho 1 tài khoản sinh viên.`,
+          details: {
+            blockedReason: 'DUPLICATE_DEVICE',
+            usedByStudent: existingDeviceLog.student?.name || 'Sinh viên khác',
+            detectedDeviceId: effectiveDeviceId
+          }
+        });
+      }
+    }
+
+    // 2. Kiểm tra vị trí GPS nếu buổi học có cấu hình tọa độ lớp học
+    const parsedLat = (latitude !== undefined && latitude !== null && !isNaN(parseFloat(latitude.toString())))
+      ? parseFloat(latitude.toString())
+      : null;
+    const parsedLng = (longitude !== undefined && longitude !== null && !isNaN(parseFloat(longitude.toString())))
+      ? parseFloat(longitude.toString())
+      : null;
+
+    if (session.locationLat !== null && session.locationLng !== null) {
+      if (parsedLat === null || parsedLng === null) {
+        return res.status(403).json({
+          success: false,
+          code: 'LOCATION_REQUIRED',
+          message: 'Buổi học này yêu cầu xác thực vị trí GPS. Vui lòng bật định vị trên thiết bị và cho phép quyền truy cập vị trí.',
+          details: {
+            blockedReason: 'GPS_MISSING'
+          }
+        });
+      }
+
+      const distance = calculateDistance(
+        session.locationLat,
+        session.locationLng,
+        parsedLat,
+        parsedLng
+      );
+
+      const allowedRadius = session.radiusMeters || 100;
+      if (distance > allowedRadius) {
+        console.warn(`🚨 [Anti-Fraud] Ngoài phạm vi GPS! Session: ${session.id}, Khoảng cách: ${Math.round(distance)}m, Cho phép: ${allowedRadius}m`);
+        return res.status(403).json({
+          success: false,
+          code: 'LOCATION_OUT_OF_BOUNDS',
+          message: `Điểm danh thất bại! Vị trí của bạn đang ở cách lớp học ${Math.round(distance)}m (vượt quá bán kính cho phép ${allowedRadius}m). Vui lòng di chuyển vào lớp học để điểm danh.`,
+          details: {
+            distance: Math.round(distance),
+            allowedRadius,
+            blockedReason: 'GPS_OUT_OF_BOUNDS'
+          }
+        });
+      }
+    }
+
     // Tạo record điểm danh
     const now = new Date();
     const sessionStartTime = new Date(session.startTime);
@@ -264,9 +344,9 @@ export const scanQRAndCheckIn = async (req: AuthenticatedRequest, res: Response)
         studentId,
         status: status as any,
         checkedAt: now,
-        latitude: latitude,
-        longitude: longitude,
-        deviceId: req.get('User-Agent') || 'unknown',
+        latitude: parsedLat,
+        longitude: parsedLng,
+        deviceId: effectiveDeviceId,
         clientIp,
         networkMatched,
         networkCheckReason: session.networkProfile ? (networkMatched ? 'MATCH' : 'MISMATCH_FLAGGED') : 'NOT_CONFIGURED'
@@ -280,7 +360,7 @@ export const scanQRAndCheckIn = async (req: AuthenticatedRequest, res: Response)
       code: 'CHECKIN_SUCCESS',
       message: isLate 
         ? `Điểm danh thành công! Bạn được ghi nhận có mặt nhưng trễ (${minutesDiff} phút).` 
-        : 'Điểm danh thành công! Bạn đã có mặt đúng giờ.',
+        : 'Điểm danh thành công!',
       data: {
         sessionTitle: session.title,
         className: session.class.name,
@@ -289,7 +369,12 @@ export const scanQRAndCheckIn = async (req: AuthenticatedRequest, res: Response)
         minutesDiff,
         clientIp,
         networkMatched,
-        networkName: session.networkProfile?.name || 'Mạng tiêu chuẩn'
+        networkName: session.networkProfile?.name || 'Mạng tiêu chuẩn',
+        distanceMeters: (session.locationLat !== null && session.locationLng !== null && parsedLat !== null && parsedLng !== null)
+          ? Math.round(calculateDistance(session.locationLat, session.locationLng, parsedLat, parsedLng))
+          : null,
+        allowedRadius: session.radiusMeters || 100,
+        deviceId: effectiveDeviceId
       }
     });
 

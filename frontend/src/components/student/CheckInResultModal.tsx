@@ -20,13 +20,18 @@ import {
   Smartphone,
   ChevronRight,
   Info,
-  Ban
+  Ban,
+  MapPin,
+  ShieldAlert,
+  GraduationCap
 } from 'lucide-react';
 
 export type CheckInModalType =
   | 'SUCCESS'
   | 'LATE'
   | 'NETWORK_MISMATCH'
+  | 'DEVICE_SHARING_DETECTED'
+  | 'LOCATION_OUT_OF_BOUNDS'
   | 'ALREADY_CHECKED_IN'
   | 'QR_EXPIRED'
   | 'NOT_ENROLLED'
@@ -37,6 +42,8 @@ export interface CheckInModalData {
   type: CheckInModalType;
   title?: string;
   message?: string;
+  studentName?: string;
+  studentCode?: string;
   className?: string;
   sessionTitle?: string;
   checkinTime?: string | Date;
@@ -48,6 +55,10 @@ export interface CheckInModalData {
   detectedIp?: string;
   requiredNetwork?: string;
   requiredIp?: string;
+  // Anti-Fraud GPS & Device diagnostics
+  distanceMeters?: number | null;
+  allowedRadius?: number | null;
+  deviceId?: string | null;
 }
 
 interface CheckInResultModalProps {
@@ -67,6 +78,8 @@ export default function CheckInResultModal({
     type,
     title,
     message,
+    studentName,
+    studentCode,
     className,
     sessionTitle,
     checkinTime,
@@ -77,6 +90,9 @@ export default function CheckInResultModal({
     detectedIp,
     requiredNetwork,
     requiredIp,
+    distanceMeters,
+    allowedRadius,
+    deviceId,
   } = data;
 
   // Haptic feedback for mobile
@@ -147,6 +163,38 @@ export default function CheckInResultModal({
           defaultDesc: message || `Bạn đã được ghi nhận có mặt nhưng trễ so với giờ bắt đầu ${minutesDiff ? `(${minutesDiff} phút)` : ''}.`,
           btnColor: 'bg-amber-600 hover:bg-amber-700 shadow-amber-500/25',
           showRetry: false,
+        };
+
+      case 'DEVICE_SHARING_DETECTED':
+        return {
+          headerBg: 'bg-gradient-to-br from-rose-600 via-red-600 to-rose-700',
+          iconBg: 'bg-rose-50 text-rose-600 ring-8 ring-rose-400/20',
+          icon: <Smartphone className="w-12 h-12 text-rose-500 animate-pulse" strokeWidth={2.5} />,
+          badge: {
+            text: 'Trùng thiết bị điểm danh',
+            color: 'bg-rose-100 text-rose-800 border-rose-300',
+            dot: 'bg-rose-500',
+          },
+          defaultTitle: 'Phát Hiện Dùng Chung Thiết Bị!',
+          defaultDesc: message || 'Thiết bị này đã được một sinh viên khác sử dụng để điểm danh trong buổi học này.',
+          btnColor: 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/25',
+          showRetry: false,
+        };
+
+      case 'LOCATION_OUT_OF_BOUNDS':
+        return {
+          headerBg: 'bg-gradient-to-br from-amber-600 via-rose-600 to-amber-700',
+          iconBg: 'bg-rose-50 text-rose-600 ring-8 ring-rose-400/20',
+          icon: <MapPin className="w-12 h-12 text-rose-500 animate-bounce " strokeWidth={2.5} />,
+          badge: {
+            text: 'Ngoài phạm vi phòng học',
+            color: 'bg-rose-100 text-rose-800 border-rose-300',
+            dot: 'bg-rose-500',
+          },
+          defaultTitle: 'Vị Trí Ngoài Khu Vực Lớp Học!',
+          defaultDesc: message || 'Vị trí GPS của bạn đang ở ngoài khu vực phòng học do giảng viên quy định.',
+          btnColor: 'bg-amber-600 hover:bg-amber-700 shadow-amber-500/25',
+          showRetry: true,
         };
 
       case 'NETWORK_MISMATCH':
@@ -235,14 +283,14 @@ export default function CheckInResultModal({
   const config = getConfig();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
       <div 
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 flex flex-col transform transition-all animate-in zoom-in-95 duration-200"
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] overflow-hidden border border-gray-100 flex flex-col transform transition-all animate-in zoom-in-95 duration-200 my-auto"
         role="dialog"
         aria-modal="true"
       >
         {/* Decorative Header Bar */}
-        <div className={`relative px-6 pt-8 pb-14 text-white ${config.headerBg}`}>
+        <div className={`relative px-6 pt-7 pb-12 text-white shrink-0 ${config.headerBg}`}>
           {/* Subtle geometric pattern overlay */}
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
           
@@ -268,22 +316,34 @@ export default function CheckInResultModal({
         </div>
 
         {/* Center Floating Icon Badge */}
-        <div className="relative -mt-10 flex justify-center z-10">
-          <div className={`p-4 rounded-2xl shadow-xl border-4 border-white ${config.iconBg}`}>
+        <div className="relative -mt-9 flex justify-center z-10 shrink-0">
+          <div className={`p-3.5 sm:p-4 rounded-2xl shadow-xl border-4 border-white ${config.iconBg}`}>
             {config.icon}
           </div>
         </div>
 
         {/* Body Content */}
-        <div className="px-6 pt-3 pb-6 flex-1 flex flex-col">
+        <div className="px-5 sm:px-6 pt-2 pb-6 flex-1 flex flex-col overflow-y-auto overscroll-contain">
           {/* Message Description */}
           <p className="text-sm text-center text-gray-600 font-medium leading-relaxed px-2">
             {config.defaultDesc}
           </p>
 
           {/* Info Card: Success or Recorded Attendance */}
-          {(className || sessionTitle || checkinTime) && (
+          {(studentName || className || sessionTitle || checkinTime) && (
             <div className="mt-4 p-4 rounded-2xl bg-gray-50/90 border border-gray-100 space-y-2.5 text-xs text-gray-700 shadow-xs">
+              {studentName && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-gray-400 font-medium flex items-center gap-1.5">
+                    <GraduationCap className="w-4 h-4 text-emerald-600 shrink-0" />
+                    Sinh viên:
+                  </span>
+                  <span className="font-bold text-gray-900 text-right truncate max-w-[200px]">
+                    {studentName} {studentCode ? `(${studentCode})` : ''}
+                  </span>
+                </div>
+              )}
+
               {className && (
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-gray-400 font-medium flex items-center gap-1.5">
@@ -320,6 +380,34 @@ export default function CheckInResultModal({
                 </div>
               )}
 
+              {/* Attendance Status Row */}
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-200/60">
+                <span className="text-gray-400 font-medium flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                  Trạng thái:
+                </span>
+                <span className={`font-bold px-2 py-0.5 rounded-md text-[11px] border ${
+                  type === 'SUCCESS' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                  type === 'LATE' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                  type === 'ALREADY_CHECKED_IN' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                  'bg-rose-50 text-rose-700 border-rose-200'
+                }`}>
+                  {config.badge.text}
+                </span>
+              </div>
+
+              {distanceMeters !== undefined && distanceMeters !== null && (
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-200/60">
+                  <span className="text-gray-400 font-medium flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-cyan-600 shrink-0" />
+                    Vị trí phòng học:
+                  </span>
+                  <span className="font-semibold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-md border border-cyan-200 text-xs">
+                    Cách ~{distanceMeters}m 
+                  </span>
+                </div>
+              )}
+
               {networkName && (
                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-200/60">
                   <span className="text-gray-400 font-medium flex items-center gap-1.5">
@@ -331,6 +419,72 @@ export default function CheckInResultModal({
                   </span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Location Out of Bounds Diagnostics */}
+          {type === 'LOCATION_OUT_OF_BOUNDS' && (
+            <div className="mt-4 space-y-3">
+              <div className="bg-rose-50/90 border border-rose-200 rounded-2xl p-4 text-xs space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-rose-700 font-semibold flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-rose-600" />
+                    Khoảng cách thực tế:
+                  </span>
+                  <span className="font-bold text-rose-900 bg-white px-2.5 py-0.5 rounded-lg border border-rose-200">
+                    {distanceMeters !== undefined && distanceMeters !== null ? `~${distanceMeters} mét` : 'Ngoài phạm vi'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 border-t border-rose-200/60 text-gray-600">
+                  <span className="flex items-center gap-1.5 text-gray-500">
+                    Bán kính lớp cho phép:
+                  </span>
+                  <span className="font-semibold text-gray-800 bg-white px-2 py-0.5 rounded text-[11px] border border-gray-200">
+                    {allowedRadius ? `${allowedRadius} mét` : '100 mét'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-900 space-y-1">
+                <p className="font-bold flex items-center gap-1 text-amber-800">
+                  <Info className="w-3.5 h-3.5" />
+                  Lưu ý để điểm danh hợp lệ:
+                </p>
+                <ul className="list-disc list-inside space-y-0.5 text-amber-800/90 pl-1">
+                  <li>Bạn cần có mặt trực tiếp tại phòng học để quét mã.</li>
+                  <li>Bật định vị GPS với độ chính xác cao trên điện thoại.</li>
+                  <li>Di chuyển vào trong phòng học và bấm nút <strong>&quot;Quét lại mã QR&quot;</strong>.</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* Device Sharing Diagnostics */}
+          {type === 'DEVICE_SHARING_DETECTED' && (
+            <div className="mt-4 space-y-3">
+              <div className="bg-rose-50/90 border border-rose-200 rounded-2xl p-4 text-xs space-y-2">
+                <div className="flex items-center gap-2 text-rose-800 font-bold">
+                  <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>Quy định Chống Điểm Danh Hộ</span>
+                </div>
+                <p className="text-gray-700 leading-relaxed text-[11px]">
+                  Hệ thống Anti-Fraud phát hiện thiết bị di động này vừa được sử dụng để điểm danh cho một sinh viên khác trong cùng buổi học.
+                </p>
+                {deviceId && (
+                  <div className="pt-1.5 border-t border-rose-200/60 flex items-center justify-between text-[11px]">
+                    <span className="text-gray-500">Mã định danh thiết bị:</span>
+                    <span className="font-mono text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-200">
+                      {deviceId.slice(0, 16)}...
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-[11px] text-gray-700 space-y-1">
+                <p className="font-bold text-gray-800">Hướng giải quyết:</p>
+                <p>Mỗi sinh viên phải tự đăng nhập và quét mã bằng thiết bị của chính mình. Nếu bạn mượn máy hoặc có sự cố, vui lòng báo ngay cho Giảng viên để được điểm danh thủ công.</p>
+              </div>
             </div>
           )}
 

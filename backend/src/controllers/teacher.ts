@@ -11,6 +11,7 @@ import QRCode from 'qrcode';
 import { UserPayload } from '../types';
 import { AuthUtils } from '../utils/auth';
 import { ensureStudentProfileAndCode, generateNextStudentCode } from '../utils/studentCode';
+import { calculateDistance } from '../utils/geo';
 
 interface AuthenticatedRequest extends Request {
   user?: UserPayload;
@@ -237,7 +238,14 @@ export const createAttendanceSession = async (req: AuthenticatedRequest, res: Re
     
     const teacherId = req.user?.userId;
     const { classId } = req.params;
-    const { title, networkProfileId, networkEnforcementMode = 'OFF' } = req.body;
+    const {
+      title,
+      networkProfileId,
+      networkEnforcementMode = 'OFF',
+      locationLat,
+      locationLng,
+      radiusMeters
+    } = req.body;
 
     console.log('Teacher ID:', teacherId);
     console.log('Class ID:', classId);
@@ -277,6 +285,10 @@ export const createAttendanceSession = async (req: AuthenticatedRequest, res: Re
     }
 
     console.log('✅ Creating session...');
+    const parsedLat = locationLat !== undefined && locationLat !== null && !isNaN(parseFloat(locationLat.toString())) ? parseFloat(locationLat.toString()) : null;
+    const parsedLng = locationLng !== undefined && locationLng !== null && !isNaN(parseFloat(locationLng.toString())) ? parseFloat(locationLng.toString()) : null;
+    const parsedRadius = radiusMeters !== undefined && radiusMeters !== null && !isNaN(parseInt(radiusMeters.toString())) ? parseInt(radiusMeters.toString()) : 100;
+
     const session = await prisma.attendanceSession.create({
       data: {
         teacherId: teacherId,
@@ -288,7 +300,10 @@ export const createAttendanceSession = async (req: AuthenticatedRequest, res: Re
         qrExpiresAt: null,
         isActive: false, // Inactive until QR is generated
         networkProfileId: networkProfile?.id || null,
-        networkEnforcementMode: networkProfile ? networkEnforcementMode : 'OFF'
+        networkEnforcementMode: networkProfile ? networkEnforcementMode : 'OFF',
+        locationLat: parsedLat,
+        locationLng: parsedLng,
+        radiusMeters: parsedRadius
       },
       include: {
         networkProfile: true
@@ -897,12 +912,20 @@ export const updateSession = async (req: AuthenticatedRequest, res: Response): P
   try {
     const teacherId = req.user?.userId;
     const { sessionId } = req.params;
-    const { title, startTime, networkProfileId, networkEnforcementMode } = req.body;
+    const {
+      title,
+      startTime,
+      networkProfileId,
+      networkEnforcementMode,
+      locationLat,
+      locationLng,
+      radiusMeters
+    } = req.body;
 
     console.log('🔄 UPDATE SESSION DEBUG:');
     console.log('Teacher ID:', teacherId);
     console.log('Session ID:', sessionId);
-    console.log('Request body:', { title, startTime, networkProfileId, networkEnforcementMode });
+    console.log('Request body:', { title, startTime, networkProfileId, networkEnforcementMode, locationLat, locationLng, radiusMeters });
 
     if (!teacherId) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -954,6 +977,16 @@ export const updateSession = async (req: AuthenticatedRequest, res: Response): P
       }
     } else if (networkEnforcementMode !== undefined) {
       updateData.networkEnforcementMode = session.networkProfileId ? networkEnforcementMode : 'OFF';
+    }
+
+    if (locationLat !== undefined) {
+      updateData.locationLat = (locationLat !== null && !isNaN(parseFloat(locationLat.toString()))) ? parseFloat(locationLat.toString()) : null;
+    }
+    if (locationLng !== undefined) {
+      updateData.locationLng = (locationLng !== null && !isNaN(parseFloat(locationLng.toString()))) ? parseFloat(locationLng.toString()) : null;
+    }
+    if (radiusMeters !== undefined) {
+      updateData.radiusMeters = (radiusMeters !== null && !isNaN(parseInt(radiusMeters.toString()))) ? parseInt(radiusMeters.toString()) : 100;
     }
     
     console.log('Update data:', updateData);
@@ -1081,10 +1114,38 @@ export const getSessionAttendanceStats = async (req: AuthenticatedRequest, res: 
     // Tạo danh sách tất cả sinh viên trong lớp
     const allStudents = session.class.enrollments.map(enrollment => enrollment.student);
     
-    // Tạo thống kê chi tiết
+    // Tạo thống kê chi tiết & phân tích toàn vẹn chống gian lận
     const attendanceStats = allStudents.map(student => {
       const attendanceRecord = attendanceRecords.find(record => record.studentId === student.id);
       
+      const sharingRecords = (
+        attendanceRecord?.deviceId && 
+        attendanceRecord.deviceId !== 'unknown' && 
+        attendanceRecord.deviceId !== 'MANUAL_TEACHER'
+      )
+        ? attendanceRecords.filter(r => 
+            r.deviceId === attendanceRecord.deviceId && 
+            r.studentId !== student.id && 
+            r.deviceId !== 'MANUAL_TEACHER'
+          )
+        : [];
+      
+      const hasSessionCoords = session.locationLat !== null && session.locationLng !== null && session.locationLat !== undefined && session.locationLng !== undefined;
+      const hasStudentCoords = attendanceRecord?.latitude !== null && attendanceRecord?.longitude !== null && attendanceRecord?.latitude !== undefined && attendanceRecord?.longitude !== undefined;
+
+      const distanceMeters = (hasSessionCoords && hasStudentCoords)
+        ? calculateDistance(
+            Number(session.locationLat),
+            Number(session.locationLng),
+            Number(attendanceRecord!.latitude),
+            Number(attendanceRecord!.longitude)
+          )
+        : null;
+
+      const isLocationOutOfBounds = (distanceMeters !== null && session.radiusMeters !== null && session.radiusMeters !== undefined)
+        ? (distanceMeters > (session.radiusMeters || 100))
+        : false;
+
       return {
         studentId: student.id,
         studentName: student.name,
@@ -1096,13 +1157,25 @@ export const getSessionAttendanceStats = async (req: AuthenticatedRequest, res: 
           Math.floor((attendanceRecord.checkedAt.getTime() - session.startTime.getTime()) / 1000 / 60) : null,
         clientIp: attendanceRecord?.clientIp || null,
         networkMatched: attendanceRecord?.networkMatched ?? null,
-        networkCheckReason: attendanceRecord?.networkCheckReason || null
+        networkCheckReason: attendanceRecord?.networkCheckReason || null,
+        // Anti-Fraud Radar data
+        deviceId: attendanceRecord?.deviceId || null,
+        latitude: attendanceRecord?.latitude || null,
+        longitude: attendanceRecord?.longitude || null,
+        distanceMeters,
+        isDuplicateDevice: sharingRecords.length > 0,
+        duplicateWith: sharingRecords.map(r => r.student.name),
+        isLocationOutOfBounds
       };
     });
 
     const presentCount = attendanceRecords.filter(r => r.status === 'PRESENT').length;
     const lateCount = attendanceRecords.filter(r => r.status === 'LATE').length;
     const mismatchedNetworkCount = attendanceRecords.filter(r => r.networkMatched === false).length;
+    
+    // Đếm số lượng vi phạm thiết bị và GPS
+    const duplicateDeviceCount = attendanceStats.filter(s => s.isDuplicateDevice).length;
+    const outOfBoundsLocationCount = attendanceStats.filter(s => s.isLocationOutOfBounds).length;
 
     const stats = {
       sessionInfo: {
@@ -1113,13 +1186,18 @@ export const getSessionAttendanceStats = async (req: AuthenticatedRequest, res: 
         endTime: session.endTime,
         isActive: session.isActive,
         networkProfile: session.networkProfile,
-        networkEnforcementMode: session.networkEnforcementMode
+        networkEnforcementMode: session.networkEnforcementMode,
+        locationLat: session.locationLat,
+        locationLng: session.locationLng,
+        radiusMeters: session.radiusMeters
       },
       totalStudents: allStudents.length,
       presentStudents: presentCount,
       lateStudents: lateCount,
       absentStudents: allStudents.length - presentCount - lateCount,
       mismatchedNetworkCount,
+      duplicateDeviceCount,
+      outOfBoundsLocationCount,
       attendanceRate: allStudents.length > 0 ? ((presentCount + lateCount) / allStudents.length * 100).toFixed(1) : 0,
       attendanceDetails: attendanceStats,
       logs: attendanceRecords

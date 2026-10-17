@@ -333,10 +333,10 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
                     <div className="mt-2 flex items-center justify-between text-[11px] text-gray-400">
                       <span>0%</span>
                       <span className={`font-semibold ${rateColor.text}`}>
-                        {overallStats.attendanceRate >= 90 ? '🎉 Chuyên cần xuất sắc!' :
-                         overallStats.attendanceRate >= 75 ? '👍 Chuyên cần tốt!' :
-                         overallStats.attendanceRate >= 60 ? '⚠️ Cần cải thiện tần suất dự học' :
-                         '🚨 Tỷ lệ thấp — cần chú ý'}
+                        {overallStats.attendanceRate >= 90 ? 'Chuyên cần xuất sắc!' :
+                         overallStats.attendanceRate >= 75 ? 'Chuyên cần tốt!' :
+                         overallStats.attendanceRate >= 60 ? 'Cần cải thiện tần suất dự học' :
+                         'Tỷ lệ thấp — cần chú ý'}
                       </span>
                       <span>100%</span>
                     </div>

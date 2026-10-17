@@ -60,3 +60,7 @@ exports/
 # Root temporary MCP packages
 /package.json
 /package-lock.json
+
+# IDE and executables
+.idea/
+*.exe

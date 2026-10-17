@@ -263,7 +263,7 @@ export default function StudentManagementModal({
               {/* Status Filter */}
               <div className="flex items-center gap-1.5 bg-white px-2.5 py-1.5 border border-gray-300 rounded-xl text-xs shadow-2xs">
                 <Filter size={13} className="text-gray-500 shrink-0" />
-                <span className="font-semibold text-gray-600 hidden sm:inline">Trạng thái:</span>
+                {/* <span className="font-semibold text-gray-600 hidden sm:inline">Trạng thái:</span> */}
                 <select
                   value={statusFilter}
                   onChange={e => setStatusFilter(e.target.value)}

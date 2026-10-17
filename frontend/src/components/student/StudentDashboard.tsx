@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { BookOpen, Calendar, CheckCircle, QrCode, Camera, History, UserCheck, UserX, Clock, Trash2, LogOut, Award, CreditCard, ChevronRight, X, FileText } from 'lucide-react';
+import { BookOpen, Calendar, CheckCircle, QrCode, Camera, History, UserCheck, UserX, Clock, Trash2, LogOut, Award, CreditCard, ChevronRight, X, FileText, Loader2, ShieldCheck, MapPin, Wifi, Smartphone } from 'lucide-react';
 import QRScanner from '@/components/student/QRScanner';
 import AttendanceHistory from '@/components/student/AttendanceHistory';
 import StudentGradesModal from '@/components/student/StudentGradesModal';
@@ -13,6 +13,7 @@ import StudentMaterialsModal from '@/components/student/StudentMaterialsModal';
 import CheckInResultModal, { CheckInModalData } from '@/components/student/CheckInResultModal';
 import ApiService from '@/services/ApiService';
 import { API_BASE_URL } from '@/config/api';
+import { getOrCreateDeviceId, getCurrentPositionPromise } from '@/utils/deviceFingerprint';
 
 interface Class {
   id: string;
@@ -67,6 +68,8 @@ export default function StudentDashboard() {
   const [studentCode, setStudentCode] = useState<string>(user?.studentProfile?.studentCode || '');
   const [scanResult, setScanResult] = useState<string>('');
   const [checkInModalData, setCheckInModalData] = useState<CheckInModalData | null>(null);
+  const [isVerifyingAttendance, setIsVerifyingAttendance] = useState(false);
+  const [verifyingStep, setVerifyingStep] = useState<string>('');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -231,15 +234,10 @@ export default function StudentDashboard() {
   };
 
   const handleQRScan = async (qrCode: string) => {
-    // console.log('🔥 QR Scan started!');
-    // console.log('📊 QR Code received:', qrCode);
-    // console.log('🔍 QR Code type:', typeof qrCode);
-    // console.log('📏 QR Code length:', qrCode.length);
-    // console.log('🧪 QR Code preview:', qrCode.substring(0, 100) + (qrCode.length > 100 ? '...' : ''));
-
     // Validate QR format before sending
+    let parsedQR: any;
     try {
-      const parsedQR = JSON.parse(qrCode);
+      parsedQR = JSON.parse(qrCode);
       if (!parsedQR.sessionId || !parsedQR.qrCode || !parsedQR.classId) {
         throw new Error('Dữ liệu QR không đầy đủ');
       }
@@ -250,13 +248,35 @@ export default function StudentDashboard() {
         type: 'ERROR',
         title: 'Mã QR Không Đúng Định Dạng',
         message: 'Mã QR vừa quét không phải là mã điểm danh hợp lệ của hệ thống.',
+        studentName: user?.name,
+        studentCode: user?.studentProfile?.studentCode || studentCode,
       });
       return;
     }
 
+    // Đóng camera scanner ngay và mở giao diện "Đang kiểm tra & đối soát..."
+    setIsQRScannerOpen(false);
+    setIsVerifyingAttendance(true);
+    setVerifyingStep('Đang khởi tạo đối soát bảo mật...');
+
+    const deviceId = getOrCreateDeviceId();
+    const effectiveStudentName = user?.name || 'Sinh viên';
+    const effectiveStudentCode = user?.studentProfile?.studentCode || studentCode || '';
+
     try {
-      const response = await ApiService.scanQRAndCheckIn(qrCode);
-      setIsQRScannerOpen(false);
+      setVerifyingStep('Đang xác thực tọa độ GPS phòng học...');
+      const coords = await getCurrentPositionPromise(5500);
+
+      setVerifyingStep('Đang đối soát Wi-Fi & ghi nhận điểm danh...');
+      const response = await ApiService.scanQRAndCheckIn(
+        qrCode,
+        coords?.latitude,
+        coords?.longitude,
+        deviceId
+      );
+
+      // Đã có kết quả -> Tắt loader
+      setIsVerifyingAttendance(false);
 
       if (response.success) {
         const isLate = response.data?.status === 'LATE';
@@ -265,13 +285,18 @@ export default function StudentDashboard() {
           type: isLate ? 'LATE' : 'SUCCESS',
           title: isLate ? 'Điểm Danh Thành Công (Muộn)' : 'Điểm Danh Thành Công!',
           message: response.message,
-          className: response.data?.className,
+          studentName: effectiveStudentName,
+          studentCode: effectiveStudentCode,
+          className: response.data?.className || parsedQR?.className,
           sessionTitle: response.data?.sessionTitle,
-          checkinTime: response.data?.checkinTime,
+          checkinTime: response.data?.checkinTime || new Date().toISOString(),
           status: response.data?.status,
           minutesDiff: response.data?.minutesDiff,
           clientIp: response.data?.clientIp,
           networkName: response.data?.networkName,
+          distanceMeters: response.data?.distanceMeters,
+          allowedRadius: response.data?.allowedRadius,
+          deviceId: response.data?.deviceId || deviceId,
         });
 
         // Refresh attendance history and stats
@@ -282,23 +307,64 @@ export default function StudentDashboard() {
           type: 'ERROR',
           title: 'Điểm Danh Thất Bại',
           message: response.message || 'Không thể ghi nhận điểm danh.',
+          studentName: effectiveStudentName,
+          studentCode: effectiveStudentCode,
+          className: response.data?.className || parsedQR?.className,
         });
       }
     } catch (error: any) {
-      setIsQRScannerOpen(false);
+      setIsVerifyingAttendance(false);
 
       const errCode = error?.code || error?.response?.code;
       const errDetails = error?.details || error?.response?.details;
       const errData = error?.data || error?.response?.data;
       const errMsg = error?.message || 'Đã xảy ra lỗi trong quá trình xử lý.';
 
-      if (errCode === 'NETWORK_MISMATCH') {
+      if (errCode === 'DEVICE_SHARING_DETECTED') {
+        setCheckInModalData({
+          isOpen: true,
+          type: 'DEVICE_SHARING_DETECTED',
+          title: '🚫 Phát Hiện Dùng Chung Thiết Bị!',
+          message: errMsg,
+          studentName: effectiveStudentName,
+          studentCode: effectiveStudentCode,
+          className: errDetails?.className || parsedQR?.className,
+          sessionTitle: errDetails?.sessionTitle,
+          deviceId: errDetails?.detectedDeviceId || deviceId,
+        });
+      } else if (errCode === 'LOCATION_OUT_OF_BOUNDS') {
+        setCheckInModalData({
+          isOpen: true,
+          type: 'LOCATION_OUT_OF_BOUNDS',
+          title: 'Vị Trí Không Hợp Lệ!',
+          message: errMsg,
+          studentName: effectiveStudentName,
+          studentCode: effectiveStudentCode,
+          className: errDetails?.className || parsedQR?.className,
+          sessionTitle: errDetails?.sessionTitle,
+          distanceMeters: errDetails?.distance,
+          allowedRadius: errDetails?.allowedRadius,
+        });
+      } else if (errCode === 'LOCATION_REQUIRED') {
+        setCheckInModalData({
+          isOpen: true,
+          type: 'ERROR',
+          title: 'Yêu Cầu Định Vị GPS',
+          message: errMsg,
+          studentName: effectiveStudentName,
+          studentCode: effectiveStudentCode,
+          className: errDetails?.className || parsedQR?.className,
+          sessionTitle: errDetails?.sessionTitle,
+        });
+      } else if (errCode === 'NETWORK_MISMATCH') {
         setCheckInModalData({
           isOpen: true,
           type: 'NETWORK_MISMATCH',
-          title: 'Phát Hiện Gian Lận!',
+          title: 'Phát Hiện Gian Lận !',
           message: errMsg,
-          className: errDetails?.className,
+          studentName: effectiveStudentName,
+          studentCode: effectiveStudentCode,
+          className: errDetails?.className || parsedQR?.className,
           sessionTitle: errDetails?.sessionTitle,
           detectedIp: errDetails?.detectedIp,
           requiredNetwork: errDetails?.requiredNetwork,
@@ -310,9 +376,11 @@ export default function StudentDashboard() {
           type: 'ALREADY_CHECKED_IN',
           title: 'Đã Điểm Danh Trước Đó',
           message: errMsg,
-          className: errData?.className,
+          studentName: effectiveStudentName,
+          studentCode: effectiveStudentCode,
+          className: errData?.className || parsedQR?.className,
           sessionTitle: errData?.sessionTitle,
-          checkinTime: errData?.checkinTime,
+          checkinTime: errData?.checkinTime || new Date().toISOString(),
           status: errData?.status,
         });
       } else if (errCode === 'QR_EXPIRED' || errCode === 'SESSION_INACTIVE' || errCode === 'QR_REGENERATED') {
@@ -321,7 +389,9 @@ export default function StudentDashboard() {
           type: 'QR_EXPIRED',
           title: errCode === 'SESSION_INACTIVE' ? 'Phiên Điểm Danh Đã Đóng' : 'Mã QR Hết Hiệu Lực',
           message: errMsg,
-          className: errData?.className,
+          studentName: effectiveStudentName,
+          studentCode: effectiveStudentCode,
+          className: errData?.className || parsedQR?.className,
           sessionTitle: errData?.sessionTitle,
         });
       } else if (errCode === 'NOT_ENROLLED') {
@@ -330,7 +400,9 @@ export default function StudentDashboard() {
           type: 'NOT_ENROLLED',
           title: 'Chưa Đăng Ký Lớp Học',
           message: errMsg,
-          className: errData?.className,
+          studentName: effectiveStudentName,
+          studentCode: effectiveStudentCode,
+          className: errData?.className || parsedQR?.className,
           sessionTitle: errData?.sessionTitle,
         });
       } else {
@@ -346,6 +418,8 @@ export default function StudentDashboard() {
           type: 'ERROR',
           title: 'Điểm Danh Không Thành Công',
           message: displayMsg,
+          studentName: effectiveStudentName,
+          studentCode: effectiveStudentCode,
         });
       }
     }
@@ -400,8 +474,8 @@ export default function StudentDashboard() {
 
           <div className="flex justify-between items-center py-4">
 
-            <div>
-              <p className="text-red-600 font-bold text-md md:text-xl flex items-center gap-2">WELCOME,
+            <div className='flex-1'>
+              <p className="text-red-600 whitespace-nowrap font-bold text-md md:text-xl flex items-center gap-2">WELCOME,
                 <div className="flex items-center justify-center space-x-1">
                   {(studentCode || user?.studentProfile?.studentCode) && (
                     <div className="flex items-center gap-1.5 text-green-600 font-mono  rounded-full w-fit ">
@@ -414,7 +488,7 @@ export default function StudentDashboard() {
               <p className="text-black  flex items-center gap-2 my-1">
                 <div className='flex items-center gap-1  text-gray-600'>
                   <img src="icons/name.png" width="25" height="25" alt="" />
-                  <span className='hidden md:block'>Your name: </span>
+                  <span className='hidden md:block whitespace-nowrap'>Name: </span>
                 </div>
                 <p className='font-bold truncate'>
                   {user?.name || user?.email || 'Student'}</p>
@@ -422,14 +496,14 @@ export default function StudentDashboard() {
               <p className="text-black flex items-center gap-2">
                 <div className='flex items-center gap-1  text-gray-600'>
                   <img src="icons/email.png" width="25" height="25" alt="" />
-                  <span className='hidden md:block'>Your email: </span>
+                  <span className='hidden md:block '>Email: </span>
                 </div>
                 <p className='font-bold truncate'>
                   {user?.email || 'Chưa xác thực email'}</p>
               </p>
 
             </div>
-            <div className="flex flex-row flex-wrap items-center justify-end gap-2">
+            <div className="flex flex-row flex-wrap items-center justify-end gap-2 flex-1">
               <button
                 onClick={() => {
                   window.location.href = '/schedule';
@@ -438,7 +512,7 @@ export default function StudentDashboard() {
                 title="Thời Khóa Biểu & Lịch Học"
               >
                 <Calendar className="w-4 h-4" />
-                <span className="hidden md:block font-medium">Thời Khóa Biểu</span>
+                <span className="hidden md:block font-medium">Lịch học</span>
               </button>
               <button
                 onClick={() => {
@@ -496,7 +570,7 @@ export default function StudentDashboard() {
                 className="bg-blue-600 text-white p-3 md:px-4 md:py-2 rounded-full shadow-md hover:bg-blue-700 flex items-center space-x-0 md:space-x-2 cursor-pointer transition-colors"
               >
                 <History className="w-4 h-4 " />
-                <span className='hidden md:block font-medium'>History</span>
+                <span className='hidden md:block font-medium'>Lịch sử</span>
               </button>
               {/* <button
                 onClick={handleDeleteAccount}
@@ -706,6 +780,67 @@ export default function StudentDashboard() {
           onScanSuccess={(qrCode: string) => handleQRScan(qrCode)}
           onClose={() => setIsQRScannerOpen(false)}
         />
+      )}
+
+      {/* Verifying & Security Check In Progress Overlay */}
+      {isVerifyingAttendance && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-100 p-6 sm:p-7 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+            {/* Animated Radar Shield Icon */}
+            <div className="relative mb-5 flex items-center justify-center">
+              <span className="absolute w-20 h-20 rounded-full bg-blue-500/20 animate-ping" />
+              <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30">
+                <ShieldCheck className="w-8 h-8 animate-pulse" />
+              </div>
+            </div>
+
+            {/* Title & Subtitle */}
+            <h3 className="text-lg font-black text-gray-900 tracking-tight">
+              Đang Xác Thực Điểm Danh...
+            </h3>
+            <p className="text-xs text-gray-500 mt-1 max-w-[250px] leading-relaxed">
+              Hệ thống đang tiến hành đối soát bảo mật và định vị phòng học.
+            </p>
+
+            {/* Checklist Steps */}
+            <div className="w-full mt-4 p-3 rounded-2xl bg-gray-50 border border-gray-100 space-y-2 text-left">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-600 flex items-center gap-1.5 font-medium">
+                  <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+                  Định danh thiết bị:
+                </span>
+                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  Khớp mã máy
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-600 flex items-center gap-1.5 font-medium">
+                  <MapPin className="w-3.5 h-3.5 text-cyan-600" />
+                  Tọa độ vị trí (GPS):
+                </span>
+                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Đang dò
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-600 flex items-center gap-1.5 font-medium">
+                  <Wifi className="w-3.5 h-3.5 text-purple-600" />
+                  Mạng lớp học (Wi-Fi):
+                </span>
+                <span className="text-[11px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                  Đối soát IP
+                </span>
+              </div>
+            </div>
+
+            {/* Current Step Status Banner */}
+            <div className="mt-4 w-full py-2.5 px-3 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center gap-2 text-xs font-semibold text-blue-700">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600 shrink-0" />
+              <span className="truncate">{verifyingStep || 'Đang kiểm tra dữ liệu...'}</span>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Attendance Check-in Result Modal */}

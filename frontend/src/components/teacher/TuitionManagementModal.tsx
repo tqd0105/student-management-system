@@ -453,7 +453,10 @@ export default function TuitionManagementModal({ onClose, classes }: TuitionMana
               </div>
               <p className="text-[10px] sm:text-[11px] text-gray-400 mt-1 truncate">
                 {stats.overdueCount > 0 ? (
-                  <span className="text-rose-600 font-bold">⚠️ {stats.overdueCount} khoản quá hạn</span>
+                  <span className="text-rose-600 font-bold inline-flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" strokeWidth={2.5} />
+                    <span>{stats.overdueCount} khoản quá hạn</span>
+                  </span>
                 ) : (
                   <span className="text-emerald-600 font-medium">Không quá hạn</span>
                 )}

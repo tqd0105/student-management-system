@@ -7,6 +7,7 @@
 "use client";
 
 import React from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -44,7 +45,9 @@ class ErrorBoundary extends React.Component<
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
             <div className="text-center">
-              <div className="text-red-500 text-6xl mb-4">⚠️</div>
+              <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 mx-auto flex items-center justify-center mb-4 shadow-sm">
+                <AlertTriangle className="w-8 h-8 text-rose-600" strokeWidth={2.5} />
+              </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 Something went wrong
               </h2>

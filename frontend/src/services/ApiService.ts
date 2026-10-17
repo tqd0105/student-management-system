@@ -662,14 +662,17 @@ class ApiService {
     qrData: string,
     latitude?: number,
     longitude?: number,
+    deviceId?: string
   ) {
     const body: {
       qrData: string;
       latitude?: number;
       longitude?: number;
+      deviceId?: string;
     } = { qrData };
     if (latitude !== undefined) body.latitude = latitude;
     if (longitude !== undefined) body.longitude = longitude;
+    if (deviceId !== undefined) body.deviceId = deviceId;
 
     return this.makeRequest(`${API_BASE_URL}/api/student/scan-qr`, {
       method: "POST",

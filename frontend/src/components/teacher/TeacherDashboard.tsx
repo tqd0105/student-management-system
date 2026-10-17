@@ -9,6 +9,7 @@ import ManualAttendance from "./ManualAttendance";
 import StudentManagementModal from "./StudentManagementModal";
 import TuitionManagementModal from "./TuitionManagementModal";
 import ClassMaterialsPanel from "./ClassMaterialsPanel";
+import AntiFraudRadarModal from "./AntiFraudRadarModal";
 import {
   Plus,
   Users,
@@ -42,6 +43,10 @@ import {
   Globe,
   ShieldAlert,
   Loader2,
+  MapPin,
+  Crosshair,
+  Navigation,
+  Sliders,
 } from "lucide-react";
 
 interface Class {
@@ -70,6 +75,9 @@ interface Session {
   networkProfileId?: string | null;
   networkEnforcementMode?: "OFF" | "REQUIRED" | "FLAG_ONLY";
   networkProfile?: NetworkProfile | null;
+  locationLat?: number | null;
+  locationLng?: number | null;
+  radiusMeters?: number | null;
 }
 
 interface NetworkProfile {
@@ -108,10 +116,15 @@ export default function TeacherDashboard() {
   const [selectedClassForStudent, setSelectedClassForStudent] = useState<Class | null>(null);
   const [selectedClassForGrades, setSelectedClassForGrades] = useState<Class | null>(null);
   const [selectedClassForMaterials, setSelectedClassForMaterials] = useState<Class | null>(null);
+  const [selectedClassForRadar, setSelectedClassForRadar] = useState<Class | null>(null);
   const [selectedSessionForAttendance, setSelectedSessionForAttendance] = useState<Session | null>(null);
   const [newClassName, setNewClassName] = useState("");
   const [newClassDescription, setNewClassDescription] = useState("");
   const [newSessionTitle, setNewSessionTitle] = useState("");
+  const [newSessionLat, setNewSessionLat] = useState<number | null>(null);
+  const [newSessionLng, setNewSessionLng] = useState<number | null>(null);
+  const [newSessionRadius, setNewSessionRadius] = useState<number>(100);
+  const [isDetectingNewSessionGps, setIsDetectingNewSessionGps] = useState(false);
   const [networkProfiles, setNetworkProfiles] = useState<NetworkProfile[]>([]);
   const [selectedNetworkProfileId, setSelectedNetworkProfileId] = useState("");
   const [networkEnforcementMode, setNetworkEnforcementMode] = useState<"OFF" | "REQUIRED" | "FLAG_ONLY">("OFF");
@@ -125,6 +138,10 @@ export default function TeacherDashboard() {
   const [editSessionDate, setEditSessionDate] = useState("");
   const [editNetworkProfileId, setEditNetworkProfileId] = useState("");
   const [editNetworkEnforcementMode, setEditNetworkEnforcementMode] = useState<"OFF" | "REQUIRED" | "FLAG_ONLY">("OFF");
+  const [editSessionLat, setEditSessionLat] = useState<number | null>(null);
+  const [editSessionLng, setEditSessionLng] = useState<number | null>(null);
+  const [editSessionRadius, setEditSessionRadius] = useState<number>(100);
+  const [isDetectingEditSessionGps, setIsDetectingEditSessionGps] = useState(false);
 
   // Management dropdown & modals
   const [isManagementMenuOpen, setIsManagementMenuOpen] = useState(false);
@@ -599,6 +616,81 @@ export default function TeacherDashboard() {
       setIsRegisteringNetwork(false);
     }
   };
+
+  const detectNewSessionGps = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      alert("Trình duyệt không hỗ trợ định vị GPS.");
+      return;
+    }
+    setIsDetectingNewSessionGps(true);
+
+    const onGeoSuccess = (pos: GeolocationPosition) => {
+      setNewSessionLat(parseFloat(pos.coords.latitude.toFixed(6)));
+      setNewSessionLng(parseFloat(pos.coords.longitude.toFixed(6)));
+      setIsDetectingNewSessionGps(false);
+    };
+
+    const onGeoError = (err: GeolocationPositionError, triedLowAccuracy: boolean) => {
+      if (!triedLowAccuracy) {
+        navigator.geolocation.getCurrentPosition(
+          onGeoSuccess,
+          (secondErr) => onGeoError(secondErr, true),
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+        );
+        return;
+      }
+      console.error("GPS error:", err);
+      setIsDetectingNewSessionGps(false);
+      const tip = err.code === 1 
+        ? "Quyền vị trí bị chặn. Trên Cốc Cốc, hãy kiểm tra Cài đặt Windows > Quyền riêng tư > Vị trí."
+        : "Không nhận được tín hiệu định vị. Vui lòng bật Wi-Fi hoặc nhập tọa độ thủ công.";
+      alert(`Không thể lấy vị trí: ${err.message}\n${tip}`);
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      onGeoSuccess,
+      (firstErr) => onGeoError(firstErr, false),
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    );
+  };
+
+  const detectEditSessionGps = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      alert("Trình duyệt không hỗ trợ định vị GPS.");
+      return;
+    }
+    setIsDetectingEditSessionGps(true);
+
+    const onGeoSuccess = (pos: GeolocationPosition) => {
+      setEditSessionLat(parseFloat(pos.coords.latitude.toFixed(6)));
+      setEditSessionLng(parseFloat(pos.coords.longitude.toFixed(6)));
+      setIsDetectingEditSessionGps(false);
+    };
+
+    const onGeoError = (err: GeolocationPositionError, triedLowAccuracy: boolean) => {
+      if (!triedLowAccuracy) {
+        navigator.geolocation.getCurrentPosition(
+          onGeoSuccess,
+          (secondErr) => onGeoError(secondErr, true),
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+        );
+        return;
+      }
+      console.error("GPS error:", err);
+      setIsDetectingEditSessionGps(false);
+      const tip = err.code === 1 
+        ? "Quyền vị trí bị chặn. Trên Cốc Cốc, hãy kiểm tra Cài đặt Windows > Quyền riêng tư > Vị trí."
+        : "Không nhận được tín hiệu định vị. Vui lòng bật Wi-Fi hoặc nhập tọa độ thủ công.";
+      alert(`Không thể lấy vị trí: ${err.message}\n${tip}`);
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      onGeoSuccess,
+      (firstErr) => onGeoError(firstErr, false),
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    );
+  };
+
   const createSession = async () => {
     if (!selectedClass || isCreatingSession) return;
 
@@ -613,6 +705,9 @@ export default function TeacherDashboard() {
         title:
           newSessionTitle ||
           `Bài học ${new Date().toLocaleDateString("vi-VN")}`,
+        locationLat: newSessionLat,
+        locationLng: newSessionLng,
+        radiusMeters: newSessionRadius
       };
 
       const response = await fetch(url, {
@@ -630,7 +725,10 @@ export default function TeacherDashboard() {
         setNewSessionTitle("");
         setSelectedNetworkProfileId("");
         setNetworkEnforcementMode("OFF");
-        alert("Session created successfully!");
+        setNewSessionLat(null);
+        setNewSessionLng(null);
+        setNewSessionRadius(100);
+        alert("Tạo buổi học thành công!");
       } else {
         const errorData = await response.json();
         console.error("Error response:", errorData);
@@ -864,10 +962,13 @@ export default function TeacherDashboard() {
   const openEditSession = (session: Session) => {
     setEditingSession(session);
     setEditSessionTitle(session.title || "");
-    // Luôn khớp với thời gian hiện tại khi mở modal chỉnh sửa (theo giờ địa phương)
-    setEditSessionDate(formatLocalDateTime(new Date()));
+    // Khớp với thời gian bắt đầu của session (nếu có) hoặc thời gian hiện tại
+    setEditSessionDate(session.startTime ? formatLocalDateTime(new Date(session.startTime)) : formatLocalDateTime(new Date()));
     setEditNetworkProfileId(session.networkProfileId || "");
     setEditNetworkEnforcementMode(session.networkEnforcementMode || (session.networkProfileId ? "REQUIRED" : "OFF"));
+    setEditSessionLat(session.locationLat ?? null);
+    setEditSessionLng(session.locationLng ?? null);
+    setEditSessionRadius(session.radiusMeters || 100);
     detectCurrentIp();
     setIsEditSessionModalOpen(true);
   };
@@ -878,8 +979,10 @@ export default function TeacherDashboard() {
     const selectedDateTime = new Date(editSessionDate);
     // Cho phép đệm 1 phút để tránh việc vừa mở modal bấm lưu bị báo lỗi do chênh lệch vài giây
     const currentDateTime = new Date(Date.now() - 60 * 1000);
+    const originalTime = editingSession.startTime ? new Date(editingSession.startTime).getTime() : 0;
+    const isChangingTime = Math.abs(selectedDateTime.getTime() - originalTime) > 60000;
 
-    if (selectedDateTime < currentDateTime) {
+    if (isChangingTime && selectedDateTime < currentDateTime) {
       alert("❌ Cannot set session time in the past. Please select a future date and time.");
       return;
     }
@@ -892,6 +995,9 @@ export default function TeacherDashboard() {
         startTime: editSessionDate,
         networkProfileId: editNetworkProfileId || null,
         networkEnforcementMode: editNetworkProfileId ? editNetworkEnforcementMode : "OFF",
+        locationLat: editSessionLat,
+        locationLng: editSessionLng,
+        radiusMeters: editSessionRadius,
       };
 
       const response = await fetch(
@@ -913,6 +1019,9 @@ export default function TeacherDashboard() {
         setEditSessionDate("");
         setEditNetworkProfileId("");
         setEditNetworkEnforcementMode("OFF");
+        setEditSessionLat(null);
+        setEditSessionLng(null);
+        setEditSessionRadius(100);
         fetchClassSessions(selectedClass?.id || "");
         alert("✅ Session updated successfully!");
       } else {
@@ -1104,7 +1213,7 @@ export default function TeacherDashboard() {
                       className="fixed inset-0 z-40 bg-black/10 sm:bg-transparent"
                       onClick={() => setIsManagementMenuOpen(false)}
                     />
-                    <div className="absolute sm:left-auto left-1/2 sm:-translate-x-1/2 -translate-x-1/2 mt-2.5 w-72 sm:w-80 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-purple-100/90 p-2 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 ring-1 ring-black/5 divide-y divide-gray-100">
+                    <div className="absolute sm:left-auto left-0  mt-2.5 w-72 sm:w-80 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-purple-100/90 p-2 z-50 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200 ring-1 ring-black/5 divide-y divide-gray-100">
 
                       {/* Menu Action Items */}
                       <div className="py-1.5 space-y-1">
@@ -1409,8 +1518,8 @@ export default function TeacherDashboard() {
                     </p>
                   </div>
 
-                  {/* Responsive Action Buttons Toolbar for All Devices */}
-                  <div className="grid grid-cols-5 gap-1.5 sm:flex sm:items-center sm:gap-2 shrink-0 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+                  {/* Responsive Action Buttons Toolbar for All Devices (3x2 Grid on sm+, 6 on mobile) */}
+                  <div className="grid grid-cols-6 sm:grid-cols-3 gap-1.5 shrink-0 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-gray-100">
                     {/* Button 1: Sessions & QR Code */}
                     <div className="relative group flex justify-center">
                       <button
@@ -1477,7 +1586,22 @@ export default function TeacherDashboard() {
                       </div>
                     </div>
 
-                    {/* Button 5: Delete Class */}
+                    {/* Button 5: Anti-Fraud Radar & Integrity */}
+                    <div className="relative group flex justify-center">
+                      <button
+                        onClick={() => setSelectedClassForRadar(cls)}
+                        className="w-full sm:w-10 h-10 bg-cyan-50 text-cyan-600 hover:bg-cyan-600 hover:text-white border border-cyan-200/80 hover:border-cyan-600 rounded-xl flex items-center justify-center cursor-pointer transition-all duration-150 shadow-xs hover:shadow active:scale-95"
+                        title="Radar Soi Gian Lận & Toàn Vẹn Điểm Danh"
+                        aria-label="Radar Soi Gian Lận & Toàn Vẹn Điểm Danh"
+                      >
+                        <ShieldAlert className="w-5 h-5" />
+                      </button>
+                      <div className="hidden sm:group-hover:flex absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-gray-900 text-white text-[11px] font-medium rounded shadow-md whitespace-nowrap z-20 pointer-events-none">
+                        Radar Soi Gian Lận
+                      </div>
+                    </div>
+
+                    {/* Button 6: Delete Class */}
                     <div className="relative group flex justify-center">
                       <button
                         disabled={deletingClassId === cls.id}
@@ -1706,42 +1830,44 @@ export default function TeacherDashboard() {
 
                             <div className="mt-1.5 flex flex-wrap items-center gap-2">
                               <span
-                                className={`text-[11px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${effectiveIsActive
-                                  ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                className={`text-[11px] font-bold px-2.5 py-1 rounded-xl inline-flex items-center gap-1.5 shadow-2xs border ${effectiveIsActive
+                                  ? "bg-emerald-100 text-emerald-800 border-emerald-300"
                                   : isQRExpired
                                     ? "bg-rose-100 text-rose-800 border border-rose-300"
                                     : session.isActive
-                                      ? "bg-blue-100 text-blue-800"
-                                      : "bg-gray-100 text-gray-700"
-                                  }`}
+                                      ? "bg-blue-100 text-blue-800 border border-blue-300"
+                                      : "bg-gray-100 text-gray-700 border-gray-300"
+                                }`}
                               >
-                                {effectiveIsActive
-                                  ? "🟢 Đang mở QR điểm danh"
-                                  : isQRExpired
-                                    ? "❌ QR Đã hết hạn"
-                                    : session.isActive
-                                      ? "⚫ Buổi học đang diễn ra (Chưa bật QR)"
-                                      : "⚫ Đã kết thúc"}
+                                {effectiveIsActive ? (
+                                  <>
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ring-2 ring-emerald-200" />
+                                    <span>Đang mở QR điểm danh</span>
+                                  </>
+                                ) : isQRExpired ? (
+                                  <>
+                                    <Clock className="w-3.5 h-3.5 text-rose-600" strokeWidth={2.5} />
+                                    <span>QR đã hết hạn</span>
+                                  </>
+                                ) : session.isActive ? (
+                                  <>
+                                    <Play className="w-3.5 h-3.5 text-blue-600" strokeWidth={2.5} />
+                                    <span>Đang diễn ra (Chưa bật QR)</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="w-2 h-2 rounded-full bg-gray-400" />
+                                    <span>Đã kết thúc</span>
+                                  </>
+                                )}
                               </span>
 
-                              <span className="text-[11px] text-gray-500">
-                                📅 {new Date(session.startTime).toLocaleString("vi-VN")}
+                              <span className="text-[11px] text-gray-500 inline-flex items-center gap-1 font-medium">
+                                <Calendar className="w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
+                                <span>{new Date(session.startTime).toLocaleString("vi-VN")}</span>
                               </span>
 
-                              {session.qrExpiresAt && (
-                                <span
-                                  className={`text-[11px] font-semibold ${isQRExpired
-                                    ? "text-rose-600"
-                                    : isQRExpiringSoon
-                                      ? "text-amber-600 font-bold animate-pulse"
-                                      : "text-amber-700"
-                                    }`}
-                                >
-                                  ⏰ Hạn QR: {new Date(session.qrExpiresAt).toLocaleTimeString("vi-VN")}
-                                </span>
-                              )}
-
-                              {session.networkProfile && (
+                                 {session.networkProfile && (
                                 <span
                                   className={`text-[11px] font-semibold px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${session.networkEnforcementMode === "REQUIRED"
                                     ? "bg-purple-100 text-purple-800 border border-purple-200"
@@ -1754,6 +1880,16 @@ export default function TeacherDashboard() {
                                   <span className="opacity-75 font-normal">
                                     ({session.networkEnforcementMode === "REQUIRED" ? "Bắt buộc IP" : "Cảnh báo IP"})
                                   </span>
+                                </span>
+                              )}
+
+                              {session.locationLat !== null && session.locationLng !== null && (
+                                <span
+                                  className="text-[11px] font-semibold px-2 py-0.5 rounded-md inline-flex items-center gap-1 bg-cyan-100 text-cyan-800 border border-cyan-200"
+                                  title={`Tọa độ: ${session.locationLat}, ${session.locationLng} (Bán kính: ${session.radiusMeters || 100}m)`}
+                                >
+                                  <MapPin className="w-3 h-3 text-cyan-600" />
+                                  <span>GPS ({session.radiusMeters || 100}m)</span>
                                 </span>
                               )}
                             </div>
@@ -1954,10 +2090,11 @@ export default function TeacherDashboard() {
       )}
 
       {/* Create Session Modal */}
+      {/* Create Session Modal */}
       {isCreateSessionModalOpen && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="bg-white shadow-2xl rounded-2xl sm:rounded-3xl w-full max-w-md border border-gray-200 overflow-hidden animate__animated animate__zoomIn animate__faster">
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white flex justify-between items-center">
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white shadow-2xl rounded-2xl sm:rounded-3xl w-full max-w-lg max-h-[calc(100dvh-1.5rem)] sm:max-h-[88vh] flex flex-col border border-gray-200 overflow-hidden animate__animated animate__zoomIn animate__faster my-auto">
+            <div className="p-3.5 sm:p-5 bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white flex justify-between items-center shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
                   <Calendar className="w-5 h-5 text-white" />
@@ -1980,7 +2117,7 @@ export default function TeacherDashboard() {
               </button>
             </div>
 
-            <div className="p-4 sm:p-6 space-y-4">
+            <div className="p-3.5 sm:p-5 space-y-3 sm:space-y-4 overflow-y-auto flex-1 overscroll-contain bg-gray-50/40">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
                   Tên Buổi Học *
@@ -1989,11 +2126,11 @@ export default function TeacherDashboard() {
                   type="text"
                   value={newSessionTitle}
                   onChange={(e) => setNewSessionTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
                   placeholder="VD: Buổi 1: Giới thiệu kiến trúc hệ thống"
                 />
               </div>
-              <div className="space-y-2.5 p-3.5 rounded-2xl bg-gray-50 border border-gray-200">
+              <div className="space-y-2.5 p-3.5 rounded-2xl bg-white border border-gray-200 shadow-2xs">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
                     <Wifi className="w-4 h-4 text-blue-600" />
@@ -2002,7 +2139,7 @@ export default function TeacherDashboard() {
                   {detectingIp ? (
                     <span className="text-[11px] text-gray-400 animate-pulse">Đang dò IP...</span>
                   ) : detectedIpInfo ? (
-                    <span className="text-[11px] font-mono text-gray-600 bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-2xs">
+                    <span className="text-[11px] font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-200 shadow-2xs">
                       IP: <strong>{detectedIpInfo.clientIp}</strong>
                     </span>
                   ) : null}
@@ -2016,7 +2153,7 @@ export default function TeacherDashboard() {
                       if (!e.target.value) setNetworkEnforcementMode("OFF");
                       else if (networkEnforcementMode === "OFF") setNetworkEnforcementMode("REQUIRED");
                     }}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-gray-50 font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Không giới hạn (Cho phép mọi IP)</option>
                     {networkProfiles.map((profile) => (
@@ -2075,8 +2212,8 @@ export default function TeacherDashboard() {
                       onChange={(e) => setNetworkEnforcementMode(e.target.value as "REQUIRED" | "FLAG_ONLY")}
                       className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="REQUIRED">🔒 Bắt buộc cùng mạng (Chặn sinh viên khác IP)</option>
-                      <option value="FLAG_ONLY">⚠️ Ghi nhận & Cảnh báo (Cho phép nhưng đánh dấu khác IP)</option>
+                      <option value="REQUIRED">[Bắt buộc] Cùng mạng Wi-Fi (Chặn sinh viên khác IP)</option>
+                      <option value="FLAG_ONLY">[Cảnh báo] Ghi nhận & Đánh dấu (Cho phép nhưng gắn cờ)</option>
                     </select>
                     <p className="text-[11px] text-gray-500 leading-normal">
                       {networkEnforcementMode === "REQUIRED"
@@ -2086,39 +2223,126 @@ export default function TeacherDashboard() {
                   </div>
                 )}
               </div>
-              <div className="bg-blue-50 p-3.5 rounded-xl border border-blue-200 text-xs text-blue-700 leading-relaxed">
+
+              {/* Giới Hạn Vị Trí Phòng Học (GPS Geofence) */}
+              <div className="space-y-2.5 p-3.5 rounded-2xl bg-white border border-cyan-200 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-cyan-600" />
+                    <span>Giới Hạn Vị Trí Phòng Học</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={detectNewSessionGps}
+                    disabled={isDetectingNewSessionGps}
+                    className="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-2xs cursor-pointer disabled:opacity-50"
+                  >
+                    {isDetectingNewSessionGps ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <span>Đang dò...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Navigation className="w-3 h-3" />
+                        <span>Lấy GPS</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] font-semibold text-gray-500 uppercase">Tọa độ Vĩ độ (Lat)</span>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={newSessionLat ?? ""}
+                      onChange={(e) => setNewSessionLat(e.target.value ? parseFloat(e.target.value) : null)}
+                      placeholder="Trống: Cho phép mọi nơi"
+                      className="w-full mt-0.5 px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-mono font-semibold text-gray-800 bg-gray-50 focus:bg-white focus:ring-1 focus:ring-cyan-500"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-gray-500 uppercase">Tọa độ Kinh độ (Lng)</span>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={newSessionLng ?? ""}
+                      onChange={(e) => setNewSessionLng(e.target.value ? parseFloat(e.target.value) : null)}
+                      placeholder="Trống: Cho phép mọi nơi"
+                      className="w-full mt-0.5 px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-mono font-semibold text-gray-800 bg-gray-50 focus:bg-white focus:ring-1 focus:ring-cyan-500"
+                    />
+                  </div>
+                </div>
+
+                {newSessionLat !== null && newSessionLng !== null && (
+                  <div className="space-y-1 pt-1 border-t border-cyan-100">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-gray-700">Bán kính quét hợp lệ:</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewSessionLat(null);
+                          setNewSessionLng(null);
+                        }}
+                        className="text-rose-600 hover:underline font-semibold"
+                      >
+                        Tắt GPS
+                      </button>
+                    </div>
+                    <select
+                      value={newSessionRadius}
+                      onChange={(e) => setNewSessionRadius(parseInt(e.target.value))}
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 bg-white focus:ring-1 focus:ring-cyan-500"
+                    >
+                      <option value={30}>30m (Phòng Lab / Phòng học nhỏ)</option>
+                      <option value={50}>50m (Phòng học thông thường)</option>
+                      <option value={100}>100m (Tiêu chuẩn đại học - Khuyến nghị)</option>
+                      <option value={200}>200m (Hội trường lớn / Nhà thi đấu)</option>
+                      <option value={500}>500m (Khuôn viên trường)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-blue-50/80 p-3 rounded-xl border border-blue-200 text-xs text-blue-700 leading-relaxed">
                 💡 <strong>Mẹo:</strong> Sau khi tạo buổi học, bạn có thể bấm <strong>&quot;Bật QR điểm danh&quot;</strong> để sinh mã QR tức thời cho sinh viên quét.
               </div>
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  onClick={() => {
-                    setIsCreateSessionModalOpen(false);
-                    setNewSessionTitle("");
-                    setSelectedNetworkProfileId("");
-                    setNetworkEnforcementMode("OFF");
-                  }}
-                  className="flex-1 bg-white border border-gray-300 font-bold text-gray-700 py-2.5 px-4 rounded-xl hover:bg-gray-100 transition-colors text-xs sm:text-sm cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  onClick={createSession}
-                  disabled={!newSessionTitle.trim() || isCreatingSession}
-                  className="flex-1 bg-blue-600 font-bold text-white py-2.5 px-4 rounded-xl shadow-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs sm:text-sm cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  {isCreatingSession ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Đang tạo...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4" />
-                      <span>Tạo Buổi Học</span>
-                    </>
-                  )}
-                </button>
-              </div>
+            </div>
+
+            {/* Modal Sticky Footer */}
+            <div className="p-3.5 sm:p-4 bg-white border-t border-gray-200 flex items-center gap-2.5 shrink-0 pb-[max(0.875rem,env(safe-area-inset-bottom))] shadow-xs">
+              <button
+                onClick={() => {
+                  setIsCreateSessionModalOpen(false);
+                  setNewSessionTitle("");
+                  setSelectedNetworkProfileId("");
+                  setNetworkEnforcementMode("OFF");
+                  setNewSessionLat(null);
+                  setNewSessionLng(null);
+                }}
+                className="flex-1 bg-white border border-gray-300 font-bold text-gray-700 py-2.5 px-4 rounded-xl hover:bg-gray-100 transition-colors text-xs sm:text-sm cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={createSession}
+                disabled={!newSessionTitle.trim() || isCreatingSession}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 font-bold text-white py-2.5 px-4 rounded-xl shadow-md hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs sm:text-sm cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                {isCreatingSession ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Đang tạo...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    <span>Tạo Buổi Học</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -2377,16 +2601,16 @@ export default function TeacherDashboard() {
 
       {/* Edit Session Modal */}
       {isEditSessionModalOpen && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="bg-white shadow-2xl rounded-2xl sm:rounded-3xl w-full max-w-md border border-gray-200 overflow-hidden animate__animated animate__zoomIn animate__faster">
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white flex justify-between items-center">
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white shadow-2xl rounded-2xl sm:rounded-3xl w-full max-w-lg max-h-[calc(100dvh-1.5rem)] sm:max-h-[88vh] flex flex-col border border-gray-200 overflow-hidden animate__animated animate__zoomIn animate__faster my-auto">
+            <div className="p-3.5 sm:p-5 bg-gradient-to-r from-emerald-600 via-teal-700 to-cyan-800 text-white flex justify-between items-center shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
                   <Edit3 className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-extrabold">Chỉnh Sửa Buổi Học</h3>
-                  <p className="text-xs text-emerald-100">Cập nhật tiêu đề, thời gian hoặc giới hạn mạng</p>
+                  <p className="text-xs text-emerald-100">Cập nhật tiêu đề, thời gian, Wi-Fi hoặc vị trí GPS phòng học</p>
                 </div>
               </div>
               <button
@@ -2397,6 +2621,9 @@ export default function TeacherDashboard() {
                   setEditSessionDate("");
                   setEditNetworkProfileId("");
                   setEditNetworkEnforcementMode("OFF");
+                  setEditSessionLat(null);
+                  setEditSessionLng(null);
+                  setEditSessionRadius(100);
                 }}
                 className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-full transition-colors cursor-pointer"
               >
@@ -2404,7 +2631,7 @@ export default function TeacherDashboard() {
               </button>
             </div>
 
-            <div className="p-4 sm:p-6 space-y-4 max-h-[calc(90vh-80px)] overflow-y-auto">
+            <div className="p-3.5 sm:p-5 space-y-3 sm:space-y-4 overflow-y-auto flex-1 overscroll-contain bg-gray-50/40">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
                   Tên Buổi Học *
@@ -2413,7 +2640,7 @@ export default function TeacherDashboard() {
                   type="text"
                   value={editSessionTitle}
                   onChange={(e) => setEditSessionTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
                   placeholder="Nhập tên buổi học..."
                 />
               </div>
@@ -2435,13 +2662,12 @@ export default function TeacherDashboard() {
                   type="datetime-local"
                   value={editSessionDate}
                   onChange={(e) => setEditSessionDate(e.target.value)}
-                  min={formatLocalDateTime(new Date())}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white"
                 />
               </div>
 
               {/* Giới Hạn Mạng Điểm Danh (IP) */}
-              <div className="space-y-2.5 p-3.5 rounded-2xl bg-gray-50 border border-gray-200">
+              <div className="space-y-2.5 p-3.5 rounded-2xl bg-white border border-gray-200 shadow-2xs">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
                     <Wifi className="w-4 h-4 text-emerald-600" />
@@ -2450,7 +2676,7 @@ export default function TeacherDashboard() {
                   {detectingIp ? (
                     <span className="text-[11px] text-gray-400 animate-pulse">Đang dò IP...</span>
                   ) : detectedIpInfo ? (
-                    <span className="text-[11px] font-mono text-gray-600 bg-white px-2 py-0.5 rounded-md border border-gray-200 shadow-2xs">
+                    <span className="text-[11px] font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-200 shadow-2xs">
                       IP: <strong>{detectedIpInfo.clientIp}</strong>
                     </span>
                   ) : null}
@@ -2464,7 +2690,7 @@ export default function TeacherDashboard() {
                       if (!e.target.value) setEditNetworkEnforcementMode("OFF");
                       else if (editNetworkEnforcementMode === "OFF") setEditNetworkEnforcementMode("REQUIRED");
                     }}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-gray-50 font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="">Không giới hạn (Cho phép mọi IP)</option>
                     {networkProfiles.map((profile) => (
@@ -2521,8 +2747,8 @@ export default function TeacherDashboard() {
                       onChange={(e) => setEditNetworkEnforcementMode(e.target.value as "REQUIRED" | "FLAG_ONLY")}
                       className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     >
-                      <option value="REQUIRED">🔒 Bắt buộc cùng mạng (Chặn sinh viên khác IP)</option>
-                      <option value="FLAG_ONLY">⚠️ Ghi nhận & Cảnh báo (Cho phép nhưng đánh dấu khác IP)</option>
+                      <option value="REQUIRED">[Bắt buộc] Cùng mạng Wi-Fi (Chặn sinh viên khác IP)</option>
+                      <option value="FLAG_ONLY">[Cảnh báo] Ghi nhận & Đánh dấu (Cho phép nhưng gắn cờ)</option>
                     </select>
                     <p className="text-[11px] text-gray-500 leading-normal">
                       {editNetworkEnforcementMode === "REQUIRED"
@@ -2533,38 +2759,124 @@ export default function TeacherDashboard() {
                 )}
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  onClick={() => {
-                    setIsEditSessionModalOpen(false);
-                    setEditingSession(null);
-                    setEditSessionTitle("");
-                    setEditSessionDate("");
-                    setEditNetworkProfileId("");
-                    setEditNetworkEnforcementMode("OFF");
-                  }}
-                  className="flex-1 bg-white border border-gray-300 font-bold text-gray-700 py-2.5 px-4 rounded-xl hover:bg-gray-100 transition-colors text-xs sm:text-sm cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  onClick={updateSession}
-                  disabled={!editSessionTitle.trim() || isUpdatingSession}
-                  className="flex-1 bg-emerald-600 font-bold text-white py-2.5 px-4 rounded-xl shadow-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs sm:text-sm cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  {isUpdatingSession ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Đang lưu...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      <span>Lưu Thay Đổi</span>
-                    </>
-                  )}
-                </button>
+              {/* Giới Hạn Vị Trí Phòng Học (GPS Geofence) */}
+              <div className="space-y-2.5 p-3.5 rounded-2xl bg-white border border-cyan-200 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-cyan-600" />
+                    <span>Giới Hạn Vị Trí Phòng Học (GPS)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={detectEditSessionGps}
+                    disabled={isDetectingEditSessionGps}
+                    className="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-2xs cursor-pointer disabled:opacity-50"
+                  >
+                    {isDetectingEditSessionGps ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <span>Đang dò...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Navigation className="w-3 h-3" />
+                        <span>Lấy GPS</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] font-semibold text-gray-500 uppercase">Tọa độ Vĩ độ (Lat)</span>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={editSessionLat ?? ""}
+                      onChange={(e) => setEditSessionLat(e.target.value ? parseFloat(e.target.value) : null)}
+                      placeholder="Trống: Cho phép mọi nơi"
+                      className="w-full mt-0.5 px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-mono font-semibold text-gray-800 bg-gray-50 focus:bg-white focus:ring-1 focus:ring-cyan-500"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-gray-500 uppercase">Tọa độ Kinh độ (Lng)</span>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={editSessionLng ?? ""}
+                      onChange={(e) => setEditSessionLng(e.target.value ? parseFloat(e.target.value) : null)}
+                      placeholder="Trống: Cho phép mọi nơi"
+                      className="w-full mt-0.5 px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-mono font-semibold text-gray-800 bg-gray-50 focus:bg-white focus:ring-1 focus:ring-cyan-500"
+                    />
+                  </div>
+                </div>
+
+                {editSessionLat !== null && editSessionLng !== null && (
+                  <div className="space-y-1 pt-1 border-t border-cyan-100">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-gray-700">Bán kính quét hợp lệ:</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditSessionLat(null);
+                          setEditSessionLng(null);
+                        }}
+                        className="text-rose-600 hover:underline font-semibold cursor-pointer"
+                      >
+                        Tắt GPS
+                      </button>
+                    </div>
+                    <select
+                      value={editSessionRadius}
+                      onChange={(e) => setEditSessionRadius(parseInt(e.target.value))}
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 bg-white focus:ring-1 focus:ring-cyan-500"
+                    >
+                      <option value={30}>30m (Phòng Lab / Phòng học nhỏ)</option>
+                      <option value={50}>50m (Phòng học thông thường)</option>
+                      <option value={100}>100m (Tiêu chuẩn đại học - Khuyến nghị)</option>
+                      <option value={200}>200m (Hội trường lớn / Nhà thi đấu)</option>
+                      <option value={500}>500m (Khuôn viên trường)</option>
+                    </select>
+                  </div>
+                )}
               </div>
+            </div>
+
+            {/* Modal Sticky Footer */}
+            <div className="p-3.5 sm:p-4 bg-white border-t border-gray-200 flex items-center gap-2.5 shrink-0 pb-[max(0.875rem,env(safe-area-inset-bottom))] shadow-xs">
+              <button
+                onClick={() => {
+                  setIsEditSessionModalOpen(false);
+                  setEditingSession(null);
+                  setEditSessionTitle("");
+                  setEditSessionDate("");
+                  setEditNetworkProfileId("");
+                  setEditNetworkEnforcementMode("OFF");
+                  setEditSessionLat(null);
+                  setEditSessionLng(null);
+                  setEditSessionRadius(100);
+                }}
+                className="flex-1 bg-white border border-gray-300 font-bold text-gray-700 py-2.5 px-4 rounded-xl hover:bg-gray-100 transition-colors text-xs sm:text-sm cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={updateSession}
+                disabled={!editSessionTitle.trim() || isUpdatingSession}
+                className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-white py-2.5 px-4 rounded-xl shadow-md hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-xs sm:text-sm cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                {isUpdatingSession ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Đang lưu...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Lưu Thay Đổi</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -2639,9 +2951,9 @@ export default function TeacherDashboard() {
 
                 {sessionStats.mismatchedNetworkCount > 0 && (
                   <div className="bg-amber-50 border border-amber-300 p-3 rounded-xl flex items-center gap-2.5 text-amber-900 text-xs sm:text-sm font-semibold animate__animated animate__fadeIn">
-                    <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
+                    <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" strokeWidth={2.5} />
                     <span>
-                      ⚠️ Phát hiện <strong>{sessionStats.mismatchedNetworkCount} sinh viên</strong> quét QR từ địa chỉ IP không khớp với mạng của lớp học!
+                      Phát hiện <strong>{sessionStats.mismatchedNetworkCount} sinh viên</strong> quét QR từ địa chỉ IP không khớp với mạng của lớp học!
                     </span>
                   </div>
                 )}
@@ -2705,16 +3017,18 @@ export default function TeacherDashboard() {
                                   {student.clientIp}
                                 </span>
                                 {student.networkMatched === true && (
-                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
-                                    ✅ Khớp mạng
+                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                                    <Check className="w-3 h-3 text-emerald-600" strokeWidth={2.5} />
+                                    <span>Khớp mạng</span>
                                   </span>
                                 )}
                                 {student.networkMatched === false && (
                                   <span
-                                    className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded"
+                                    className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1"
                                     title={student.networkCheckReason === 'MISMATCH_FLAGGED' ? 'IP không khớp mạng của giảng viên' : student.networkCheckReason || 'Khác mạng'}
                                   >
-                                    ⚠️ Khác mạng
+                                    <AlertCircle className="w-3 h-3 text-rose-600" strokeWidth={2.5} />
+                                    <span>Khác mạng</span>
                                   </span>
                                 )}
                               </div>
@@ -2868,6 +3182,16 @@ export default function TeacherDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Anti-Fraud Radar Modal */}
+      {selectedClassForRadar && (
+        <AntiFraudRadarModal
+          isOpen={!!selectedClassForRadar}
+          classInfo={selectedClassForRadar}
+          onClose={() => setSelectedClassForRadar(null)}
+          onDataChanged={fetchClasses}
+        />
       )}
 
       {/* Manual Attendance Modal */}
