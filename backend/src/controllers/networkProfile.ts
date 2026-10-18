@@ -100,8 +100,15 @@ export const deleteNetworkProfile = async (req: AuthenticatedRequest, res: Respo
     const profile = await prisma.networkProfile.findFirst({ where: { id: profileId, ownerId } });
     if (!profile) return res.status(404).json({ success: false, message: 'Network profile not found' });
 
-    await prisma.networkProfile.update({ where: { id: profileId }, data: { isActive: false } });
-    return res.json({ success: true, message: 'Network profile disabled' });
+    // Hủy liên kết các buổi học đang dùng profile này về không giới hạn IP
+    await prisma.attendanceSession.updateMany({
+      where: { networkProfileId: profileId },
+      data: { networkProfileId: null, networkEnforcementMode: 'OFF' }
+    });
+
+    // Xóa vĩnh viễn profile để giải phóng hoàn toàn ràng buộc unique (ownerId, publicIp)
+    await prisma.networkProfile.delete({ where: { id: profileId } });
+    return res.json({ success: true, message: 'Đã xóa cấu hình mạng thành công' });
   } catch (error: any) {
     console.error('Error in deleteNetworkProfile:', error);
     return res.status(500).json({ success: false, message: error.message || 'Lỗi xóa cấu hình mạng' });
@@ -134,20 +141,34 @@ export const updateNetworkProfile = async (req: AuthenticatedRequest, res: Respo
         return res.status(400).json({ success: false, message: 'Địa chỉ IP không hợp lệ' });
       }
 
-      const existing = await prisma.networkProfile.findFirst({
-        where: {
-          ownerId,
-          publicIp: cleaned,
-          id: { not: profileId },
-          isActive: true
+      // Chỉ kiểm tra và cập nhật nếu IP thực sự thay đổi khác với IP hiện tại của profile
+      if (cleaned !== profile.publicIp) {
+        const existing = await prisma.networkProfile.findFirst({
+          where: {
+            ownerId,
+            publicIp: cleaned,
+            id: { not: profileId }
+          }
+        });
+
+        if (existing) {
+          if (existing.isActive) {
+            return res.status(400).json({
+              success: false,
+              message: `Địa chỉ IP ${cleaned} đã được dùng cho mạng "${existing.name}"`
+            });
+          } else {
+            // Nếu là profile cũ đã bị tắt/xóa (inactive), chuyển liên kết buổi học sang profile này và xóa bản ghi cũ để giải phóng ràng buộc unique
+            await prisma.attendanceSession.updateMany({
+              where: { networkProfileId: existing.id },
+              data: { networkProfileId: profileId }
+            });
+            await prisma.networkProfile.delete({ where: { id: existing.id } });
+          }
         }
-      });
 
-      if (existing) {
-        return res.status(400).json({ success: false, message: `Địa chỉ IP ${cleaned} đã được dùng cho mạng "${existing.name}"` });
+        updateData.publicIp = cleaned;
       }
-
-      updateData.publicIp = cleaned;
     }
 
     updateData.lastVerifiedAt = new Date();

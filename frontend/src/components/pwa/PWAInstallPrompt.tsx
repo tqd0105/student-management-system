@@ -13,7 +13,7 @@ export default function PWAInstallPrompt({ onClose }: PWAInstallPromptProps) {
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
-      console.log('📱 PWA install prompt available');
+      // console.log('📱 PWA install prompt available');
       e.preventDefault();
       setDeferredPrompt(e);
       setIsVisible(true);
