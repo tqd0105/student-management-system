@@ -188,7 +188,7 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative z-10 w-full sm:max-w-4xl bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[95dvh] sm:h-auto sm:max-h-[92vh] animate__animated animate__zoomIn animate__faster">
+      <div className="relative mx-2 z-10 w-full sm:max-w-4xl bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[95dvh] sm:h-auto sm:max-h-[92vh] animate__animated animate__zoomIn animate__faster">
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-gray-100 bg-gray-50/80 shrink-0 gap-3">
@@ -324,31 +324,52 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
                         {overallStats.attendanceRate.toFixed(1)}% — {rateColor.label}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                      <div
-                        className={`h-3 rounded-full transition-all duration-700 ${rateColor.bar}`}
-                        style={{ width: `${overallStats.attendanceRate}%` }}
-                      />
+                    {/* Attendance Progress Bar with Integrated Milestone Markers */}
+                    <div className="relative">
+                      <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                        <div
+                          className={`h-3 rounded-full transition-all duration-700 ${rateColor.bar}`}
+                          style={{ width: `${overallStats.attendanceRate}%` }}
+                        />
+                      </div>
+
+                      {/* Milestone markers attached directly to the bar */}
+                      {[60, 75, 90].map(milestone => (
+                        <div
+                          key={milestone}
+                          className="absolute top-0 w-px -translate-x-1/2 pointer-events-none"
+                          style={{ left: `${milestone}%` }}
+                        >
+                          {/* Inner notch on bar */}
+                          <div
+                            className={`w-px h-3 ${
+                              overallStats.attendanceRate >= milestone ? 'bg-white/80' : 'bg-gray-300'
+                            }`}
+                          />
+                          {/* Tick mark extending below bar */}
+                          <div className="w-px h-1 bg-gray-300 mx-auto" />
+                          {/* Milestone label */}
+                          <span className="absolute top-4 -translate-x-1/2 text-[9px] text-gray-400 font-medium whitespace-nowrap">
+                            {milestone}%
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                    <div className="mt-2 flex items-center justify-between text-[11px] text-gray-400">
+
+                    {/* Scale boundary labels (0% & 100%) */}
+                    <div className="relative mt-1 flex items-center justify-between text-[9px] text-gray-400 font-medium">
                       <span>0%</span>
-                      <span className={`font-semibold ${rateColor.text}`}>
+                      <span>100%</span>
+                    </div>
+
+                    {/* Evaluation status message */}
+                    <div className="mt-2 text-center">
+                      <span className={`text-xs font-semibold ${rateColor.text}`}>
                         {overallStats.attendanceRate >= 90 ? 'Chuyên cần xuất sắc!' :
                          overallStats.attendanceRate >= 75 ? 'Chuyên cần tốt!' :
                          overallStats.attendanceRate >= 60 ? 'Cần cải thiện tần suất dự học' :
                          'Tỷ lệ thấp — cần chú ý'}
                       </span>
-                      <span>100%</span>
-                    </div>
-                    {/* Milestone markers */}
-                    <div className="relative mt-1">
-                      <div className="w-full h-0.5 bg-transparent relative">
-                        {[60, 75, 90].map(milestone => (
-                          <div key={milestone} className="absolute top-0 w-px h-1 bg-gray-300" style={{ left: `${milestone}%` }}>
-                            <span className="absolute top-1.5 -translate-x-1/2 text-[9px] text-gray-400 font-medium">{milestone}%</span>
-                          </div>
-                        ))}
-                      </div>
                     </div>
                   </div>
 
@@ -363,7 +384,7 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
                       <p className="font-bold mb-0.5">Lưu ý học vụ:</p>
                       <p>
                         {overallStats.attendanceRate >= 75
-                          ? 'Bạn đang duy trì chuyên cần tốt và đủ điều kiện thi hết môn. Hãy tiếp tục phát huy!'
+                          ? 'Bạn đang duy trì chuyên cần tốt và đủ điều kiện thi kết thúc môn. Hãy tiếp tục phát huy!'
                           : 'Tỷ lệ chuyên cần thấp hơn 75% có thể ảnh hưởng đến điều kiện dự thi. Hãy liên hệ giảng viên nếu cần hỗ trợ.'}
                       </p>
                     </div>
