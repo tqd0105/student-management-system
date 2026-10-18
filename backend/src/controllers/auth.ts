@@ -581,6 +581,7 @@ class AuthController {
   static async updateProfile(req: Request, res: Response) {
     try {
       const userId = req.user?.userId;
+      const userRole = req.user?.role;
 
       if (!userId) {
         return res.status(401).json({
@@ -592,8 +593,13 @@ class AuthController {
       const { name, avatar } = req.body;
       const updateData: { name?: string; avatar?: string } = {};
 
+      // Sinh viên không được phép tự ý thay đổi họ tên (thông tin học vụ chính thức)
       if (typeof name === 'string' && name.trim()) {
-        updateData.name = name.trim();
+        if (userRole === 'STUDENT') {
+          // Bỏ qua cập nhật họ tên với học sinh / sinh viên để bảo vệ tính toàn vẹn học vụ
+        } else {
+          updateData.name = name.trim();
+        }
       }
 
       if (typeof avatar === 'string') {

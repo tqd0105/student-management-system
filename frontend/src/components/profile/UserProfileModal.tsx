@@ -13,7 +13,9 @@ import {
   AlertCircle, 
   CloudUpload,
   Loader2,
-  GraduationCap
+  GraduationCap,
+  Lock,
+  Info
 } from 'lucide-react';
 
 interface UserProfileModalProps {
@@ -87,9 +89,11 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     }
   };
 
+  const isStudent = user.role === 'STUDENT';
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
+    if (!isStudent && !name.trim()) {
       setStatusMessage({ type: 'error', text: 'Tên hiển thị không được để trống.' });
       return;
     }
@@ -99,7 +103,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
       setStatusMessage(null);
 
       await updateProfile({
-        name: name.trim(),
+        name: isStudent ? undefined : name.trim(),
         avatar: avatarUrl || undefined,
       });
 
@@ -126,13 +130,13 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
       case 'TEACHER':
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">
-            <GraduationCap className="w-3 h-3" /> Giảng viên / Giáo viên
+            <GraduationCap className="w-3 h-3" /> Giảng viên
           </span>
         );
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200">
-            <UserIcon className="w-3 h-3" /> Học sinh / Sinh viên
+            <UserIcon className="w-3 h-3" />  Sinh viên
           </span>
         );
     }
@@ -141,7 +145,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
   const initials = user.name ? user.name.charAt(0).toUpperCase() : 'U';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed my-2 inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
         className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-gray-100 overflow-hidden transform transition-all animate-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
@@ -247,20 +251,38 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
           {/* Form Fields */}
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                Họ và tên hiển thị <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-gray-700">
+                  Họ và tên hiển thị {isStudent ? '' : <span className="text-red-500">*</span>}
+                </label>
+                {isStudent && (
+                  <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 font-medium bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                    <Lock className="w-2.5 h-2.5" /> Học vụ cố định
+                  </span>
+                )}
+              </div>
               <div className="relative">
                 <input
                   type="text"
                   value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  onChange={e => !isStudent && setName(e.target.value)}
+                  disabled={isStudent}
+                  className={`w-full pl-9 pr-3 py-2 border rounded-xl text-sm transition-colors ${
+                    isStudent
+                      ? 'bg-gray-50 border-gray-200 text-gray-600 cursor-not-allowed select-none font-medium'
+                      : 'border-gray-300 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900'
+                  }`}
                   placeholder="Nhập họ và tên..."
-                  required
+                  required={!isStudent}
                 />
                 <UserIcon className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
               </div>
+              {isStudent && (
+                <p className="text-[11px] text-gray-400 mt-1.5 flex items-start gap-1">
+                  <Info className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
+                  <span>Họ và tên là thông tin học vụ chính thức. Để đính chính thông tin theo CCCD, vui lòng liên hệ Ban Đào tạo hoặc Quản trị viên.</span>
+                </p>
+              )}
             </div>
 
             <div>
@@ -279,7 +301,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
+              <div className='flex items-center justify-between gap-2'>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
                   Vai trò hệ thống
                 </label>
@@ -287,9 +309,9 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
               </div>
 
               {user.studentProfile?.studentCode && (
-                <div>
+                <div className='flex items-center justify-between gap-2'>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Mã số sinh viên (MSSV)
+                    Mã số sinh viên 
                   </label>
                   <span className="font-mono text-xs font-bold px-2.5 py-1 bg-gray-100 text-indigo-700 rounded-lg border border-gray-200 inline-block">
                     {user.studentProfile.studentCode}
