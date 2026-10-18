@@ -329,12 +329,15 @@ export const scanQRAndCheckIn = async (req: AuthenticatedRequest, res: Response)
     // Tạo record điểm danh
     const now = new Date();
     const sessionStartTime = new Date(session.startTime);
-    const timeDiff = Math.abs(now.getTime() - sessionStartTime.getTime());
-    const minutesDiff = Math.ceil(timeDiff / (1000 * 60));
+    // Tính số phút kể từ khi buổi học bắt đầu (nếu quét trước giờ bắt đầu thì là 0)
+    const diffMs = now.getTime() - sessionStartTime.getTime();
+    const minutesDiff = diffMs > 0 ? Math.floor(diffMs / (1000 * 60)) : 0;
 
-    // Xác định status
+    // Sinh viên chỉ bị coi là MUỘN (LATE) nếu thời điểm quét vượt quá 15 phút KỂ TỪ GIỜ BẮT ĐẦU BUỔI HỌC (now > sessionStartTime + 15m)
+    // Nếu quét trước giờ bắt đầu hoặc trong 15 phút đầu, luôn là CÓ MẶT (PRESENT)
+    const lateThreshold = new Date(sessionStartTime.getTime() + 15 * 60 * 1000);
     let status = 'PRESENT';
-    if (minutesDiff > 15) { // Nếu quá 15 phút
+    if (now > lateThreshold) {
       status = 'LATE';
     }
 

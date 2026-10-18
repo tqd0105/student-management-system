@@ -990,9 +990,10 @@ export default function TeacherDashboard() {
     try {
       setIsUpdatingSession(true);
       const token = localStorage.getItem("token");
+      const parsedStartDate = new Date(editSessionDate);
       const payload = {
         title: editSessionTitle,
-        startTime: editSessionDate,
+        startTime: !isNaN(parsedStartDate.getTime()) ? parsedStartDate.toISOString() : editSessionDate,
         networkProfileId: editNetworkProfileId || null,
         networkEnforcementMode: editNetworkProfileId ? editNetworkEnforcementMode : "OFF",
         locationLat: editSessionLat,
