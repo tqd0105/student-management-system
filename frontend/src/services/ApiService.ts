@@ -66,17 +66,30 @@ class ApiService {
     }
 
     if (!response.ok) {
-      // Handle 401 Unauthorized - clear auth data and redirect (except during login)
+      // Handle 401 Unauthorized - trigger session expired modal gracefully instead of abruptly forcing redirect
       if (response.status === 401 && !skipAuthRedirect) {
-        console.warn("🔒 Authentication failed - clearing tokens");
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        const hasToken =
+          typeof window !== "undefined" && !!localStorage.getItem("token");
+        console.warn("🔒 Authentication failed - 401 Unauthorized", { hasToken });
 
-        // Redirect to login if not already there
-        if (
+        if (hasToken && typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("auth:session_expired", {
+              detail: {
+                message:
+                  errorData?.message ||
+                  errorData?.error ||
+                  "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+                status: response.status,
+              },
+            })
+          );
+        } else if (
           typeof window !== "undefined" &&
-          !window.location.pathname.includes("auth")
+          !window.location.pathname.includes("auth") &&
+          window.location.pathname !== "/"
         ) {
+          // If no token exists and user is on protected route, redirect to home
           window.location.href = "/";
         }
       }

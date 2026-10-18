@@ -296,7 +296,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className='flex items-center justify-between gap-2'>
+              <div className='flex sm:block items-center justify-between gap-2'>
                 <label className="block text-xs font-bold text-gray-700 mb-1">
                   Vai trò hệ thống
                 </label>
@@ -304,7 +304,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
               </div>
 
               {user.studentProfile?.studentCode && (
-                <div className='flex items-center justify-between gap-2'>
+                <div className='flex sm:block items-center justify-between gap-2'>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
                     Mã số sinh viên 
                   </label>

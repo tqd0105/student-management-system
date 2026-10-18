@@ -57,8 +57,13 @@ export const requireAuth = (allowedRoles: string[] = []) => {
       req.user = payload;
       next();
     } catch (error) {
+      const isExpired = error instanceof jwt.TokenExpiredError ||
+        (error instanceof Error && (error.message.includes('expired') || error.message.includes('Invalid or expired')));
       res.status(401).json({ 
-        error: error instanceof Error ? error.message : 'Authentication failed' 
+        success: false,
+        code: isExpired ? 'TOKEN_EXPIRED' : 'AUTH_FAILED',
+        error: error instanceof Error ? error.message : 'Authentication failed',
+        message: isExpired ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.' : (error instanceof Error ? error.message : 'Authentication failed')
       });
       return;
     }

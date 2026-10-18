@@ -1,13 +1,15 @@
 /**
  * Authentication Context
- * Student Management System - DTECH TEAM
- * Quản lý authentication state toàn app
+ * Student Management System - DTECH TEAM / LightBrave
+ * Quản lý authentication state toàn app & giám sát phiên đăng nhập 6h
  */
 
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import ApiService from '@/services/ApiService';
+import { isTokenExpired } from '@/utils/token';
+import SessionExpiredModal from '@/components/auth/SessionExpiredModal';
 
 interface User {
   id: string;
@@ -32,6 +34,8 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
+  isSessionExpired: boolean;
+  triggerSessionExpired: () => void;
   login: (email: string, password: string) => Promise<void>;
   register: (userData: {
     email: string;
@@ -62,24 +66,97 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in on app start
     const currentUser = ApiService.getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-      // Fetch latest profile from server to ensure studentProfile and studentCode are synced
-      ApiService.getProfile()
-        .then((res) => {
-          if (res?.success && res.data?.user) {
-            setUser(res.data.user);
-            localStorage.setItem('user', JSON.stringify(res.data.user));
-          }
-        })
-        .catch(() => {});
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+    if (currentUser && token) {
+      if (isTokenExpired(token)) {
+        const isHomePage = typeof window !== 'undefined' && window.location.pathname === '/';
+        if (!isHomePage) {
+          // Khi truy cập vào trang bảo vệ mà token đã hết hạn 6h -> hiển thị modal
+          setUser(currentUser);
+          setIsSessionExpired(true);
+        } else {
+          // Nếu đang ở trang chủ, dọn dẹp sạch token cũ
+          ApiService.logout();
+          setUser(null);
+        }
+      } else {
+        setUser(currentUser);
+        // Fetch latest profile from server to ensure studentProfile and studentCode are synced
+        ApiService.getProfile()
+          .then((res) => {
+            if (res?.success && res.data?.user) {
+              setUser(res.data.user);
+              localStorage.setItem('user', JSON.stringify(res.data.user));
+            }
+          })
+          .catch(() => {});
+      }
     }
     setLoading(false);
   }, []);
+
+  // Chủ động giám sát phiên đăng nhập theo thời gian thực (6 giờ) & bắt sự kiện 401
+  useEffect(() => {
+    if (!user || isSessionExpired) return;
+
+    const checkTokenExpiry = () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      if (token && isTokenExpired(token)) {
+        console.warn('🔒 Session expired (6h limit reached)');
+        setIsSessionExpired(true);
+      }
+    };
+
+    // Định kỳ kiểm tra mỗi 10 giây
+    const interval = setInterval(checkTokenExpiry, 10000);
+
+    // Kiểm tra ngay khi người dùng chuyển lại tab (wake screen / active tab)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkTokenExpiry();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // Lắng nghe sự kiện 401 khi token bị backend từ chối
+    const handleSessionExpiredEvent = () => {
+      console.warn('🔒 401 Unauthorized caught - triggering session expired modal');
+      setIsSessionExpired(true);
+    };
+    window.addEventListener('auth:session_expired', handleSessionExpiredEvent);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('auth:session_expired', handleSessionExpiredEvent);
+    };
+  }, [user, isSessionExpired]);
+
+  const handleSessionExpiredLogin = () => {
+    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+      try {
+        sessionStorage.setItem(
+          'redirect_after_login',
+          window.location.pathname + window.location.search
+        );
+      } catch {}
+    }
+    setIsSessionExpired(false);
+    logout();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
+  };
+
+  const triggerSessionExpired = () => {
+    setIsSessionExpired(true);
+  };
 
   const login = async (email: string, password: string) => {
     try {
@@ -87,6 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       const response = await ApiService.login(email, password);
       if (response.success) {
+        setIsSessionExpired(false);
         setUser(response.data.user);
       } else {
         setError(response.message || 'Login failed');
@@ -128,6 +206,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ApiService.logout();
     setUser(null);
     setError(null);
+    setIsSessionExpired(false);
   };
 
   const clearError = () => {
@@ -155,6 +234,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     loading,
     error,
+    isSessionExpired,
+    triggerSessionExpired,
     login,
     register,
     logout,
@@ -166,5 +247,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAdmin: user?.role === 'ADMIN',
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <SessionExpiredModal
+        isOpen={isSessionExpired}
+        user={user}
+        onReLogin={handleSessionExpiredLogin}
+      />
+    </AuthContext.Provider>
+  );
 };

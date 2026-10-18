@@ -155,7 +155,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenContactModal }) => {
         <div className="flex flex-col md:flex-row items-center justify-between gap-3.5 text-xs text-gray-500">
 
           {/* Brand & Copyright */}
-          <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-2.5 sm:gap-3 text-center sm:text-left">
+          <div className="flex flex-col shrink-0 sm:flex-row items-center justify-center md:justify-start gap-2.5 sm:gap-3 text-center sm:text-left">
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 flex items-center justify-center overflow-hidden shrink-0">
                 <img

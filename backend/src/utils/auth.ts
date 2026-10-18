@@ -13,7 +13,7 @@ export class AuthUtils {
    */
   static generateToken(payload: Omit<UserPayload, 'iat' | 'exp'>): string {
     const options: SignOptions = { /* Interface của lib, options như expiresIn, algorithm, ... */
-      expiresIn: '6h'
+      expiresIn: (JWT_EXPIRES_IN || '6h') as any
     };
     return jwt.sign(payload, JWT_SECRET, options); /* Hàm từ lib: tạo token từ payload */
   }

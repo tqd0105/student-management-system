@@ -59,6 +59,14 @@ export default function HomePage() {
 
   useEffect(() => {
     if (isAuthenticated && user) {
+      // Check if there was a saved redirect path from session re-login
+      const savedRedirect = typeof window !== 'undefined' ? sessionStorage.getItem('redirect_after_login') : null;
+      if (savedRedirect) {
+        sessionStorage.removeItem('redirect_after_login');
+        router.push(savedRedirect);
+        return;
+      }
+
       // Admin redirect to admin panel
       if (isAdmin) {
         router.push("/admin");
