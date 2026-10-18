@@ -238,11 +238,10 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
                 <button
                   key={tab.id}
                   onClick={() => setViewMode(tab.id)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-semibold border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
-                    viewMode === tab.id
-                      ? 'text-violet-600 border-violet-500 bg-violet-50/50'
-                      : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-50'
-                  }`}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-semibold border-b-2 whitespace-nowrap transition-colors cursor-pointer ${viewMode === tab.id
+                    ? 'text-violet-600 border-violet-500 bg-violet-50/50'
+                    : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-50'
+                    }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
                   {tab.label}
@@ -325,10 +324,10 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-violet-500" />
-                        <h4 className="text-sm font-bold text-gray-800">Tỷ lệ chuyên cần tổng thể</h4>
+                        <h4 className="text-sm font-bold text-gray-800">Tỷ lệ chuyên cần</h4>
                       </div>
                       <span className={`px-3 py-1 rounded-full text-xs font-bold border ${rateColor.bg} ${rateColor.text} ${rateColor.border}`}>
-                        {overallStats.attendanceRate.toFixed(1)}% — {rateColor.label}
+                        {rateColor.label}
                       </span>
                     </div>
                     {/* Attendance Progress Bar with Integrated Milestone Markers */}
@@ -344,19 +343,22 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
                       {[60, 75, 90].map(milestone => (
                         <div
                           key={milestone}
-                          className="absolute top-0 w-px -translate-x-1/2 pointer-events-none"
+                          className="absolute  top-0 w-px -translate-x-1/2 pointer-events-none"
                           style={{ left: `${milestone}%` }}
                         >
                           {/* Inner notch on bar */}
                           <div
-                            className={`w-px h-3 ${
-                              overallStats.attendanceRate >= milestone ? 'bg-white/80' : 'bg-gray-300'
-                            }`}
+                            className={`w-px h-3 ${overallStats.attendanceRate >= milestone ? 'bg-white/80' : 'bg-gray-300'
+                              }`}
                           />
                           {/* Tick mark extending below bar */}
                           <div className="w-px h-1 bg-gray-300 mx-auto" />
-                          {/* Milestone label */}
-                          <span className="absolute top-4 -translate-x-1/2 text-[9px] text-gray-400 font-medium whitespace-nowrap">
+                          {/* Milestone label (ẩn nhãn 90% trên mobile để không bị đè lên mốc 100%) */}
+                          <span
+                            className={`absolute top-4 -translate-x-1/2 text-[9px] whitespace-nowrap ${
+                              milestone === 75 ? 'text-gray-500 font-semibold' : 'text-gray-400 font-medium'
+                            } ${milestone === 90 ? 'hidden sm:inline-block' : ''}`}
+                          >
                             {milestone}%
                           </span>
                         </div>
@@ -372,11 +374,10 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
                   </div>
 
                   {/* Academic Note */}
-                  <div className={`p-3.5 rounded-2xl border text-xs leading-relaxed flex items-start gap-2.5 ${
-                    overallStats.attendanceRate >= 75
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                      : 'bg-amber-50 border-amber-200 text-amber-900'
-                  }`}>
+                  <div className={`p-3.5 rounded-2xl border text-xs leading-relaxed flex items-start gap-2.5 ${overallStats.attendanceRate >= 75
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                    : 'bg-amber-50 border-amber-200 text-amber-900'
+                    }`}>
                     <Award className={`w-4 h-4 shrink-0 mt-0.5 ${overallStats.attendanceRate >= 75 ? 'text-emerald-600' : 'text-amber-600'}`} />
                     <div>
                       <p className="font-bold mb-0.5">Lưu ý học vụ:</p>
@@ -415,7 +416,7 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
                           <div className="p-4">
                             <div className="grid grid-cols-4 gap-2 mb-3">
                               {[
-                                { label: 'Tổng buổi', val: cls.totalSessions, color: 'text-gray-700' },
+                                { label: 'Tổng ', val: cls.totalSessions, color: 'text-gray-700' },
                                 { label: 'Có mặt', val: cls.presentCount, color: 'text-emerald-600' },
                                 { label: 'Đi muộn', val: cls.lateCount, color: 'text-amber-600' },
                                 { label: 'Vắng', val: cls.absentCount, color: 'text-rose-600' },
@@ -495,7 +496,7 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
                                     title={`Thời gian quét: ${formatTime(record.checkedAt, true)} ngày ${formatDate(record.checkedAt)}`}
                                   >
                                     <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                                    <span>{formatTime(record.checkedAt, true)}</span>
+                                    <span>{formatTime(record.checkedAt, true)} - {formatDate(record.checkedAt)}</span>
                                   </div>
                                 ) : (
                                   <span className="text-gray-400 text-xs italic">—</span>
@@ -513,18 +514,19 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
                     {attendanceRecords.map((record) => (
                       <div key={record.id} className="bg-white rounded-2xl border border-gray-200 shadow-xs p-4">
                         <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="min-w-0">
-                            <p className="font-bold text-sm text-gray-900 leading-snug">{record.session.title}</p>
-                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                              <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-violet-50 text-violet-700 border border-violet-200">
-                                {record.session.class.name}
-                              </span>
+                          <div className="min-w-0 w-full">
+                            <div className='flex items-center justify-between '>
+                              <p className="font-bold text-sm text-gray-900 leading-snug">{record.session.title}</p>
                               <span className="text-[11px] text-gray-400">{record.session.class.teacher.name}</span>
                             </div>
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              <span className="w-full text-center my-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-violet-50 text-violet-700 border border-violet-200">
+                                {record.session.class.name}
+                              </span>
+                            </div>
                           </div>
-                          {getStatusBadge(record.status)}
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-2.5 pt-2 border-t border-gray-100 flex-wrap">
+                        <div className="flex justify-center w-full items-center gap-3 text-xs text-gray-500 mt-2.5 pt-2 border-t border-gray-100 flex-wrap">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
                             <span>{formatDate(record.session.startTime)}</span>
@@ -533,9 +535,10 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
                             </span>
                           </div>
                           {record.status !== 'ABSENT' && record.checkedAt && (
-                            <div className="flex items-center gap-1 font-mono font-medium text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-200/80">
-                              <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                              <span>Check-in: {formatTime(record.checkedAt, true)}</span>
+                            <div className="flex items-center gap-1 font-mono font-medium text-slate-600  px-2 py-0.5 rounded ">
+                              <CheckCircle2 className='w-4 h-4 text-green-500 font-bold shrink-0' />
+                              <span className='font-bold text-green-500 text-[10px]'>{formatTime(record.checkedAt, true)} - {formatDate(record.checkedAt)}</span>
+                              {/* {getStatusBadge(record.status)} */}
                             </div>
                           )}
                         </div>
