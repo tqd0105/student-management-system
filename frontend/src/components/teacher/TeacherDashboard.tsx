@@ -10,6 +10,7 @@ import StudentManagementModal from "./StudentManagementModal";
 import TuitionManagementModal from "./TuitionManagementModal";
 import ClassMaterialsPanel from "./ClassMaterialsPanel";
 import AntiFraudRadarModal from "./AntiFraudRadarModal";
+import NetworkProfileSelector from "./NetworkProfileSelector";
 import {
   Plus,
   Users,
@@ -169,10 +170,8 @@ export default function TeacherDashboard() {
   const [isUpdatingSession, setIsUpdatingSession] = useState(false);
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [removingStudentKey, setRemovingStudentKey] = useState<string | null>(null);
-  const [isRegisteringNetwork, setIsRegisteringNetwork] = useState(false);
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const [deletingClassId, setDeletingClassId] = useState<string | null>(null);
-  const [deletingNetworkProfileId, setDeletingNetworkProfileId] = useState<string | null>(null);
 
   // Real-time ticker: Cập nhật mỗi giây để countdown và status nhảy realtime
   useEffect(() => {
@@ -547,75 +546,6 @@ export default function TeacherDashboard() {
     return null;
   };
 
-  const deleteNetworkProfile = async (profileId: string) => {
-    if (!confirm("Bạn có chắc muốn xóa cấu hình mạng này khỏi danh sách?")) return;
-    try {
-      setDeletingNetworkProfileId(profileId);
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/api/teacher/network-profiles/${profileId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        setNetworkProfiles((prev) => prev.filter((p) => p.id !== profileId));
-        if (selectedNetworkProfileId === profileId) {
-          setSelectedNetworkProfileId("");
-          setNetworkEnforcementMode("OFF");
-        }
-        if (editNetworkProfileId === profileId) {
-          setEditNetworkProfileId("");
-          setEditNetworkEnforcementMode("OFF");
-        }
-      } else {
-        const err = await response.json();
-        alert(err.message || "Không thể xóa cấu hình mạng");
-      }
-    } catch (error) {
-      console.error("Error deleting network profile:", error);
-    } finally {
-      setDeletingNetworkProfileId(null);
-    }
-  };
-
-  const registerCurrentNetwork = async () => {
-    const ipInfo = await detectCurrentIp();
-    const targetIp = ipInfo?.clientIp || ipInfo?.publicIp || "";
-    const promptText = targetIp
-      ? `Đặt tên cho mạng hiện tại (IP phát hiện: ${targetIp}):`
-      : "Đặt tên cho mạng hiện tại (ví dụ: Wi-Fi Giảng Đường A101):";
-    const name = window.prompt(promptText, "Wi-Fi Giảng Đường");
-    if (!name?.trim()) return;
-    try {
-      setIsRegisteringNetwork(true);
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/api/teacher/network-profiles`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          publicIp: targetIp || undefined
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Không thể đăng ký mạng");
-      setNetworkProfiles((current) => [
-        data.data,
-        ...current.filter((profile) => profile.id !== data.data.id),
-      ]);
-      if (isEditSessionModalOpen) {
-        setEditNetworkProfileId(data.data.id);
-        setEditNetworkEnforcementMode("REQUIRED");
-      } else {
-        setSelectedNetworkProfileId(data.data.id);
-        setNetworkEnforcementMode("REQUIRED");
-      }
-      alert(`✅ Đã lưu mạng thành công:\n${data.data.name} (IP: ${data.data.publicIp})`);
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Không thể đăng ký mạng hiện tại");
-    } finally {
-      setIsRegisteringNetwork(false);
-    }
-  };
 
   const detectNewSessionGps = () => {
     if (typeof window === "undefined" || !navigator.geolocation) {
@@ -2131,99 +2061,22 @@ export default function TeacherDashboard() {
                   placeholder="VD: Buổi 1: Giới thiệu kiến trúc hệ thống"
                 />
               </div>
-              <div className="space-y-2.5 p-3.5 rounded-2xl bg-white border border-gray-200 shadow-2xs">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                    <Wifi className="w-4 h-4 text-blue-600" />
-                    <span>Giới Hạn Mạng Điểm Danh (IP)</span>
-                  </label>
-                  {detectingIp ? (
-                    <span className="text-[11px] text-gray-400 animate-pulse">Đang dò IP...</span>
-                  ) : detectedIpInfo ? (
-                    <span className="text-[11px] font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-200 shadow-2xs">
-                      IP: <strong>{detectedIpInfo.clientIp}</strong>
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <select
-                    value={selectedNetworkProfileId}
-                    onChange={(e) => {
-                      setSelectedNetworkProfileId(e.target.value);
-                      if (!e.target.value) setNetworkEnforcementMode("OFF");
-                      else if (networkEnforcementMode === "OFF") setNetworkEnforcementMode("REQUIRED");
-                    }}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-gray-50 font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Không giới hạn (Cho phép mọi IP)</option>
-                    {networkProfiles.map((profile) => (
-                      <option key={profile.id} value={profile.id}>
-                        {profile.name} ({profile.publicIp})
-                      </option>
-                    ))}
-                  </select>
-
-                  <div className="flex items-center justify-center w-full gap-2">
-
-                    {selectedNetworkProfileId && (
-                      <button
-                        type="button"
-                        onClick={() => deleteNetworkProfile(selectedNetworkProfileId)}
-                        disabled={deletingNetworkProfileId === selectedNetworkProfileId}
-                        className="px-2.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Xóa cấu hình mạng này"
-                        aria-label="Xóa cấu hình mạng"
-                      >
-                        {deletingNetworkProfileId === selectedNetworkProfileId ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={registerCurrentNetwork}
-                      disabled={isRegisteringNetwork}
-                      className="px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold hover:bg-blue-100 transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center w-full gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isRegisteringNetwork ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Đang lưu...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Lưu mạng này</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                </div>
-
-                {selectedNetworkProfileId && (
-                  <div className="pt-1 space-y-1.5 border-t border-gray-200">
-                    <label className="text-[11px] font-bold text-gray-700">Chế độ kiểm tra:</label>
-                    <select
-                      value={networkEnforcementMode}
-                      onChange={(e) => setNetworkEnforcementMode(e.target.value as "REQUIRED" | "FLAG_ONLY")}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="REQUIRED">[Bắt buộc] Cùng mạng Wi-Fi (Chặn sinh viên khác IP)</option>
-                      <option value="FLAG_ONLY">[Cảnh báo] Ghi nhận & Đánh dấu (Cho phép nhưng gắn cờ)</option>
-                    </select>
-                    <p className="text-[11px] text-gray-500 leading-normal">
-                      {networkEnforcementMode === "REQUIRED"
-                        ? "• Sinh viên dùng 4G hoặc ở ngoài lớp sẽ bị chặn điểm danh."
-                        : "• Sinh viên vẫn được điểm danh, nhưng sẽ bị gắn cờ cảnh báo đỏ trong báo cáo thống kê."}
-                    </p>
-                  </div>
-                )}
-              </div>
+              {/* Giới Hạn Mạng Điểm Danh (IP) */}
+              <NetworkProfileSelector
+                networkProfiles={networkProfiles}
+                selectedProfileId={selectedNetworkProfileId}
+                onSelectProfile={(profileId) => {
+                  setSelectedNetworkProfileId(profileId);
+                  if (!profileId) setNetworkEnforcementMode("OFF");
+                  else if (networkEnforcementMode === "OFF") setNetworkEnforcementMode("REQUIRED");
+                }}
+                enforcementMode={networkEnforcementMode}
+                onChangeEnforcementMode={setNetworkEnforcementMode}
+                detectedIpInfo={detectedIpInfo}
+                detectingIp={detectingIp}
+                onRefreshProfiles={fetchNetworkProfiles}
+                themeColor="blue"
+              />
 
               {/* Giới Hạn Vị Trí Phòng Học (GPS Geofence) */}
               <div className="space-y-2.5 p-3.5 rounded-2xl bg-white border border-cyan-200 shadow-2xs">
@@ -2307,9 +2160,6 @@ export default function TeacherDashboard() {
                 )}
               </div>
 
-              <div className="bg-blue-50/80 p-3 rounded-xl border border-blue-200 text-xs text-blue-700 leading-relaxed">
-                💡 <strong>Mẹo:</strong> Sau khi tạo buổi học, bạn có thể bấm <strong>&quot;Bật QR điểm danh&quot;</strong> để sinh mã QR tức thời cho sinh viên quét.
-              </div>
             </div>
 
             {/* Modal Sticky Footer */}
@@ -2668,97 +2518,21 @@ export default function TeacherDashboard() {
               </div>
 
               {/* Giới Hạn Mạng Điểm Danh (IP) */}
-              <div className="space-y-2.5 p-3.5 rounded-2xl bg-white border border-gray-200 shadow-2xs">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                    <Wifi className="w-4 h-4 text-emerald-600" />
-                    <span>Giới Hạn Mạng Điểm Danh (IP)</span>
-                  </label>
-                  {detectingIp ? (
-                    <span className="text-[11px] text-gray-400 animate-pulse">Đang dò IP...</span>
-                  ) : detectedIpInfo ? (
-                    <span className="text-[11px] font-mono text-gray-600 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-200 shadow-2xs">
-                      IP: <strong>{detectedIpInfo.clientIp}</strong>
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <select
-                    value={editNetworkProfileId}
-                    onChange={(e) => {
-                      setEditNetworkProfileId(e.target.value);
-                      if (!e.target.value) setEditNetworkEnforcementMode("OFF");
-                      else if (editNetworkEnforcementMode === "OFF") setEditNetworkEnforcementMode("REQUIRED");
-                    }}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-gray-50 font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="">Không giới hạn (Cho phép mọi IP)</option>
-                    {networkProfiles.map((profile) => (
-                      <option key={profile.id} value={profile.id}>
-                        {profile.name} ({profile.publicIp})
-                      </option>
-                    ))}
-                  </select>
-
-                  <div className="flex items-center justify-center w-full gap-2">
-                    {editNetworkProfileId && (
-                      <button
-                        type="button"
-                        onClick={() => deleteNetworkProfile(editNetworkProfileId)}
-                        disabled={deletingNetworkProfileId === editNetworkProfileId}
-                        className="px-2.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Xóa cấu hình mạng này"
-                        aria-label="Xóa cấu hình mạng"
-                      >
-                        {deletingNetworkProfileId === editNetworkProfileId ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={registerCurrentNetwork}
-                      disabled={isRegisteringNetwork}
-                      className="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center w-full gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isRegisteringNetwork ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Đang lưu...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Lưu mạng này</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {editNetworkProfileId && (
-                  <div className="pt-1 space-y-1.5 border-t border-gray-200">
-                    <label className="text-[11px] font-bold text-gray-700">Chế độ kiểm tra:</label>
-                    <select
-                      value={editNetworkEnforcementMode}
-                      onChange={(e) => setEditNetworkEnforcementMode(e.target.value as "REQUIRED" | "FLAG_ONLY")}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs sm:text-sm bg-white font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    >
-                      <option value="REQUIRED">[Bắt buộc] Cùng mạng Wi-Fi (Chặn sinh viên khác IP)</option>
-                      <option value="FLAG_ONLY">[Cảnh báo] Ghi nhận & Đánh dấu (Cho phép nhưng gắn cờ)</option>
-                    </select>
-                    <p className="text-[11px] text-gray-500 leading-normal">
-                      {editNetworkEnforcementMode === "REQUIRED"
-                        ? "• Sinh viên dùng 4G hoặc ở ngoài lớp sẽ bị chặn điểm danh."
-                        : "• Sinh viên vẫn được điểm danh, nhưng sẽ bị gắn cờ cảnh báo đỏ trong báo cáo thống kê."}
-                    </p>
-                  </div>
-                )}
-              </div>
+              <NetworkProfileSelector
+                networkProfiles={networkProfiles}
+                selectedProfileId={editNetworkProfileId}
+                onSelectProfile={(profileId) => {
+                  setEditNetworkProfileId(profileId);
+                  if (!profileId) setEditNetworkEnforcementMode("OFF");
+                  else if (editNetworkEnforcementMode === "OFF") setEditNetworkEnforcementMode("REQUIRED");
+                }}
+                enforcementMode={editNetworkEnforcementMode}
+                onChangeEnforcementMode={setEditNetworkEnforcementMode}
+                detectedIpInfo={detectedIpInfo}
+                detectingIp={detectingIp}
+                onRefreshProfiles={fetchNetworkProfiles}
+                themeColor="emerald"
+              />
 
               {/* Giới Hạn Vị Trí Phòng Học (GPS Geofence) */}
               <div className="space-y-2.5 p-3.5 rounded-2xl bg-white border border-cyan-200 shadow-2xs">

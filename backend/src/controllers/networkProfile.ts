@@ -87,3 +87,55 @@ export const deleteNetworkProfile = async (req: AuthenticatedRequest, res: Respo
   await prisma.networkProfile.update({ where: { id: profileId }, data: { isActive: false } });
   return res.json({ success: true, message: 'Network profile disabled' });
 };
+
+export const updateNetworkProfile = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  const ownerId = req.user?.userId;
+  const { profileId } = req.params;
+  if (!ownerId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+  const profile = await prisma.networkProfile.findFirst({ where: { id: profileId, ownerId } });
+  if (!profile) return res.status(404).json({ success: false, message: 'Network profile not found' });
+
+  const { name, publicIp } = req.body;
+  const updateData: any = {};
+
+  if (name !== undefined) {
+    const trimmedName = typeof name === 'string' ? name.trim() : '';
+    if (trimmedName.length < 2 || trimmedName.length > 80) {
+      return res.status(400).json({ success: false, message: 'Tên mạng phải từ 2 đến 80 ký tự' });
+    }
+    updateData.name = trimmedName;
+  }
+
+  if (publicIp !== undefined) {
+    const cleaned = cleanIp(publicIp);
+    if (!isValidIp(cleaned)) {
+      return res.status(400).json({ success: false, message: 'Địa chỉ IP không hợp lệ' });
+    }
+
+    const existing = await prisma.networkProfile.findFirst({
+      where: {
+        ownerId,
+        publicIp: cleaned,
+        id: { not: profileId },
+        isActive: true
+      }
+    });
+
+    if (existing) {
+      return res.status(400).json({ success: false, message: `Địa chỉ IP ${cleaned} đã được dùng cho mạng "${existing.name}"` });
+    }
+
+    updateData.publicIp = cleaned;
+  }
+
+  updateData.lastVerifiedAt = new Date();
+
+  const updated = await prisma.networkProfile.update({
+    where: { id: profileId },
+    data: updateData,
+    select: { id: true, name: true, publicIp: true, provider: true, lastVerifiedAt: true, createdAt: true }
+  });
+
+  return res.json({ success: true, data: updated, message: 'Cập nhật cấu hình mạng thành công' });
+};

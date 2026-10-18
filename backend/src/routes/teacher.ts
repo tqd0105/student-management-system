@@ -6,7 +6,7 @@
 
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth';
-import { getNetworkProfiles, detectNetwork, createNetworkProfile, deleteNetworkProfile } from '../controllers/networkProfile';
+import { getNetworkProfiles, detectNetwork, createNetworkProfile, updateNetworkProfile, deleteNetworkProfile } from '../controllers/networkProfile';
 import {
   getTeacherClasses,
   createClass,
@@ -58,6 +58,7 @@ router.use(requireAuth(['TEACHER', 'ADMIN']));
 router.get('/network-profiles', getNetworkProfiles);
 router.get('/network-profiles/detect', detectNetwork);
 router.post('/network-profiles', createNetworkProfile);
+router.put('/network-profiles/:profileId', updateNetworkProfile);
 router.delete('/network-profiles/:profileId', deleteNetworkProfile);
 
 // Class Management Routes
