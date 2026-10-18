@@ -127,34 +127,37 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen flex flex-col justify-between bg-gray-50">  
       {/* Top Navigation */}
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
+      <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md shadow-2xs border-b border-gray-200/80">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
             {/* Logo & Title */}
-            <div className="flex items-center">
-              <div className="flex-shrink-0 flex items-center">
-                <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <img src="./images/logo.png" alt="Logo" />
-                </div>
-                <div className="ml-3">
-                  <h1 className="text-md md:text-lg font-extrabold text-gray-900">Student Management System</h1>
-                  <p className="text-xs text-gray-500">LIGHTBRAVE.EDU</p>
-                </div>
+            <div className="flex items-center min-w-0 flex-1 mr-1 sm:mr-3">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-full flex items-center justify-center shrink-0 shadow-2xs overflow-hidden bg-white">
+                <img src="/images/logo.png" alt="LightBrave Logo" className="w-full h-full object-contain" />
+              </div>
+              <div className="ml-2.5 sm:ml-3 min-w-0">
+                <h1 className="text-xs sm:text-base md:text-lg font-black text-gray-900 tracking-tight leading-tight truncate">
+                  <span className="sm:hidden">Student Management</span>
+                  <span className="hidden sm:inline">Student Management System</span>
+                </h1>
+                <p className="text-[10px] sm:text-xs text-gray-400 font-bold tracking-wider uppercase truncate mt-0.5">
+                  LIGHTBRAVE.EDU
+                </p>
               </div>
             </div>
 
             {/* User Menu & Profile */}
-            <div className="flex items-center space-x-3 sm:space-x-4">
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
               {/* Profile Button with Avatar (Opens Profile Modal) */}
               <button
                 type="button"
                 onClick={() => setIsProfileModalOpen(true)}
-                className="flex items-center space-x-2.5 p-1.5 rounded-xl hover:bg-gray-100/90 active:bg-gray-200/80 transition-all cursor-pointer group text-left"
+                className="flex items-center gap-2 p-1 sm:p-1.5 rounded-xl hover:bg-gray-100/90 active:bg-gray-200/80 transition-all cursor-pointer group text-left"
                 title="Hồ sơ cá nhân & Đổi avatar"
               >
                 {/* Avatar with S3 Image or Gradient Initials */}
                 <div className="relative shrink-0">
-                  <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-indigo-500/20 group-hover:ring-indigo-600 transition-all shadow-xs bg-gray-100 flex items-center justify-center">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden ring-2 ring-indigo-500/20 group-hover:ring-indigo-600 transition-all shadow-xs bg-gray-100 flex items-center justify-center">
                     {user?.avatar ? (
                       <img
                         src={user.avatar}
@@ -163,11 +166,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center text-sm font-bold">
+                      <div className="w-full h-full bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xs sm:text-sm font-bold">
                         {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
                       </div>
                     )}
                   </div>
+                  {/* Online indicator */}
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
                 </div>
 
                 {/* User Info (Desktop) */}
@@ -184,11 +189,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               {/* Logout Button */}
               <button
                 onClick={handleLogout}
-                className="bg-gray-600 text-white p-2.5 md:p-3 lg:px-4 lg:py-2 rounded-full shadow-md hover:bg-gray-700 flex items-center space-x-0 lg:space-x-2 cursor-pointer transition-colors shrink-0"
-                title="Logout"
+                className="w-9 h-9 sm:w-10 sm:h-10 lg:w-auto bg-gray-700 hover:bg-rose-600 text-white rounded-full shadow-xs lg:px-3.5 lg:py-2 flex items-center justify-center gap-1.5 cursor-pointer transition-all shrink-0 active:scale-95"
+                title="Đăng xuất"
               >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden lg:block text-xs font-semibold">Logout</span>
+                <LogOut className="w-4 h-4 shrink-0" />
+                <span className="hidden lg:inline text-xs font-semibold">Logout</span>
               </button>
             </div>
           </div>

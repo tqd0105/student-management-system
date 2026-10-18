@@ -498,7 +498,7 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900">QR Scanner</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900">QR Scan</h3>
                 {deviceInfo.isLaptop ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
                     <Laptop className="w-3 h-3 text-emerald-600" />
@@ -528,7 +528,7 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
           {gpsReady === true ? (
             <div className="inline-flex items-center gap-1.5 font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 shadow-2xs">
               <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>GPS: Đã sẵn sàng</span>
+              <span>GPS: Sẵn sàng</span>
             </div>
           ) : gpsReady === false ? (
             <button
@@ -538,7 +538,7 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
               title="Bấm để thử dò lại vị trí GPS ngay"
             >
               <MapPin className="w-3.5 h-3.5 text-amber-600 shrink-0 animate-bounce" />
-              <span>GPS: Chưa định vị</span>
+              <span>GPS: Chưa có</span>
               <span className="text-[10px] text-amber-700 underline flex items-center gap-0.5 ml-1">
                 <RefreshCw className="w-3 h-3 group-hover:rotate-180 transition-transform" />
                 Dò lại
@@ -547,13 +547,13 @@ export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerP
           ) : (
             <div className="inline-flex items-center gap-1.5 font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
               <RefreshCw className="w-3.5 h-3.5 text-cyan-600 animate-spin shrink-0" />
-              <span>GPS: Đang dò vị trí...</span>
+              <span>GPS: Đang dò...</span>
             </div>
           )}
 
           <div className="flex items-center gap-1.5 font-semibold text-gray-700">
             <ShieldCheck className="w-3.5 h-3.5 text-cyan-600" />
-            <span>Thiết bị: Đã định danh</span>
+            <span>Thiết bị: Sẵn sàng</span>
           </div>
         </div>
 
