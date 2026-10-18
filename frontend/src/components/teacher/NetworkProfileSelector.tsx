@@ -432,7 +432,7 @@ export default function NetworkProfileSelector({
                 onClick={() => handleOpenCreateModal(detectedIpInfo?.clientIp || detectedIpInfo?.publicIp)}
                 className="flex-1 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                {/* <Sparkles className="w-3.5 h-3.5 text-emerald-600" /> */}
                 <span>Lưu mạng hiện tại ({detectedIpInfo?.clientIp || 'Dò IP'})</span>
               </button>
 
@@ -532,7 +532,7 @@ export default function NetworkProfileSelector({
                       onClick={() => setFormIp(detectedIpInfo.clientIp || detectedIpInfo.publicIp || '')}
                       className="text-[11px] font-bold text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
                     >
-                      <Sparkles className="w-3 h-3" />
+                      {/* <Sparkles className="w-3 h-3" /> */}
                       <span>Lấy IP hiện tại ({detectedIpInfo.clientIp})</span>
                     </button>
                   )}
@@ -594,8 +594,8 @@ export default function NetworkProfileSelector({
                 <strong className="text-gray-900 font-bold">&quot;{profileToDelete.name}&quot;</strong>{' '}
                 (IP: <span className="font-mono text-gray-700">{profileToDelete.publicIp}</span>)?
               </p>
-              <p className="text-[11px] text-gray-400 mt-2 italic">
-                Các buổi học đang chọn mạng này sẽ tự động chuyển về không giới hạn IP.
+              <p className="text-[11px] text-gray-400 mt-2 ">
+                *Các buổi học đang chọn mạng này sẽ tự động chuyển về không giới hạn IP.
               </p>
             </div>
 

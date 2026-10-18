@@ -44,8 +44,9 @@ const corsOptions: cors.CorsOptions = {
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control', 'Pragma'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control', 'Pragma', 'x-network-type'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400, // Cache preflight OPTIONS trong 24 giờ để giảm độ trễ và tránh lỗi preflight rớt mạng
 };
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
