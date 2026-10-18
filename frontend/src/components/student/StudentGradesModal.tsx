@@ -264,7 +264,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
         {/* Modal Container */}
-        <div className="relative z-10 w-full sm:max-w-5xl bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[95dvh] sm:h-auto sm:max-h-[92vh] animate__animated animate__zoomIn animate__faster">
+        <div className="relative mx-2 z-10 w-full sm:max-w-5xl bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[95dvh] sm:h-auto sm:max-h-[92vh] animate__animated animate__zoomIn animate__faster">
           {/* ── Top Header ─────────────────────────────────────────────────── */}
           <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-gray-100 bg-gray-50/80 shrink-0 gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -662,7 +662,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
             <thead className="bg-gray-100 font-bold uppercase text-[10px] text-gray-900">
               <tr>
                 <th className="p-1.5 text-center w-8">STT</th>
-                <th className="p-1.5">Học Phần / Môn Học</th>
+                <th className="p-1.5">Học Phần</th>
                 <th className="p-1.5">Giảng Viên Phụ Trách</th>
                 <th className="p-1.5 text-center w-24">Tiến Độ Bài</th>
                 <th className="p-1.5 text-center w-24">ĐTB</th>
@@ -720,9 +720,9 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
               <tr>
                 <th className="p-1.5 text-center w-8">STT</th>
                 <th className="p-1.5 w-44">Học Phần</th>
-                <th className="p-1.5 w-52">Tên Bài Đánh Giá / Kiểm Tra</th>
+                <th className="p-1.5 w-52">Tên Bài Đánh Giá</th>
                 <th className="p-1.5 text-center w-24">Hạn Nộp</th>
-                <th className="p-1.5 text-center w-20">Điểm (Hệ 10)</th>
+                <th className="p-1.5 text-center w-20">Điểm</th>
                 <th className="p-1.5">Nhận Xét Của Giảng Viên</th>
               </tr>
             </thead>

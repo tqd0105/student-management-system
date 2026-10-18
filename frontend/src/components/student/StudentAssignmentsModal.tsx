@@ -448,7 +448,7 @@ export default function StudentAssignmentsModal({ initialClassId, onClose }: Stu
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative z-10 w-full sm:max-w-4xl bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[95dvh] sm:h-auto sm:max-h-[92vh] animate__animated animate__zoomIn animate__faster">
+      <div className="relative mx-2 z-10 w-full sm:max-w-4xl bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[95dvh] sm:h-auto sm:max-h-[92vh] animate__animated animate__zoomIn animate__faster">
         {/* ── Top Header ─────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-gray-100 bg-gray-50/80 shrink-0 gap-3">
           <div className="flex items-center gap-3 min-w-0">

@@ -168,8 +168,15 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
     return new Date(dateString).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  const formatTime = (dateString: string, includeSeconds = false) => {
+    if (!dateString) return '—';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      ...(includeSeconds ? { second: '2-digit' } : {})
+    });
   };
 
   const overallStats = getOverallStats();
@@ -188,7 +195,7 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative mx-2 z-10 w-full sm:max-w-4xl bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[95dvh] sm:h-auto sm:max-h-[92vh] animate__animated animate__zoomIn animate__faster">
+      <div className="relative mx-2 z-10 w-full sm:max-w-5xl bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[95dvh] sm:h-auto sm:max-h-[92vh] animate__animated animate__zoomIn animate__faster">
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-gray-100 bg-gray-50/80 shrink-0 gap-3">
@@ -362,15 +369,6 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
                       <span>100%</span>
                     </div>
 
-                    {/* Evaluation status message */}
-                    <div className="mt-2 text-center">
-                      <span className={`text-xs font-semibold ${rateColor.text}`}>
-                        {overallStats.attendanceRate >= 90 ? 'Chuyên cần xuất sắc!' :
-                         overallStats.attendanceRate >= 75 ? 'Chuyên cần tốt!' :
-                         overallStats.attendanceRate >= 60 ? 'Cần cải thiện tần suất dự học' :
-                         'Tỷ lệ thấp — cần chú ý'}
-                      </span>
-                    </div>
                   </div>
 
                   {/* Academic Note */}
@@ -447,38 +445,67 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
                 <>
                   {/* Desktop Table */}
                   <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-gray-50 text-[11px] text-gray-500 font-semibold uppercase tracking-wider border-b border-gray-100">
-                        <tr>
-                          <th className="px-5 py-3 whitespace-nowrap">Ngày</th>
-                          <th className="px-4 py-3 whitespace-nowrap">Buổi học</th>
-                          <th className="px-4 py-3 whitespace-nowrap">Lớp</th>
-                          <th className="px-4 py-3 whitespace-nowrap">Giảng viên</th>
-                          <th className="px-4 py-3 whitespace-nowrap text-center">Trạng thái</th>
-                          <th className="px-4 py-3 whitespace-nowrap text-center">Thời gian check-in</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {attendanceRecords.map((record) => (
-                          <tr key={record.id} className="hover:bg-slate-50/70 transition-colors">
-                            <td className="px-5 py-3.5 whitespace-nowrap text-gray-600 font-medium">{formatDate(record.session.startTime)}</td>
-                            <td className="px-4 py-3.5">
-                              <p className="font-semibold text-gray-900 leading-snug">{record.session.title}</p>
-                            </td>
-                            <td className="px-4 py-3.5 whitespace-nowrap">
-                              <span className="px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-violet-50 text-violet-700 border border-violet-200">
-                                {record.session.class.name}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3.5 text-gray-600 whitespace-nowrap">{record.session.class.teacher.name}</td>
-                            <td className="px-4 py-3.5 text-center whitespace-nowrap">{getStatusBadge(record.status)}</td>
-                            <td className="px-4 py-3.5 text-center text-gray-500 whitespace-nowrap">
-                              {record.checkedAt ? formatTime(record.checkedAt) : '—'}
-                            </td>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs min-w-[760px]">
+                        <thead className="bg-gray-50/90 text-[11px] text-gray-500 font-semibold uppercase tracking-wider border-b border-gray-100">
+                          <tr>
+                            <th className="px-4 py-3.5 whitespace-nowrap w-28">Ngày</th>
+                            <th className="px-4 py-3.5 whitespace-nowrap min-w-[200px]">Buổi học</th>
+                            <th className="px-4 py-3.5 whitespace-nowrap min-w-[170px]">Lớp</th>
+                            <th className="px-4 py-3.5 whitespace-nowrap min-w-[130px]">Giảng viên</th>
+                            <th className="px-4 py-3.5 whitespace-nowrap text-center w-28">Trạng thái</th>
+                            <th className="px-4 py-3.5 whitespace-nowrap text-center min-w-[150px]">Thời gian check-in</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {attendanceRecords.map((record) => (
+                            <tr key={record.id} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="px-4 py-3.5 whitespace-nowrap font-medium text-gray-700">
+                                {formatDate(record.session.startTime)}
+                              </td>
+                              <td className="px-4 py-3.5 min-w-[200px]">
+                                <p className="font-semibold text-gray-900 leading-snug" title={record.session.title}>
+                                  {record.session.title || 'Buổi học'}
+                                </p>
+                                <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1 font-mono">
+                                  <Clock className="w-3 h-3 text-gray-400 shrink-0" />
+                                  <span>{formatTime(record.session.startTime)} - {formatTime(record.session.endTime)}</span>
+                                </p>
+                              </td>
+                              <td className="px-4 py-3.5 whitespace-nowrap">
+                                <span
+                                  className="inline-block px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-violet-50 text-violet-700 border border-violet-200/80 max-w-[220px] truncate"
+                                  title={record.session.class.name}
+                                >
+                                  {record.session.class.name}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 text-gray-700 whitespace-nowrap font-medium">
+                                {record.session.class.teacher.name}
+                              </td>
+                              <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                                {getStatusBadge(record.status)}
+                              </td>
+                              <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                                {record.status === 'ABSENT' ? (
+                                  <span className="text-gray-400 text-xs italic font-medium">Vắng mặt</span>
+                                ) : record.checkedAt ? (
+                                  <div
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200/90 text-slate-700 font-mono text-xs font-semibold shadow-2xs"
+                                    title={`Thời gian quét: ${formatTime(record.checkedAt, true)} ngày ${formatDate(record.checkedAt)}`}
+                                  >
+                                    <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                                    <span>{formatTime(record.checkedAt, true)}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 text-xs italic">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
 
                   {/* Mobile Card List */}
@@ -497,15 +524,18 @@ const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ onClose, refreshT
                           </div>
                           {getStatusBadge(record.status)}
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100">
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-2.5 pt-2 border-t border-gray-100 flex-wrap">
                           <div className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3 text-gray-400" />
+                            <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
                             <span>{formatDate(record.session.startTime)}</span>
+                            <span className="text-gray-400 font-mono text-[11px]">
+                              ({formatTime(record.session.startTime)} - {formatTime(record.session.endTime)})
+                            </span>
                           </div>
-                          {record.checkedAt && (
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-gray-400" />
-                              <span>Check-in: {formatTime(record.checkedAt)}</span>
+                          {record.status !== 'ABSENT' && record.checkedAt && (
+                            <div className="flex items-center gap-1 font-mono font-medium text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-200/80">
+                              <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>Check-in: {formatTime(record.checkedAt, true)}</span>
                             </div>
                           )}
                         </div>

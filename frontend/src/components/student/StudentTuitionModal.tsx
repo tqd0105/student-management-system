@@ -196,7 +196,7 @@ export default function StudentTuitionModal({ isOpen, onClose }: StudentTuitionM
 
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
-      <div className="bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl w-full sm:max-w-5xl h-[95dvh] sm:h-auto sm:max-h-[92vh] flex flex-col overflow-hidden border border-gray-100">
+      <div className="mx-2 bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl w-full sm:max-w-5xl h-[95dvh] sm:h-auto sm:max-h-[92vh] flex flex-col overflow-hidden border border-gray-100">
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 px-4 sm:px-6 py-4 sm:py-5 text-white flex items-center justify-between shadow-md shrink-0">
           <div className="flex items-center space-x-3">
