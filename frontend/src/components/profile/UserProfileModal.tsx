@@ -255,11 +255,6 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                 <label className="block text-xs font-bold text-gray-700">
                   Họ và tên hiển thị {isStudent ? '' : <span className="text-red-500">*</span>}
                 </label>
-                {isStudent && (
-                  <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 font-medium bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                    <Lock className="w-2.5 h-2.5" /> Học vụ cố định
-                  </span>
-                )}
               </div>
               <div className="relative">
                 <input
@@ -280,7 +275,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
               {isStudent && (
                 <p className="text-[11px] text-gray-400 mt-1.5 flex items-start gap-1">
                   <Info className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-                  <span>Họ và tên là thông tin học vụ chính thức. Để đính chính thông tin theo CCCD, vui lòng liên hệ Ban Đào tạo hoặc Quản trị viên.</span>
+                  <span>Để đính chính thông tin theo CCCD, vui lòng liên hệ Ban Đào tạo hoặc Quản trị viên.</span>
                 </p>
               )}
             </div>
