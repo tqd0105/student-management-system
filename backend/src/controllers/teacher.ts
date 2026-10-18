@@ -372,14 +372,26 @@ export const generateQRCode = async (req: AuthenticatedRequest, res: Response): 
     console.log('Generated QR Code:', qrCode);
     console.log('QR Expires At:', qrExpiresAt);
 
+    // Kiểm tra xem buổi học đã có lượt điểm danh nào trước đó chưa
+    const logCount = await prisma.attendanceLog.count({ where: { sessionId } });
+    const updateSessionData: any = {
+      qrCode,
+      qrExpiresAt,
+      isActive: true
+    };
+
+    // Nếu buổi học chưa có lượt điểm danh nào (lần đầu mở QR), cập nhật startTime về thời điểm hiện tại
+    // để học sinh quét trong 15 phút đầu không bị tính muộn oan do giáo viên tạo buổi học từ trước
+    if (logCount === 0) {
+      const now = new Date();
+      updateSessionData.startTime = now;
+      updateSessionData.endTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    }
+
     // Cập nhật session với QR code mới
     const updatedSession = await prisma.attendanceSession.update({
       where: { id: sessionId },
-      data: {
-        qrCode,
-        qrExpiresAt,
-        isActive: true
-      }
+      data: updateSessionData
     });
 
     console.log('✅ Session updated:', updatedSession);
@@ -554,6 +566,13 @@ export const resumeSession = async (req: AuthenticatedRequest, res: Response): P
       
       updateData.qrCode = base64Data;
       updateData.qrExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
+    }
+
+    // Nếu buổi học chưa có lượt điểm danh nào, đồng bộ startTime sang thời điểm mở QR
+    const logCount = await prisma.attendanceLog.count({ where: { sessionId } });
+    if (logCount === 0) {
+      updateData.startTime = now;
+      updateData.endTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
     }
 
     const updatedSession = await prisma.attendanceSession.update({

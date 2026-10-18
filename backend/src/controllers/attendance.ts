@@ -287,8 +287,23 @@ class AttendanceController {
         }
       }
 
-      // Kiểm tra có muộn không (sau 15 phút đầu session)
-      const lateThreshold = new Date(session.startTime.getTime() + 15 * 60 * 1000);
+      // Kiểm tra có muộn không (sau 15 phút đầu session thực tế)
+      let effectiveStartTime = new Date(session.startTime);
+      if (session.qrExpiresAt) {
+        const qrWindowMs = 15 * 60 * 1000;
+        const qrCreatedAt = new Date(session.qrExpiresAt.getTime() - qrWindowMs);
+        const priorLogsCount = await prisma.attendanceLog.count({
+          where: {
+            sessionId: session.id,
+            checkedAt: { lt: qrCreatedAt }
+          }
+        });
+        if (priorLogsCount === 0 && session.startTime < qrCreatedAt) {
+          effectiveStartTime = qrCreatedAt;
+        }
+      }
+
+      const lateThreshold = new Date(effectiveStartTime.getTime() + 15 * 60 * 1000);
       if (now > lateThreshold) {
         status = 'LATE';
       }

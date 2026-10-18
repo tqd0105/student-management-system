@@ -329,13 +329,37 @@ export const scanQRAndCheckIn = async (req: AuthenticatedRequest, res: Response)
     // Tạo record điểm danh
     const now = new Date();
     const sessionStartTime = new Date(session.startTime);
-    // Tính số phút kể từ khi buổi học bắt đầu (nếu quét trước giờ bắt đầu thì là 0)
-    const diffMs = now.getTime() - sessionStartTime.getTime();
+
+    // Xác định thời điểm bắt đầu tính muộn (effectiveStartTime):
+    // 1. Mặc định là session.startTime
+    // 2. Nếu buổi học chưa có lượt điểm danh nào trước thời điểm QR hiện tại được mở,
+    //    và session.startTime ở trong quá khứ so với lúc mở QR:
+    //    Lấy mốc mở mã QR làm thời điểm bắt đầu thực tế (khoảng 15 phút trước khi qrExpiresAt hết hạn)
+    //    để học sinh quét trong 15 phút đầu của mã QR không bị tính muộn oan do giáo viên tạo buổi học trước rồi mới mở QR sau.
+    let effectiveStartTime = sessionStartTime;
+    if (session.qrExpiresAt) {
+      const qrWindowMs = 15 * 60 * 1000;
+      const qrCreatedAt = new Date(session.qrExpiresAt.getTime() - qrWindowMs);
+      
+      const priorLogsCount = await prisma.attendanceLog.count({
+        where: {
+          sessionId,
+          checkedAt: { lt: qrCreatedAt }
+        }
+      });
+
+      if (priorLogsCount === 0 && sessionStartTime < qrCreatedAt) {
+        effectiveStartTime = qrCreatedAt;
+      }
+    }
+
+    // Tính số phút kể từ khi điểm danh thực sự bắt đầu
+    const diffMs = now.getTime() - effectiveStartTime.getTime();
     const minutesDiff = diffMs > 0 ? Math.floor(diffMs / (1000 * 60)) : 0;
 
-    // Sinh viên chỉ bị coi là MUỘN (LATE) nếu thời điểm quét vượt quá 15 phút KỂ TỪ GIỜ BẮT ĐẦU BUỔI HỌC (now > sessionStartTime + 15m)
-    // Nếu quét trước giờ bắt đầu hoặc trong 15 phút đầu, luôn là CÓ MẶT (PRESENT)
-    const lateThreshold = new Date(sessionStartTime.getTime() + 15 * 60 * 1000);
+    // Sinh viên chỉ bị coi là MUỘN (LATE) nếu thời điểm quét vượt quá 15 phút KỂ TỪ MỐC BẮT ĐẦU (now > effectiveStartTime + 15m)
+    // Nếu quét trong 15 phút đầu hoặc trước giờ, luôn là CÓ MẶT (PRESENT)
+    const lateThreshold = new Date(effectiveStartTime.getTime() + 15 * 60 * 1000);
     let status = 'PRESENT';
     if (now > lateThreshold) {
       status = 'LATE';
