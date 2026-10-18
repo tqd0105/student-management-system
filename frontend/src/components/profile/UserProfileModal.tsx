@@ -275,7 +275,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
               {isStudent && (
                 <p className="text-[11px] text-gray-400 mt-1.5 flex items-start gap-1">
                   <Info className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-                  <span>Để đính chính thông tin theo CCCD, vui lòng liên hệ Ban Đào tạo hoặc Quản trị viên.</span>
+                  <span>Để đính chính thông tin, vui lòng liên hệ Admin.</span>
                 </p>
               )}
             </div>
