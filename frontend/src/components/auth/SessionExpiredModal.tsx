@@ -99,13 +99,13 @@ export default function SessionExpiredModal({
     >
       <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Top ambient color bar */}
-        <div className="h-2 w-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500" />
+        {/* <div className="h-2 w-full bg-gradient-to-r from-red-600 via-orange-600 to-rose-600" /> */}
 
         <div className="p-6 sm:p-7">
           {/* Header Icon with pulse badge */}
           <div className="relative mx-auto w-16 h-16 mb-4 flex items-center justify-center">
             <div className="absolute inset-0 rounded-2xl bg-amber-500/15 animate-ping opacity-75" />
-            <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100 border border-amber-200 flex items-center justify-center shadow-inner">
+            <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100 border border-amber-400 flex items-center justify-center shadow-inner">
               <Clock className="w-8 h-8 text-amber-600 animate-pulse" />
             </div>
             <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-rose-500 border-2 border-white flex items-center justify-center shadow-sm">
@@ -122,7 +122,7 @@ export default function SessionExpiredModal({
               Phiên Đăng Nhập Đã Hết Hạn
             </h2>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Phiên làm việc của bạn đã kéo dài qua <span className="font-semibold text-slate-800">6 giờ</span> bảo mật. Nhằm đảm bảo an toàn dữ liệu, hệ thống tạm thời khóa quyền truy cập.
+              Phiên đăng nhập đã hết hạn để bảo vệ tài khoản của bạn. Vui lòng đăng nhập lại để tiếp tục.
             </p>
           </div>
 
@@ -156,13 +156,6 @@ export default function SessionExpiredModal({
             </div>
           )}
 
-          {/* Security reassurance banner */}
-          <div className="mt-4 p-3 rounded-xl bg-blue-50/70 border border-blue-100 flex items-start gap-2.5 text-left">
-            <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-blue-800 leading-normal">
-              Dữ liệu học tập và thông tin điểm danh của bạn đã được lưu trữ an toàn trên hệ thống. Bạn chỉ cần xác thực lại để tiếp tục.
-            </p>
-          </div>
 
           {/* Actions */}
           <div className="mt-6 space-y-3">
