@@ -388,7 +388,7 @@ const StudentMaterialsModal: React.FC<StudentMaterialsModalProps> = ({ classId, 
 
       {/* Modal Container */}
       <div
-        className={`relative z-10 w-full bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col transition-all duration-300 ${
+        className={`relative mx-2 z-10 w-full bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col transition-all duration-300 ${
           activePreview ? 'sm:max-w-4xl h-[95dvh] sm:h-[92vh]' : 'sm:max-w-2xl h-[90dvh] sm:max-h-[90vh]'
         }`}
       >

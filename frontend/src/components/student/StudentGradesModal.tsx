@@ -265,52 +265,54 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
 
         {/* Modal Container */}
         <div className="relative mx-2 z-10 w-full sm:max-w-5xl bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[95dvh] sm:h-auto sm:max-h-[92vh] animate__animated animate__zoomIn animate__faster">
-          {/* ── Top Header ─────────────────────────────────────────────────── */}
-          <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-gray-100 bg-gray-50/80 shrink-0 gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="p-2.5 rounded-xl bg-amber-100 text-amber-600 shrink-0 shadow-2xs">
-                <Award className="w-5 h-5" />
+          <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 border-b border-gray-100 bg-gray-50/80 shrink-0 gap-2 sm:gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+              <div className="p-2 sm:p-2.5 rounded-xl bg-amber-100 text-amber-600 shrink-0 shadow-2xs">
+                <Award className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div className="min-w-0">
-                <h3 className="text-sm sm:text-base font-bold text-gray-900 truncate flex items-center gap-2">
-                  <span>Bảng Điểm Học Vụ & Thành Tích</span>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] border ${rankInfo.pill}`}>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <h3 className="text-sm sm:text-base font-bold text-gray-900 truncate">
+                    <span className="sm:hidden">Bảng Điểm Học Vụ</span>
+                    <span className="hidden sm:inline">Bảng Điểm Học Vụ & Thành Tích</span>
+                  </h3>
+                  <span className={`shrink-0 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold border ${rankInfo.pill}`}>
                     {rankInfo.text}
                   </span>
-                </h3>
-                <p className="text-xs text-gray-500 mt-0.5 truncate">
+                </div>
+                <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 truncate">
                   Báo cáo học tập chính thức, điểm số và nhận xét từ giảng viên
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <button
                 type="button"
                 onClick={handleManualRefresh}
                 disabled={isRefreshing || loading}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-100 text-gray-700 text-xs font-semibold transition-all cursor-pointer shadow-2xs disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-100 text-gray-700 text-xs font-semibold transition-all cursor-pointer shadow-2xs disabled:opacity-60 shrink-0"
                 title="Tải lại bảng điểm mới nhất"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing || loading ? 'animate-spin text-indigo-600' : 'text-gray-500'}`} />
+                <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isRefreshing || loading ? 'animate-spin text-indigo-600' : 'text-gray-500'}`} />
                 <span className="hidden sm:inline">{isRefreshing ? 'Đang tải...' : 'Tải lại'}</span>
               </button>
 
               <button
                 onClick={handlePrint}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+                className="inline-flex items-center justify-center gap-1.5 p-2 sm:px-3.5 sm:py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-colors cursor-pointer shadow-2xs shrink-0"
                 title="In bảng điểm khổ ngang A4 (Landscape)"
               >
-                <Printer className="w-3.5 h-3.5" />
-                <span>In bảng điểm</span>
+                <Printer className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden sm:inline">In bảng điểm</span>
               </button>
 
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-xl hover:bg-gray-200 text-gray-500 transition-colors cursor-pointer"
+                className="p-2 sm:p-1.5 rounded-xl hover:bg-gray-200 text-gray-500 transition-colors cursor-pointer shrink-0"
                 title="Đóng"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
           </div>
@@ -444,7 +446,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
                     </div>
 
                     {/* Class Score Summary */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-center w-full sm:w-auto gap-4">
                       <div className="text-right">
                         <p className="text-[10px] text-gray-400 font-medium">Tiến độ</p>
                         <p className="text-xs font-semibold text-gray-700">
