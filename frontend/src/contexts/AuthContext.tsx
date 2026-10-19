@@ -1,6 +1,6 @@
 /**
  * Authentication Context
- * Student Management System - DTECH TEAM / LightBrave
+ * Student Management System - DunexSoft / LightBrave
  * Quản lý authentication state toàn app & giám sát phiên đăng nhập 6h
  */
 

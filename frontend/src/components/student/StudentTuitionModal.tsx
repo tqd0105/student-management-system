@@ -658,7 +658,7 @@ export default function StudentTuitionModal({ isOpen, onClose }: StudentTuitionM
                   <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
                     <div>
                       <span className="text-xs text-slate-400 block">Chủ tài khoản</span>
-                      <span className="font-semibold text-white">TRUNG TAM DTECH MANAGEMENT</span>
+                      <span className="font-semibold text-white">TRUNG TAM DUNEXSOFT MANAGEMENT</span>
                     </div>
                   </div>
 

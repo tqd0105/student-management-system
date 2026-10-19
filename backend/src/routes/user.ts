@@ -1,6 +1,6 @@
 /**
  * User Management Routes
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * Routes cho CRUD users và user management
  */
 

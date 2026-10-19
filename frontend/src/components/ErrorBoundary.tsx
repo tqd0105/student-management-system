@@ -1,6 +1,6 @@
 /**
  * Error Boundary Component
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * Catches JavaScript errors and displays fallback UI
  */
 

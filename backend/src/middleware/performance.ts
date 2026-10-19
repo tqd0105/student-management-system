@@ -1,6 +1,6 @@
 /**
  * Performance Monitoring Middleware
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  */
 
 import { Request, Response, NextFunction } from 'express';

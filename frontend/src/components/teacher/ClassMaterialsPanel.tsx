@@ -1,7 +1,7 @@
 /**
  * ClassMaterialsPanel — Teacher View
  * Quản lý tài liệu học tập theo lớp (URL-based: YouTube, Drive, GitHub, Notion...)
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  */
 
 'use client';

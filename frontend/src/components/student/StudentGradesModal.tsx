@@ -1,7 +1,7 @@
 /**
  * StudentGradesModal — Student View
  * Bảng Điểm & Báo Cáo Học Lực Học Thuật (Academic Transcript / Gradebook)
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * 
  * Nâng cấp in ấn chuyên nghiệp:
  * - Hỗ trợ in khổ ngang A4 Landscape chuyên dụng (@page { size: A4 landscape; margin: 8mm 10mm; }).
@@ -591,7 +591,7 @@ export default function StudentGradesModal({ onClose }: StudentGradesModalProps)
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-gray-900">BỘ GIÁO DỤC VÀ ĐÀO TẠO</p>
             <p className="text-xs font-black uppercase text-gray-950">HỆ THỐNG QUẢN TRỊ ĐÀO TẠO & HỌC VỤ SMS</p>
-            <p className="text-[10px] text-gray-600">Đơn vị phát triển: DTECH TEAM</p>
+            <p className="text-[10px] text-gray-600">Đơn vị phát triển: DunexSoft</p>
           </div>
           <div className="text-center">
             <p className="text-[11px] font-bold uppercase tracking-wider text-gray-900">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>

@@ -1,6 +1,6 @@
 /**
  * Dashboard Layout
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  */
 
 'use client';
@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { LogOut, Trash2 } from 'lucide-react';
 import Footer from './Footer';
-import DTechContactModal from './DTechContactModal';
+import DunexSoftContactModal from './DunexSoftContactModal';
 import UserProfileModal from '@/components/profile/UserProfileModal';
 import { API_BASE_URL } from '@/config/api';
 
@@ -22,7 +22,7 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { user, logout, isAuthenticated, loading } = useAuth();
   const router = useRouter();
-  const [isDTechModalOpen, setIsDTechModalOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   React.useEffect(() => {
@@ -208,7 +208,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       </main>
 
       {/* Footer */}
-      <Footer onOpenContactModal={() => setIsDTechModalOpen(true)} />
+      <Footer onOpenContactModal={() => setIsContactModalOpen(true)} />
 
       {/* User Profile Modal with AWS S3 Avatar Integration */}
       <UserProfileModal
@@ -216,10 +216,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         onClose={() => setIsProfileModalOpen(false)}
       />
 
-      {/* DTECH Contact Modal */}
-      <DTechContactModal
-        isOpen={isDTechModalOpen}
-        onClose={() => setIsDTechModalOpen(false)}
+      {/* DunexSoft Contact Modal */}
+      <DunexSoftContactModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
       />
     </div>
   );

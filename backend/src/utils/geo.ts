@@ -1,6 +1,6 @@
 /**
  * Utility functions for Geographic and GPS calculations
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  */
 
 /**

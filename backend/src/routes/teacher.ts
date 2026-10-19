@@ -1,6 +1,6 @@
 /**
  * Teacher Routes
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * Routes cho các chức năng giáo viên
  */
 

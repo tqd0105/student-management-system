@@ -1,6 +1,6 @@
 /**
  * Session Expired Modal
- * Student Management System - LightBrave / DTECH TEAM
+ * Student Management System - LightBrave / DunexSoft
  * Modal thông báo hết phiên đăng nhập chuẩn mực, chuyên nghiệp và bảo mật
  */
 

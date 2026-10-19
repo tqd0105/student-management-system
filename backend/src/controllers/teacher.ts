@@ -1,6 +1,6 @@
 /**
  * Teacher Controller
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * Quản lý các chức năng dành cho giáo viên
  */
 

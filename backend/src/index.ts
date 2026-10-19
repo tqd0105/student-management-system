@@ -1,6 +1,6 @@
 /**
  * Main Server Entry Point (TypeScript)
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * Khởi tạo Express server với đầy đủ middleware và routes
  */
 
@@ -131,7 +131,7 @@ app.listen(Number(PORT), '0.0.0.0', () => {
 🚀 Student Management System API
 📌 Server running on port ${PORT}
 🌐 Environment: ${process.env.NODE_ENV || 'development'}
-👥 Developed by: DTECH TEAM
+👥 Developed by: DunexSoft
 📱 Local:   http://localhost:${PORT}/health
 📱 Network: http://${localIP}:${PORT}/health
   `);

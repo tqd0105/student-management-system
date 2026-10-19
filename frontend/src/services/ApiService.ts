@@ -1,6 +1,6 @@
 /**
  * API Service Layer
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * Centralized API communication với backend
  */
 

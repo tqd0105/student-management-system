@@ -1,6 +1,6 @@
 /**
  * Attendance Routes
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * API endpoints cho QR attendance system
  */
 

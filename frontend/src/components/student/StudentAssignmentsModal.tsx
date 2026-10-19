@@ -1,7 +1,7 @@
 /**
  * StudentAssignmentsModal — Student View
  * Quản lý bài tập & nộp bài dạng Link (Google Drive, GitHub, Docs, Figma...)
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  */
 
 'use client';

@@ -22,7 +22,7 @@ interface FooterProps {
   onOpenContactModal?: () => void;
 }
 
-const DTECH_SERVICES = [
+const DUNEXSOFT_SERVICES = [
   {
     icon: LayoutDashboard,
     title: 'Hệ thống Quản lý (SMS / ERP / CRM)',
@@ -55,7 +55,7 @@ const DTECH_SERVICES = [
   },
 ];
 
-const DTECH_HIGHLIGHTS = [
+const DUNEXSOFT_HIGHLIGHTS = [
   'Bàn giao đúng tiến độ cam kết',
   'Mã nguồn sạch, có tài liệu kỹ thuật đầy đủ',
   'Bảo hành & hỗ trợ sau bàn giao',
@@ -68,7 +68,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenContactModal }) => {
 
   const handleCopyEmail = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText('tranquangdung.tech@gmail.com');
+    navigator.clipboard.writeText('dunexsoft@gmail.com');
     setCopiedEmail(true);
     setTimeout(() => setCopiedEmail(false), 2500);
   };
@@ -84,7 +84,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenContactModal }) => {
   return (
     <footer className="w-full bg-white border-t border-gray-200 mt-10">
 
-      {/* ── DTECH SOLUTIONS AGENCY SECTION ── */}
+      {/* ── DUNEXSOFT SOLUTIONS AGENCY SECTION ── */}
       <div className="hidden bg-gray-50 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
 
@@ -94,14 +94,14 @@ export const Footer: React.FC<FooterProps> = ({ onOpenContactModal }) => {
               <div className="flex items-center gap-2">
                 <span className="inline-block w-1 h-5 bg-blue-600 rounded-full" />
                 <span className="text-xs font-bold uppercase tracking-widest text-blue-700">
-                  DTECH Solutions — Digital Agency
+                  DunexSoft — Software Solutions & Digital Agency
                 </span>
               </div>
               <h3 className="text-xl sm:text-2xl font-bold text-gray-900 leading-snug">
                 Thiết kế Website & Giải pháp Phần mềm Chuyên nghiệp
               </h3>
               <p className="text-sm text-gray-500 max-w-2xl leading-relaxed">
-                Từ hệ thống quản lý nội bộ đến website doanh nghiệp — DTECH Solutions đồng hành cùng bạn ở mọi giai đoạn: <span className="text-gray-700 font-medium">tư vấn, thiết kế, triển khai và bảo trì lâu dài</span>.{' '}
+                Từ hệ thống quản lý nội bộ đến website doanh nghiệp — DunexSoft đồng hành cùng bạn ở mọi giai đoạn: <span className="text-gray-700 font-medium">tư vấn, thiết kế, triển khai và bảo trì lâu dài</span>.{' '}
                 Sản phẩm được xây dựng trên nền tảng công nghệ hiện đại (<span className="font-medium text-gray-700">Next.js · Node.js · PostgreSQL</span>), tối ưu hiệu suất và dễ dàng mở rộng.
               </p>
             </div>
@@ -176,7 +176,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenContactModal }) => {
               <span>© 2026. Developed by</span>
 
               <strong className="text-gray-700 font-semibold">
-                DTECH TEAM
+                DunexSoft
               </strong>
 
               <span className="text-gray-400 font-mono text-[10px] bg-gray-100 px-1.5 py-0.5 rounded">
@@ -218,12 +218,12 @@ export const Footer: React.FC<FooterProps> = ({ onOpenContactModal }) => {
 
             {/* Email Support */}
             <a
-              href="mailto:dtech.webdevteam@gmail.com"
+              href="mailto:dunexsoft@gmail.com"
               className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors text-xs"
               title="Gửi email hỗ trợ kỹ thuật"
             >
               <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-              <span>dtech.webdevteam@gmail.com</span>
+              <span>dunexsoft@gmail.com</span>
             </a>
           </div>
 

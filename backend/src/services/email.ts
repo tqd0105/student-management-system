@@ -35,13 +35,13 @@ export class EmailService {
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
 
     const mailOptions = {
-      from: `"DTECH TEAM - Student Management System" <${process.env.SMTP_USER}>`,
+      from: `"DunexSoft - Student Management System" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: '🎓 Xác thực tài khoản - DTECH TEAM | Student Management System',
+      subject: '🎓 Xác thực tài khoản - DunexSoft | Student Management System',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background-color: #3b82f6; color: white; padding: 20px; text-align: center;">
-            <h2>🎓 DTECH TEAM | Student Management System</h2>
+            <h2>🎓 DunexSoft | Student Management System</h2>
           </div>
           
           <div style="padding: 20px; background-color: #f8fafc;">
@@ -68,7 +68,7 @@ export class EmailService {
               Nếu bạn không thực hiện đăng ký này, vui lòng bỏ qua email này.
               <br>
               Trân trọng,<br>
-              <strong>DTECH TEAM</strong>
+              <strong>DunexSoft</strong>
             </p>
           </div>
         </div>
@@ -82,13 +82,13 @@ export class EmailService {
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
 
     const mailOptions = {
-      from: `"DTECH TEAM - Student Management System" <${process.env.SMTP_USER}>`,
+      from: `"DunexSoft - Student Management System" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: '🔐 Đặt lại mật khẩu - DTECH TEAM | Student Management System',
+      subject: '🔐 Đặt lại mật khẩu - DunexSoft | Student Management System',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background-color: #ef4444; color: white; padding: 20px; text-align: center;">
-            <h1>🔐 Đặt lại mật khẩu <br> DTECH TEAM | Student Management System</h1>
+            <h1>🔐 Đặt lại mật khẩu <br> DunexSoft | Student Management System</h1>
           </div>
           
           <div style="padding: 20px; background-color: #f8fafc;">
@@ -115,7 +115,7 @@ export class EmailService {
               Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.
               <br>
               Trân trọng,<br>
-              <strong>DTECH TEAM</strong>
+              <strong>DunexSoft</strong>
             </p>
           </div>
         </div>
@@ -129,13 +129,13 @@ export class EmailService {
     const dashboardUrl = `${process.env.FRONTEND_URL}/dashboard`;
 
     const mailOptions = {
-      from: `"DTECH TEAM - Student Management System" <${process.env.SMTP_USER}>`,
+      from: `"DunexSoft - Student Management System" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: '🎉 Chào mừng đến với DTECH TEAM | Student Management System',
+      subject: '🎉 Chào mừng đến với DunexSoft | Student Management System',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background-color: #10b981; color: white; padding: 20px; text-align: center;">
-            <h1>🎉 Chào mừng bạn đến với DTECH TEAM!</h1>
+            <h1>🎉 Chào mừng bạn đến với DunexSoft!</h1>
           </div>
           
           <div style="padding: 20px; background-color: #f8fafc;">
@@ -172,7 +172,7 @@ export class EmailService {
             
             <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
             <p style="font-size: 12px; color: #6b7280;">
-              Nếu có bất kỳ câu hỏi nào, vui lòng liên hệ với <strong>DTECH TEAM</strong>.
+              Nếu có bất kỳ câu hỏi nào, vui lòng liên hệ với <strong>DunexSoft</strong>.
             </p>
           </div>
         </div>

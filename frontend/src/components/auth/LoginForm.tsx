@@ -1,6 +1,6 @@
 /**
  * Login Component
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * Giao diện đăng nhập với validation
  */
 
@@ -39,7 +39,7 @@ const DEMO_ACCOUNTS = [
   },
   {
     role: "Student",
-    name: "DTECH",
+    name: "DunexSoft",
     email: "tranquangdung.tech@gmail.com",
     password: "Dungabc123@",
     icon: "/icons/student.png",

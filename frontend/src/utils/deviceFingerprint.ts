@@ -1,6 +1,6 @@
 /**
  * Device Fingerprint & Geolocation Utility
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * Generates and stores a persistent, unique device identifier for attendance integrity
  */
 

@@ -1,6 +1,6 @@
 /**
  * Rate Limiting Configuration (TypeScript)
- * Student Management System - LightBrave / DTECH Team
+ * Student Management System - LightBrave / DunexSoft
  * 
  * Tối ưu hóa giới hạn request:
  * - Phân tách rõ ràng giữa endpoint nhạy cảm (Auth) và API nghiệp vụ thông thường.

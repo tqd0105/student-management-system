@@ -3,7 +3,7 @@
 ### Hệ Thống Quản Lý Sinh Viên & Điểm Danh Thông Minh
 **Student Management System (SMS)**
 
-> **Đơn vị phát triển:** DTECH TEAM / LightBrave  
+> **Đơn vị phát triển:** DunexSoft / LightBrave  
 > **Mục đích:** Bộ quy chuẩn cho quá trình phân tích yêu cầu, phát triển, kiểm thử, bảo mật và vận hành dự án. Áp dụng cho lập trình viên và AI coding assistant (bao gồm Antigravity).
 
 > **Nguyên tắc cốt lõi:** Hiểu codebase trước khi sửa; ưu tiên giải pháp đơn giản, an toàn và nhất quán; chỉ thay đổi những gì cần thiết; kiểm chứng trước khi báo cáo. AI hỗ trợ hoàn thành sản phẩm đồng thời giúp người dùng nâng cao năng lực kỹ thuật, không mặc định viết thay mọi phần code.

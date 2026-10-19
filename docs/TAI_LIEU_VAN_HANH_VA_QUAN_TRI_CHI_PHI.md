@@ -1,6 +1,6 @@
 # TÀI LIỆU VẬN HÀNH & QUẢN TRỊ CHI PHÍ DỰ ÁN
 ## Hệ Thống Quản Lý Sinh Viên (Student Management System - SMS)
-*Đơn vị phát triển: DTECH TEAM | Ngày cập nhật: 13/10/2026 | Nhánh Git: `dev`*
+*Đơn vị phát triển: DunexSoft | Ngày cập nhật: 13/10/2026 | Nhánh Git: `dev`*
 
 ---
 
@@ -19,7 +19,7 @@
 | Bước | Nội dung triển khai | Kết quả nghiệm thu |
 | :--- | :--- | :--- |
 | **Bước 1** | Chuẩn hóa in Bảng điểm học vụ khổ ngang A4 (Landscape) | Đã chuẩn hóa thang điểm 10 chính thức, bỏ quy đổi thang hệ 4. Bảng điểm giảng viên in tổng hợp điểm sinh viên, tự tính ĐTB cột/lớp và chữ ký 3 bên. |
-| **Bước 2** | Kiểm soát chi phí AWS & Ngân sách tự động $1.00 USD | Tạo AWS Budget `SMS-Monthly-Cost-Control` hạn mức $1.00 USD gửi cảnh báo về `dtech.webdevteam@gmail.com` và `tqd0105@gmail.com`. Dừng máy chủ EC2 (`stopped`) để giữ chi phí thực tế ở mức **$0.00**. |
+| **Bước 2** | Kiểm soát chi phí AWS & Ngân sách tự động $1.00 USD | Tạo AWS Budget `SMS-Monthly-Cost-Control` hạn mức $1.00 USD gửi cảnh báo về `dunexsoft@gmail.com` và `tqd0105@gmail.com`. Dừng máy chủ EC2 (`stopped`) để giữ chi phí thực tế ở mức **$0.00**. |
 | **Bước 3** | Nâng cấp Nộp bài tập tải tệp trực tiếp lên S3/CloudFront | Học sinh có thể tải file `.zip`, `.rar`, `.pdf`, `.docx` $\le$ 10MB lên S3 Presigned URL và CloudFront CDN. Giảng viên mở xem/tải tệp chấm 1-click trong SpeedGrader. |
 | **Bước 4** | Dọn dẹp mã nguồn, kiểm thử toàn diện & bàn giao tài liệu | Pass 100% TypeScript (`tsc --noEmit`), hoàn tất build Next.js thành công 9/9 trang, tài liệu vận hành Tiếng Việt hoàn chỉnh. |
 
@@ -117,7 +117,7 @@
   - 100% hạn mức ($1.00): Gửi cảnh báo vượt ngưỡng.
   - Dự báo (Forecasted) chạm 100%: Gửi cảnh báo sớm.
 - **Email nhận thông báo**: Đã cấu hình gửi đồng thời tới cả 2 email:
-  - `dtech.webdevteam@gmail.com`
+  - `dunexsoft@gmail.com`
   - `tqd0105@gmail.com`
 
 ---

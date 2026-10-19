@@ -1,6 +1,6 @@
 /**
  * User Management Controller
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * Quản lý CRUD users, roles, và profiles
  */
 

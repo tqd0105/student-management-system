@@ -1,6 +1,6 @@
 /**
  * QR Code Service
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * Generate và validate QR codes cho attendance system
  */
 

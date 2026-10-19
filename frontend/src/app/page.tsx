@@ -1,6 +1,6 @@
 /**
  * Main Page - Student Management System
- * DBUG TEAM
+ * DunexSoft
  */
 
 "use client";
@@ -40,7 +40,7 @@ const DEMO_ACCOUNTS = [
   },
   {
     role: "Student",
-    name: "DTECH",
+    name: "DunexSoft",
     email: "tranquangdung.tech@gmail.com",
     password: "Dungabc123@",
     icon: "/icons/student.png",

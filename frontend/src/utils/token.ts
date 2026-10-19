@@ -1,6 +1,6 @@
 /**
  * JWT Token Utilities
- * Student Management System - LightBrave / DTECH TEAM
+ * Student Management System - LightBrave / DunexSoft
  * Hỗ trợ decode, kiểm tra hạn phiên đăng nhập và định dạng thời gian
  */
 

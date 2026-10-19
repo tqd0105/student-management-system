@@ -1,6 +1,6 @@
 /**
  * Class Management Controller
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * Quản lý lớp học, enrollment, và class schedules
  */
 

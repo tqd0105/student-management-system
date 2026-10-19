@@ -19,11 +19,11 @@ services:
       - key: JWT_EXPIRES_IN
         value: 24h
       - key: GMAIL_USER
-        value: dtech.webdevteam@gmail.com
+        value: dunexsoft@gmail.com
       - key: GMAIL_APP_PASSWORD
         value: rtimzqahfthmoclo
       - key: EMAIL_FROM
-        value: "Student Management System | LightBrave Team <dtech.webdevteam@gmail.com>"
+        value: "Student Management System | LightBrave Team <dunexsoft@gmail.com>"
       - key: FRONTEND_URL
         value: https://sms-fe-lovat.vercel.app
       - key: APP_2FA_NAME

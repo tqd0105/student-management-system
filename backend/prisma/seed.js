@@ -83,7 +83,7 @@ async function main() {
     },
     create: {
       email: 'tranquangdung.tech@gmail.com',
-      name: 'DTECH',
+      name: 'DunexSoft',
       password: passwordHash,
       role: 'STUDENT',
       isVerified: true,

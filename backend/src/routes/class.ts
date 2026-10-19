@@ -1,6 +1,6 @@
 /**
  * Class Management Routes
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * Routes cho quản lý lớp học và enrollment
  */
 

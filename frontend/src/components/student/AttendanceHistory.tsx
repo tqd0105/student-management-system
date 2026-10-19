@@ -1,6 +1,6 @@
 /**
  * AttendanceHistory Component — Redesigned
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * Lịch sử điểm danh của học sinh — giao diện hiện đại, full responsive
  */
 

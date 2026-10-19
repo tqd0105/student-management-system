@@ -2534,7 +2534,7 @@ export default function Gradebook({ classId, className: initialClassName }: Grad
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-gray-900">BỘ GIÁO DỤC VÀ ĐÀO TẠO</p>
                 <p className="text-xs font-black uppercase text-gray-950">HỆ THỐNG QUẢN TRỊ ĐÀO TẠO & HỌC VỤ SMS</p>
-                <p className="text-[10px] text-gray-600">Đơn vị phát triển: DTECH TEAM</p>
+                <p className="text-[10px] text-gray-600">Đơn vị phát triển: DunexSoft</p>
               </div>
               <div className="text-center">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-gray-900">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>

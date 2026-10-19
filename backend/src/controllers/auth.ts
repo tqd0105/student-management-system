@@ -1,6 +1,6 @@
 /**
  * Authentication Controller
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  * Xử lý các chức năng xác thực: đăng ký, đăng nhập, xác minh email
  */
 

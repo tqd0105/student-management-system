@@ -1,6 +1,6 @@
 /**
  * Class Management Component
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  */
 
 'use client';

@@ -1,7 +1,7 @@
 /**
  * StudentMaterialsModal — Student View
  * Xem tài liệu học tập của một lớp cụ thể
- * Student Management System - DTECH TEAM
+ * Student Management System - DunexSoft
  */
 
 'use client';
